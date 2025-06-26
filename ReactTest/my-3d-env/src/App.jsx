@@ -33,21 +33,52 @@ const controls = {
 };
 
 function OnlinePlayer({ id, position, rotationYaw, viewMode }) {
-  const playerRef = useRef();
-  const rotationQuaternion = useMemo(() => new THREE.Quaternion(), []);
+  const playerRef = useRef(); // RigidBody에 할당될 ref (위치 동기화용)
+  const playerVisualRef = useRef(); // 시각적 모델 그룹에 할당될 ref (회전 동기화용)
+
+  // Ref를 사용하여 보간될 목표 위치와 회전값을 저장합니다.
+  const targetPosition = useRef(new THREE.Vector3(position.x, position.y, position.z));
+  const targetRotationY = useRef(rotationYaw);
+
+  // props (position, rotationYaw)가 변경될 때마다 목표값을 업데이트합니다.
+  useEffect(() => {
+    if (position && typeof position.x === 'number' && typeof position.y === 'number' && typeof position.z === 'number') {
+      targetPosition.current.set(position.x, position.y, position.z);
+    }
+    if (typeof rotationYaw === 'number') {
+      targetRotationY.current = rotationYaw;
+    }
+  }, [position, rotationYaw]);
+
 
   useFrame(() => {
-    rotationQuaternion.setFromEuler(new THREE.Euler(0, rotationYaw, 0, 'YXZ'));
-    if (playerRef.current) {
-        playerRef.current.position.set(position.x, position.y, position.z);
-        playerRef.current.quaternion.copy(rotationQuaternion);
+    // RigidBody와 시각적 모델 그룹의 ref가 모두 존재하고 목표값이 유효한지 확인
+    if (!playerRef.current || !playerVisualRef.current || !targetPosition.current || typeof targetRotationY.current !== 'number') {
+      return;
     }
+
+    const SMOOTHING_FACTOR_REMOTE = 0.2; // 보간(smoothing) 강도 조절 (0.0: 즉시 반응, 1.0: 느리게 반응)
+
+    // 현재 보간된 RigidBody의 위치를 목표 위치를 향해 부드럽게 이동시킵니다.
+    const currentTranslation = playerRef.current.translation();
+    const interpolatedTranslation = new THREE.Vector3(currentTranslation.x, currentTranslation.y, currentTranslation.z)
+                                    .lerp(targetPosition.current, SMOOTHING_FACTOR_REMOTE);
+    playerRef.current.setTranslation(interpolatedTranslation, true);
+
+
+    // 현재 보간된 시각적 모델의 Y축 회전을 목표 회전값을 향해 부드럽게 이동시킵니다.
+    // 다른 플레이어의 모델 방향을 서버에서 받은 값 그대로 사용하여 정확하게 표시합니다.
+    playerVisualRef.current.rotation.y = THREE.MathUtils.lerp(
+      playerVisualRef.current.rotation.y,
+      targetRotationY.current, // <-- 여기에서 `+ Math.PI`를 제거했습니다.
+      SMOOTHING_FACTOR_REMOTE
+    );
   });
 
   return (
-    <RigidBody type="fixed" colliders={false} position={[position.x, position.y, position.z]} rotation={[0, rotationYaw, 0]}>
+    <RigidBody key={id} type="fixed" colliders={false} ref={playerRef} position={[position.x, position.y, position.z]} rotation={[0, rotationYaw, 0]}>
         <CapsuleCollider args={[0.5, 0.5]} position={[0, 0, 0]} />
-        <group ref={playerRef}>
+        <group ref={playerVisualRef}>
             <mesh castShadow>
                 <capsuleGeometry args={[0.5, 0.75, 4, 8]} />
                 <meshStandardMaterial color="skyblue" />
@@ -58,7 +89,6 @@ function OnlinePlayer({ id, position, rotationYaw, viewMode }) {
             </mesh>
             <Text
                 position={[0, 1.2, 0]}
-                rotation={[0, 0, 0]}
                 fontSize={0.4}
                 color="white"
                 anchorX="center"
@@ -79,7 +109,8 @@ function PlayerMovement({ socket, myPlayerId }) {
   const { camera, gl } = useThree();
   const [sub, getKeys] = useKeyboardControls();
 
-  const playerRef = useRef();
+  const playerRef = useRef(); // RigidBody에 할당될 ref
+  const playerVisualRef = useRef(); // 시각적 모델 그룹에 할당될 ref
   const [viewMode, setViewMode] = useState('firstPerson');
   const isVPressedLastFrame = useRef(false);
   const isBPressedLastFrame = useRef(false);
@@ -97,7 +128,7 @@ function PlayerMovement({ socket, myPlayerId }) {
   const tempRight = useMemo(() => new THREE.Vector3(), []);
   const tempCameraOffset = useMemo(() => new THREE.Vector3(), []);
 
-  const JUMP_IMPULSE = 8.0;
+  const JUMP_IMPULSE = 12.0;
   const PLAYER_SPEED = 5.0;
 
   const [canJump, setCanJump] = useState(true);
@@ -152,10 +183,13 @@ function PlayerMovement({ socket, myPlayerId }) {
   useFrame((state, delta) => {
     const { forward, backward, left, right, jump, toggleView, toggleSecondPerson } = getKeys();
 
-    if (!playerRef.current) return;
-
-    playerRef.current.setRotation(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw.current, 0, 'YXZ')), true);
+    if (!playerRef.current) return; 
     
+    // 이 플레이어의 시각적 모델 방향을 카메라 yaw 값 그대로 사용하여 일치시킵니다.
+    if (playerVisualRef.current) { 
+      playerVisualRef.current.rotation.y = yaw.current; // <-- 여기에서 `+ Math.PI`를 제거했습니다.
+    }
+
     const currentVelocity = playerRef.current.linvel();
     let velocityChangeX = 0;
     let velocityChangeZ = 0;
@@ -274,9 +308,9 @@ function PlayerMovement({ socket, myPlayerId }) {
     if (socket && socket.readyState === WebSocket.OPEN && myPlayerId) {
         socket.send(JSON.stringify({
             type: 'playerUpdate',
-            id: myPlayerId, // 자신의 고유 ID
+            id: myPlayerId,
             position: { x: playerWorldPosition.x, y: playerWorldPosition.y, z: playerWorldPosition.z },
-            rotationYaw: yaw.current,
+            rotationYaw: yaw.current, // 서버로 전송되는 yaw 값은 그대로 유지 (카메라 방향 기준)
             viewMode: viewMode
         }));
     }
@@ -285,39 +319,40 @@ function PlayerMovement({ socket, myPlayerId }) {
   return (
     <RigidBody ref={playerRef} colliders={false} enabledRotations={[false, false, false]} position={[0, GROUND_RIGIDBODY_Y_POSITION, 0]}>
       <CapsuleCollider args={[0.5, 0.5]} position={[0, 0, 0]} />
-
-      {(viewMode === 'secondPerson' || viewMode === 'thirdPerson') && (
-        <>
-          <mesh position={[0, 0, 0]} castShadow>
-            <capsuleGeometry args={[0.5, 0.75, 4, 8]} />
-            <meshStandardMaterial color="gray" />
-          </mesh>
-          <mesh position={[0, 0.2, -0.6]} castShadow>
-            <boxGeometry args={[0.25, 0.25, 0.1]} />
-            <meshStandardMaterial color="red" />
-          </mesh>
-          <Text
-            position={[0, 0.7, -0.6]}
-            rotation={[0, Math.PI, 0]}
-            fontSize={0.3}
-            color="black"
-            anchorX="center"
-            anchorY="middle"
-          >
-            앞
-          </Text>
-          <Text
-            position={[0, 0.7, 0.6]}
-            rotation={[0, 0, 0]}
-            fontSize={0.3}
-            color="black"
-            anchorX="center"
-            anchorY="middle"
-          >
-            뒤
-          </Text>
-        </>
-      )}
+      <group ref={playerVisualRef}>
+        {(viewMode === 'secondPerson' || viewMode === 'thirdPerson') && ( 
+          <>
+            <mesh position={[0, 0, 0]} castShadow> 
+              <capsuleGeometry args={[0.5, 0.75, 4, 8]} /> 
+              <meshStandardMaterial color="gray" /> 
+            </mesh>
+            <mesh position={[0, 0.2, -0.6]} castShadow> 
+              <boxGeometry args={[0.25, 0.25, 0.1]} /> 
+              <meshStandardMaterial color="red" /> 
+            </mesh>
+            <Text
+              position={[0, 0.7, -0.6]} 
+              rotation={[0, Math.PI, 0]} 
+              fontSize={0.3}
+              color="black"
+              anchorX="center"
+              anchorY="middle"
+            >
+              앞
+            </Text>
+            <Text
+              position={[0, 0.7, 0.6]} 
+              rotation={[0, 0, 0]} 
+              fontSize={0.3}
+              color="black"
+              anchorX="center"
+              anchorY="middle"
+            >
+              뒤
+            </Text>
+          </>
+        )}
+      </group>
     </RigidBody>
   );
 }
@@ -382,13 +417,11 @@ function App() {
   const myPlayerId = useRef(crypto.randomUUID());
 
   useEffect(() => {
-    // Spring Boot WebSocket 서버에 연결
     const ws = new WebSocket('ws://localhost:8080/websocket');
 
     ws.onopen = () => {
       console.log('WebSocket 연결 성공: Spring Boot 서버');
       setSocket(ws);
-      // 서버는 세션 ID를 플레이어 ID로 사용하므로, 클라이언트에서 별도로 'init' 메시지를 보낼 필요 없습니다.
     };
 
     ws.onmessage = (event) => {
