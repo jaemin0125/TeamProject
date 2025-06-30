@@ -3,19 +3,19 @@ import { useGLTF, useAnimations } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 
 export const CharacterModel = React.forwardRef(
-  ({ isWalking, isBackward, isJumping, isIdle, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
+  ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
     const { scene, animations } = useGLTF('/models/character.glb');
     const { actions, mixer } = useAnimations(animations, scene);
     const currentAction = useRef(null);
 
     useEffect(() => {
       if (!actions) return;
-        
-      console.log(animations);
       let nextActionName = null;
       if (isJumping) nextActionName = 'Jump';
       else if (isWalking) nextActionName = 'WalkingForward';
-      else if (isBackward) nextActionName = 'WalkinForward';
+      else if (isBackward) nextActionName = 'WalkingForward';
+      else if (isLeft) nextActionName = 'WalkingForward';
+      else if (isRight) nextActionName = 'WalkingForward';
       else if (isIdle) nextActionName = 'Idle';
 
       if (nextActionName && actions[nextActionName]) {
@@ -27,7 +27,7 @@ export const CharacterModel = React.forwardRef(
           currentAction.current = nextAction;
         }
       }
-    }, [isWalking, isJumping, isIdle, actions]);
+    }, [isWalking, isJumping, isLeft, isRight, isIdle, actions]);
 
     useFrame((_, delta) => {
       mixer?.update(delta);

@@ -70,49 +70,38 @@ function OtherPlayer({ id, position, rotationY }) {
         <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
         <meshStandardMaterial color={color} />
       </mesh>
-      {/* 플레이어 ID 텍스트 */}
-      <Text
-        position={[0, 1.0, 0]} // 캡슐 상단에 위치하도록 조정
-        fontSize={0.2}
-        color="black"
-        anchorX="center"
-        anchorY="middle"
-        outlineColor="white"
-        outlineWidth={0.01}
-      >
-        {id.substring(0, 5)} {/* ID의 앞 5자리만 표시 */}
-      </Text>
+      
     </group>
   );
 }
 
 // 현재 플레이어를 제어하고 서버와 통신하는 컴포넌트
 function Player({ onHudUpdate }) {
-  const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
-  const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
-  const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
-  const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
-  const [isGrounded, setIsGrounded] = useState(false); // 플레이어의 착지 상태
-  const [viewMode, setViewMode] = useState('firstPerson'); // 카메라 뷰 모드: 'firstPerson' 또는 'thirdPerson'
-  const [currentAction, setCurrentAction] = useState('Idle');
-
-  const pitch = useRef(0); // 카메라 상하 회전 (피치)
-  const yaw = useRef(0);   // 카메라 좌우 회전 (요)
-
-  const [jumpImpulse] = useState(25); // 점프 힘 상수
-  // Leva를 사용하여 이동 속도 제어 UI 제공
-  const { speed } = useControls({ speed: { value: 5, min: 1, max: 20 } });
-
-  const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
-
-  // modelRef는 플레이어의 3D 모델 그룹을 참조합니다.
-  // 이 그룹은 플레이어의 위치 및 회전과 동기화됩니다.
-  // useEffect 대신 직접 JSX에서 렌더링하고 ref를 연결합니다.
-  // useFrame에서 modelRef.current의 위치/회전을 직접 업데이트합니다.
-
-  // ======================================================================
-  // ===== 웹소켓 연결 및 구독 로직 =====
-  // 이 useEffect는 컴포넌트 마운트 시 한 번만 실행되며, 클린업 함수를 통해 연결을 정리합니다.
+    const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
+    const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
+    const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
+    const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
+    const [isGrounded, setIsGrounded] = useState(false); // 플레이어의 착지 상태
+    const [viewMode, setViewMode] = useState('firstPerson'); // 카메라 뷰 모드: 'firstPerson' 또는 'thirdPerson'
+    const [currentAction, setCurrentAction] = useState('Idle');
+    
+    const pitch = useRef(0); // 카메라 상하 회전 (피치)
+    const yaw = useRef(0);   // 카메라 좌우 회전 (요)
+    
+    const [jumpImpulse] = useState(4); // 점프 힘 상수
+    // Leva를 사용하여 이동 속도 제어 UI 제공
+    const { speed } = useControls({ speed: { value: 5, min: 1, max: 20 } });
+    
+    const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
+    
+    // modelRef는 플레이어의 3D 모델 그룹을 참조합니다.
+    // 이 그룹은 플레이어의 위치 및 회전과 동기화됩니다.
+    // useEffect 대신 직접 JSX에서 렌더링하고 ref를 연결합니다.
+    // useFrame에서 modelRef.current의 위치/회전을 직접 업데이트합니다.
+    
+    // ======================================================================
+    // ===== 웹소켓 연결 및 구독 로직 =====
+    // 이 useEffect는 컴포넌트 마운트 시 한 번만 실행되며, 클린업 함수를 통해 연결을 정리합니다.
   // ======================================================================
   useEffect(() => {
     const WS_URL = 'http://localhost:8080/ws'; // Spring Boot WebSocket 엔드포인트와 일치
@@ -292,14 +281,20 @@ function Player({ onHudUpdate }) {
     if (keys.jump && isGrounded && vel.y <= 0.1) {
       playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
       setIsGrounded(false);
-      setCurrentAction('Jump');
+      setCurrentAction('Jump'); 
     } else if (keys.forward) {
       setCurrentAction('WalkForward');
     } else if (keys.backward) {
       setCurrentAction('WalkForward');
+    } else if (keys.left) {
+      setCurrentAction('WalkForward');
+    } else if (keys.right) {
+      setCurrentAction('WalkForward');
     } else {
       setCurrentAction('Idle');
     }
+
+
 
     const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z);
     const headOffset = new THREE.Vector3(0, 0.3, 0); // 카메라 또는 모델의 머리 위치 오프셋
@@ -371,17 +366,19 @@ function Player({ onHudUpdate }) {
         onCollisionEnter={() => setIsGrounded(true)} // 다른 객체와 충돌 시 착지 상태 활성화
         onCollisionExit={() => setIsGrounded(false)} // 충돌 해제 시 착지 상태 비활성화
       >
-        <CapsuleCollider args={[0.35, 0.75]} /> {/* 플레이어 충돌체 (캡슐 형태) */}
+        <CapsuleCollider args={[0.35, 0.4]} /> {/* 플레이어 충돌체 (캡슐 형태) */}
       </RigidBody>
 
       {/* 현재 플레이어의 3D 모델 (3인칭 뷰에서만 보임) */}
             <CharacterModel
-  ref={modelRef}
-  isWalking={keys.forward}
-  isBackward={keys.backward}
-  isJumping={keys.jump}
-  isIdle={!keys.forward && !keys.backward && !keys.jump}
-/>
+            ref={modelRef}
+            isWalking={keys.forward}
+            isBackward={keys.backward}
+            isLeft={keys.left}
+            isRight={keys.right}
+            isJumping={keys.jump}
+            isIdle={!keys.forward && !keys.backward && !keys.jump}
+            />
     </>
   );
 }
