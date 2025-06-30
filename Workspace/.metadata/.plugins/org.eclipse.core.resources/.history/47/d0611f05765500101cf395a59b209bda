@@ -1,0 +1,91 @@
+package com.example.demo.controller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.example.demo.dto.PlayerState;
+import com.example.demo.dto.ObjectState; // ObjectState DTO 임포트 추가
+import com.example.demo.service.PlayerService; // PlayerService 사용
+
+@Controller
+public class GameController {
+
+    private static final Logger logger = LoggerFactory.getLogger(GameController.class);
+    private final SimpMessagingTemplate messagingTemplate;
+    private final PlayerService playerService; // PlayerService 주입
+
+    public GameController(SimpMessagingTemplate messagingTemplate, PlayerService playerService) {
+        this.messagingTemplate = messagingTemplate;
+        this.playerService = playerService;
+    }
+
+    @GetMapping("/api/hello")
+    public String hello() {
+        logger.info("Hello from Spring Boot server (HTTP request)!");
+        return "Hello from Spring Boot!";
+    }
+
+    @MessageMapping("/registerPlayer")
+    public void registerPlayer(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
+        String sessionId = headerAccessor.getSessionId();
+        playerState.setSessionId(sessionId);
+
+        playerService.addPlayer(playerState, sessionId);
+        logger.info("Player registered: {} (Session: {})", playerState.getId(), sessionId);
+
+        logger.info("Broadcasting player locations after register. Total players: {}", playerService.getAllPlayers().size());
+        messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+
+        // 새로 추가: 플레이어 등록 시 모든 오브젝트 상태도 브로드캐스팅
+        logger.info("Broadcasting initial object locations. Total objects: {}", playerService.getAllObjects().size());
+        messagingTemplate.convertAndSend("/topic/objectLocations", playerService.getAllObjects());
+    }
+
+    /**
+     * 클라이언트로부터 플레이어의 이동 상태 업데이트를 수신하고,
+     * 이를 다른 모든 클라이언트에게 브로드캐스팅합니다.
+     *
+     * @param playerState 업데이트된 플레이어 상태
+     * @param headerAccessor STOMP 메시지 헤더 접근자
+     */
+    @MessageMapping("/playerMove")
+    public void playerMove(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
+        playerService.updatePlayerPosition(playerState.getId(), playerState.getPosition(), playerState.getRotationY());
+        messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+    }
+
+    /**
+     * 새로 추가: 클라이언트로부터 동적 게임 오브젝트의 상태 업데이트를 수신하고,
+     * 이를 다른 모든 클라이언트에게 브로드캐스팅합니다.
+     *
+     * @param objectState 업데이트된 오브젝트 상태 (ID, 위치, 회전 등 포함)
+     * @param headerAccessor STOMP 메시지 헤더 접근자
+     */
+    @MessageMapping("/objectMove")
+    public void objectMove(ObjectState objectState, SimpMessageHeaderAccessor headerAccessor) {
+        playerService.updateObjectState(objectState.getId(), objectState.getPosition(), objectState.getRotation());
+        // 이 로그는 프레임마다 너무 많이 발생할 수 있으므로 주석 처리하거나 debug 레벨로 설정
+        // logger.info("Object moved: {} at ({}, {}, {})", objectState.getId(), objectState.getPosition().getX(), objectState.getPosition().getY(), objectState.getPosition().getZ());
+
+        // 업데이트된 전체 오브젝트 목록을 모든 클라이언트에게 브로드캐스팅합니다.
+        messagingTemplate.convertAndSend("/topic/objectLocations", playerService.getAllObjects());
+    }
+
+    /**
+     * 웹소켓 연결이 끊어졌을 때 호출되는 메서드.
+     * 이 메서드는 WebSocketEventListener의 SessionDisconnectEvent에서 호출됩니다.
+     *
+     * @param sessionId 연결이 끊긴 세션의 ID
+     */
+    public void unregisterPlayer(String sessionId) {
+        playerService.removePlayerBySessionId(sessionId);
+        logger.info("Player unregistered (session disconnected): Session: {}. Remaining players: {}", sessionId, playerService.getAllPlayers().size());
+        // 플레이어 제거 후, 업데이트된 플레이어 목록을 브로드캐스팅
+        messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+    }
+}

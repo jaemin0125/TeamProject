@@ -1,9 +1,15 @@
 // App.jsx
+// React Hooks
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+// React Three Fiber
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { KeyboardControls, useKeyboardControls } from '@react-three/drei';
+// React Three Drei: KeyboardControls, useKeyboardControls, Text 컴포넌트 임포트
+import { KeyboardControls, useKeyboardControls, Text } from '@react-three/drei';
+// React Three Rapier
 import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
+// Leva
 import { Leva, useControls } from 'leva';
+// Three.js
 import * as THREE from 'three';
 
 // 웹소켓 라이브러리 import
@@ -22,21 +28,20 @@ const controlsMap = [
 ];
 
 // 전역 STOMP 클라이언트 (Player 컴포넌트 외부에서 접근 가능하도록 let으로 선언)
-// 주의: React StrictMode에서는 개발 모드에서 컴포넌트가 두 번 마운트될 수 있어,
-// 전역 변수 사용 시 예기치 않은 동작이 발생할 수 있습니다.
-// 실제 프로덕션에서는 Context API 또는 Zustand 같은 상태 관리 라이브러리를 고려하는 것이 좋습니다.
 let stompClient = null;
 
 // 플레이어 ID를 localStorage에서 로드하거나 새로 생성합니다.
 // 새로고침해도 동일한 플레이어 ID를 유지하기 위함입니다.
+// 주의: 여러 브라우저 탭/창에서 같은 플레이어 ID를 갖게 되어 멀티플레이 테스트 시 오해의 소지가 있습니다.
+// 각 탭이 고유한 플레이어가 되도록 하려면 `const currentPlayerId = uuidv4();` 를 직접 사용해야 합니다.
 const getOrCreatePlayerId = () => {
   let storedPlayerId = localStorage.getItem('myPlayerId');
   if (!storedPlayerId) {
     storedPlayerId = uuidv4(); // 새 ID 생성
     localStorage.setItem('myPlayerId', storedPlayerId); // 저장
-    console.log("New player ID generated and stored:", storedPlayerId);
+    //console.log("New player ID generated and stored:", storedPlayerId);
   } else {
-    console.log("Existing player ID loaded:", storedPlayerId);
+    //console.log("Existing player ID loaded:", storedPlayerId);
   }
   return storedPlayerId;
 };
@@ -45,13 +50,13 @@ const currentPlayerId = getOrCreatePlayerId();
 
 // 다른 플레이어를 렌더링하는 컴포넌트
 function OtherPlayer({ id, position, rotationY }) {
-  const meshRef = useRef();
+  const meshGroupRef = useRef(); // 메시와 텍스트를 담을 그룹에 대한 참조
 
   useFrame(() => {
-    // meshRef.current가 존재하는지 확인하고, 서버에서 받은 위치와 회전으로 부드럽게 보간(lerp)합니다.
-    if (meshRef.current) {
-      meshRef.current.position.lerp(new THREE.Vector3(position.x, position.y - 0.725, position.z), 0.2);
-      meshRef.current.rotation.y = THREE.MathUtils.lerp(meshRef.current.rotation.y, rotationY, 0.2);
+    // meshGroupRef.current가 존재하는지 확인하고, 서버에서 받은 위치와 회전으로 부드럽게 보간(lerp)합니다.
+    if (meshGroupRef.current) {
+      meshGroupRef.current.position.lerp(new THREE.Vector3(position.x, position.y - 0.725, position.z), 0.2);
+      meshGroupRef.current.rotation.y = THREE.MathUtils.lerp(meshGroupRef.current.rotation.y, rotationY, 0.2);
     }
   });
 
@@ -59,16 +64,30 @@ function OtherPlayer({ id, position, rotationY }) {
   const color = useMemo(() => new THREE.Color().setHSL(Math.random(), 0.7, 0.5), []);
 
   return (
-    <mesh ref={meshRef} position={[position.x, position.y - 0.725, position.z]}>
-      <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
-      <meshStandardMaterial color={color} />
-    </mesh>
+    <group ref={meshGroupRef}> {/* 메시와 텍스트를 묶을 그룹 */}
+      <mesh>
+        <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      {/* 플레이어 ID 텍스트 */}
+      <Text
+        position={[0, 1.0, 0]} // 캡슐 상단에 위치하도록 조정
+        fontSize={0.2}
+        color="black"
+        anchorX="center"
+        anchorY="middle"
+        outlineColor="white"
+        outlineWidth={0.01}
+      >
+        {id.substring(0, 5)} {/* ID의 앞 5자리만 표시 */}
+      </Text>
+    </group>
   );
 }
 
 // 현재 플레이어를 제어하고 서버와 통신하는 컴포넌트
 function Player({ onHudUpdate }) {
-  const { camera, gl } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
+  const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
   const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
   const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
   const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
@@ -83,90 +102,87 @@ function Player({ onHudUpdate }) {
 
   const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
 
+  // modelRef는 플레이어의 3D 모델 그룹을 참조합니다.
+  // 이 그룹은 플레이어의 위치 및 회전과 동기화됩니다.
+  // useEffect 대신 직접 JSX에서 렌더링하고 ref를 연결합니다.
+  // useFrame에서 modelRef.current의 위치/회전을 직접 업데이트합니다.
+
   // ======================================================================
   // ===== 웹소켓 연결 및 구독 로직 =====
   // 이 useEffect는 컴포넌트 마운트 시 한 번만 실행되며, 클린업 함수를 통해 연결을 정리합니다.
   // ======================================================================
   useEffect(() => {
-    // Spring Boot WebSocketConfig에서 설정한 SockJS 엔드포인트
-    // 이전에 /ws-connect 였던 것을 /ws 로 수정했습니다.
-    const WS_URL = 'http://localhost:8080/ws';
+    const WS_URL = 'http://localhost:8080/ws'; // Spring Boot WebSocket 엔드포인트와 일치
 
-    // 새로운 SockJS 인스턴스 생성
     const socket = new SockJS(WS_URL);
-    
-    // STOMP 클라이언트 초기화
     stompClient = new Client({
-      webSocketFactory: () => socket, // SockJS 소켓 팩토리 사용
+      webSocketFactory: () => socket,
       // debug: (str) => { console.log('STOMP Debug:', str); }, // STOMP 디버그 로그 (필요 시 주석 해제)
       reconnectDelay: 5000, // 연결 끊어졌을 때 5초 후 재연결 시도
       heartbeatIncoming: 4000, // 서버로부터 4초마다 하트비트 기대
       heartbeatOutgoing: 4000, // 클라이언트에서 4초마다 하트비트 전송
     });
 
-    // STOMP 연결 성공 시 콜백 함수
     stompClient.onConnect = (frame) => {
-      console.log('Connected to WebSocket:', frame);
+      //console.log('[STOMP] Connected to WebSocket:', frame);
 
-      // 플레이어 위치 정보 구독 (서버가 '/topic/playerLocations'로 모든 플레이어 상태를 브로드캐스팅)
-      stompClient.subscribe('/topic/playerLocations', (message) => {
-        try {
-          const allPlayerPositions = JSON.parse(message.body);
-          // HUD에 다른 플레이어 정보 업데이트
-          onHudUpdate(prev => ({
-            ...prev,
-            otherPlayers: allPlayerPositions
-          }));
-        } catch (e) {
-          console.error("Failed to parse player locations message:", e, message.body);
-        }
-      });
+      // 중요: STOMP 연결이 '완전히' 확립되었을 때만 메시지 전송 및 구독을 시도합니다.
+      if (stompClient.connected) {
+        stompClient.subscribe('/topic/playerLocations', (message) => {
+          try {
+            const allPlayerPositions = JSON.parse(message.body);
+            //console.log('[STOMP Subscribe] Received player locations:', allPlayerPositions); // Debug: 수신된 플레이어 위치 확인
+            onHudUpdate(prev => ({
+              ...prev,
+              otherPlayers: allPlayerPositions
+            }));
+          } catch (e) {
+            console.error("[STOMP Subscribe] Failed to parse player locations message:", e, message.body);
+          }
+        });
 
-      // 서버에 내 플레이어 ID 및 초기 위치 등록 메시지 전송
-      // GameController의 @MessageMapping("/registerPlayer")와 매핑됩니다.
-      const initialPlayerState = {
-        id: currentPlayerId,
-        // playerRef.current가 아직 null일 수 있으므로 기본값 0,0,0 사용
-        position: { x: playerRef.current?.translation().x || 0, y: playerRef.current?.translation().y || 0, z: playerRef.current?.translation().z || 0 },
-        rotationY: yaw.current + Math.PI // 3D 모델의 정면을 맞추기 위한 보정
-      };
-      stompClient.publish({
-        destination: '/app/registerPlayer',
-        body: JSON.stringify(initialPlayerState)
-      });
+        const initialPlayerState = {
+          id: currentPlayerId,
+          // playerRef.current가 아직 null일 수 있으므로 기본값 0,0,0 사용
+          position: { x: playerRef.current?.translation().x || 0, y: playerRef.current?.translation().y || 0, z: playerRef.current?.translation().z || 0 },
+          rotationY: yaw.current + Math.PI // 3D 모델의 정면을 맞추기 위한 보정
+        };
+        //console.log('[STOMP Publish] Sending initial player registration:', initialPlayerState); // Debug: 등록 메시지 확인
+        stompClient.publish({
+          destination: '/app/registerPlayer',
+          body: JSON.stringify(initialPlayerState)
+        });
+      } else {
+        console.warn('[STOMP] onConnect triggered, but stompClient.connected is false. This might be a race condition. Will rely on reconnect logic.');
+      }
     };
 
-    // STOMP 오류 발생 시 콜백 함수
     stompClient.onStompError = (frame) => {
       console.error('STOMP Error:', frame);
     };
 
-    // 브라우저 탭을 닫거나 새로고침할 때 웹소켓 연결 해제 및 서버에 알림
-    const handleBeforeUnload = () => {
-      if (stompClient && stompClient.connected) {
-        console.log("Sending DISCONNECT frame before page unload.");
-        // 서버에 명시적으로 unregisterPlayer 메시지를 보냅니다.
-        stompClient.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
-        // STOMP 클라이언트 비활성화 (연결 해제)
-        stompClient.deactivate();
-      }
+    stompClient.onDisconnect = () => {
+      //console.log('[STOMP] Explicitly disconnected from WebSocket.');
     };
 
-    // window.addEventListener('beforeunload', handleBeforeUnload); // 이 부분은 이제 제거합니다.
-                                                                // useEffect의 cleanup 함수와 서버의 SessionDisconnectEvent로 충분합니다.
+    stompClient.activate();
 
-    stompClient.activate(); // STOMP 클라이언트 활성화 (연결 시작)
-
-    // useEffect의 클린업 함수: 컴포넌트 언마운트 시 또는 useEffect가 재실행될 때 호출됩니다.
     return () => {
+      const handleBeforeUnload = () => {
+        if (stompClient && stompClient.connected) {
+          //console.log("[App Cleanup] Sending DISCONNECT frame before page unload.");
+          stompClient.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
+          stompClient.deactivate();
+        }
+      };
+      window.addEventListener('beforeunload', handleBeforeUnload);
+
       if (stompClient && stompClient.connected) {
-        // 컴포넌트 언마운트 시 명시적으로 플레이어 등록 해제 메시지를 보냅니다.
-        // 이는 서버의 WebSocketEventListener가 세션 단절을 감지하는 것 외에 추가적인 안전 장치입니다.
+        //console.log('[App Cleanup] Disconnecting STOMP client on component unmount.');
         stompClient.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
-        stompClient.deactivate(); // STOMP 클라이언트 비활성화
-        console.log('Disconnected from WebSocket (component unmount)');
+        stompClient.deactivate();
       }
-      // window.removeEventListener('beforeunload', handleBeforeUnload); // 이 부분도 제거
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []); // 빈 배열: 컴포넌트 마운트 시 한 번만 실행 (Player Ref가 없을 수 있으므로 초기 위치는 0,0,0으로 설정)
 
@@ -347,6 +363,18 @@ function Player({ onHudUpdate }) {
           <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
           <meshStandardMaterial color={'#00f'} /> {/* 플레이어 모델의 색상 (파란색) */}
         </mesh>
+        {/* 플레이어 ID 텍스트 */}
+        <Text
+          position={[0, 1.0, 0]} // 캡슐 상단에 위치하도록 조정
+          fontSize={0.2}
+          color="black"
+          anchorX="center"
+          anchorY="middle"
+          outlineColor="white"
+          outlineWidth={0.01}
+        >
+          {currentPlayerId.substring(0, 5)} {/* ID의 앞 5자리만 표시 */}
+        </Text>
       </group>
     </>
   );
@@ -370,7 +398,7 @@ function PlayerHUD({ state }) {
       backgroundColor: 'rgba(0,0,0,0.8)', // 반투명 배경
       padding: 10,
       borderRadius: 8,
-      zIndex: 100 // 다른 요소들 위에 표시되도록 z-index 설정
+      zIndex: 100
     }}>
       <div><strong>Current Player ID:</strong> {currentPlayerId.substring(0, 5)}</div>
       <div><strong>View:</strong> {state.viewMode}</div>
@@ -382,6 +410,9 @@ function PlayerHUD({ state }) {
       <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
       <br/>
       <div><strong>-- Other Players --</strong></div>
+      {state.otherPlayers && Object.values(state.otherPlayers).length > 1 &&
+        <div>Total Other Players: {Object.values(state.otherPlayers).filter(p => p.id !== currentPlayerId).length}</div>
+      }
       <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "No other players"}</pre>
     </div>
   );
@@ -391,13 +422,22 @@ function PlayerHUD({ state }) {
 export default function App() {
   const [hudState, setHudState] = useState({}); // HUD에 표시할 상태
 
+  useEffect(() => {
+    if (hudState.otherPlayers) {
+      //console.log('[App] hudState.otherPlayers updated:', hudState.otherPlayers);
+      //console.log('[App] Number of players in hudState.otherPlayers:', hudState.otherPlayers.length);
+      //hudState.otherPlayers.forEach(p => (`  - HUD Player ID: ${p.id.substring(0,5)}, SessionID: ${p.sessionId?.substring(0,5) ?? 'N/A'}, Pos: (${p.position.x.toFixed(1)}, ${p.position.y.toFixed(1)}, ${p.position.z.toFixed(1)})`));
+    }
+  }, [hudState.otherPlayers]);
+
+
   return (
     <>
       <Leva collapsed={false} /> {/* Leva 디버그 UI */}
       <PlayerHUD state={hudState} /> {/* 플레이어 상태 HUD */}
 
       <KeyboardControls map={controlsMap}> {/* 키보드 컨트롤 래퍼 */}
-        <Canvas shadows camera={{ fov: 60 }} style={{ width: '100vw', height: '100vh' }}>
+        <Canvas shadows camera={{ fov: 60, position: [0, 5, 10] }} style={{ width: '100vw', height: '100vh' }}>
           <ambientLight intensity={0.5} /> {/* 주변광 */}
           <directionalLight position={[5, 10, 5]} intensity={1} castShadow /> {/* 방향광 (그림자 드리움) */}
           <Physics gravity={[0, -9.81, 0]}> {/* Rapier 물리 엔진 활성화, 중력 설정 */}
