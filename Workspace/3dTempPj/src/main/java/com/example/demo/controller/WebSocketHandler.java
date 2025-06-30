@@ -57,6 +57,8 @@ public class WebSocketHandler extends TextWebSocketHandler {
             // JSON 메시지를 JsonNode 객체로 파싱합니다.
             JsonNode jsonNode = objectMapper.readTree(payload);
             String messageType = jsonNode.get("type").asText(); // 메시지 타입 (예: "playerUpdate")
+            
+//            System.out.println(jsonNode);
 
             if ("playerUpdate".equals(messageType)) {
                 // 플레이어 업데이트 메시지 처리
