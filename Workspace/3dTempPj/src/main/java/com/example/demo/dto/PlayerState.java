@@ -1,14 +1,25 @@
-package com.example.demo.dto; // 실제 프로젝트 패키지명으로 변경해주세요.
+package com.example.demo.dto;
 
-import lombok.AllArgsConstructor; // Lombok: 모든 필드를 인자로 받는 생성자를 자동 생성
-import lombok.Data; // Lombok: Getter, Setter, toString, equals, hashCode 등을 자동 생성
-import lombok.NoArgsConstructor; // Lombok: 기본 생성자를 자동 생성
 
-@Data // @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor를 한 번에 제공
-@NoArgsConstructor // 인자 없는 기본 생성자
-@AllArgsConstructor // 모든 필드를 인자로 받는 생성자
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class PlayerState {
-    private double x; // 플레이어의 X 좌표
-    private double y; // 플레이어의 Y 좌표
-    private double z; // 플레이어의 Z 좌표
+ private String id; // 플레이어 ID (프론트에서 uuid로 생성하고 localStorage에 저장하여 유지)
+ private String sessionId; // WebSocket 세션 ID (서버에서 설정)
+ private Position position;
+ private double rotationY;
+
+ @Data
+ @NoArgsConstructor
+ @AllArgsConstructor
+ public static class Position {
+     private double x;
+     private double y;
+     private double z;
+ }
 }

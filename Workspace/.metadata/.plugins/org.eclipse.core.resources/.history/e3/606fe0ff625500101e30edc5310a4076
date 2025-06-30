@@ -1,0 +1,32 @@
+// src/main/java/com/yourcompany/yourgame/config/SecurityConfig.java
+package com.example.demo.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler; // 6.2 이상
+import org.springframework.security.web.csrf.CsrfTokenRequestHandler; // 6.2 이상
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .csrf(csrf -> csrf
+                .ignoringRequestMatchers("/ws-connect/**") // SockJS 엔드포인트에 대한 CSRF 비활성화
+                // .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()) // CSRF 토큰을 사용할 경우 (필요하면 활성화)
+            )
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers("/ws-connect/**").permitAll() // 웹소켓 엔드포인트 허용
+                .anyRequest().permitAll() // 나머지 모든 요청 허용 (개발 목적)
+            );
+            // .cors(cors -> cors.disable()); // CORS 비활성화 (개발 목적으로 임시 사용 가능, 프록시 사용 시에는 굳이 필요 없음)
+            // .headers(headers -> headers.frameOptions().disable()); // H2 Console 등 사용 시 필요
+
+        return http.build();
+    }
+}

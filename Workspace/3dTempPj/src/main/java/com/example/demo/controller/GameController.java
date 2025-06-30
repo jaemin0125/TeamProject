@@ -1,0 +1,77 @@
+package com.example.demo.controller;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.example.demo.dto.PlayerState;
+import com.example.demo.service.PlayerService;
+
+@Controller
+public class GameController {
+
+ private static final Logger logger = LoggerFactory.getLogger(GameController.class);
+ private final SimpMessagingTemplate messagingTemplate;
+ private final PlayerService playerService;
+
+ public GameController(SimpMessagingTemplate messagingTemplate, PlayerService playerService) {
+     this.messagingTemplate = messagingTemplate;
+     this.playerService = playerService;
+ }
+
+ @GetMapping("/api/hello")
+ public String hello() {
+     logger.info("Hello from Spring Boot server (HTTP request)!");
+     return "Hello from Spring Boot!";
+ }
+
+ @MessageMapping("/registerPlayer")
+ public void registerPlayer(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
+     String sessionId = headerAccessor.getSessionId();
+     playerState.setSessionId(sessionId);
+
+     playerService.addPlayer(playerState, sessionId);
+     logger.info("Player registered: {} (Session: {})", playerState.getId(), sessionId);
+
+     // --- 추가된 로그 시작 ---
+     logger.info("Broadcasting player locations after register. Total players: {}", playerService.getAllPlayers().size());
+     // --- 추가된 로그 끝 ---
+     messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+ }
+
+// @MessageMapping("/playerMove")
+// public void playerMove(PlayerState playerState) {
+//     PlayerState existingPlayer = playerService.getPlayerById(playerState.getId());
+//     if (existingPlayer != null) {
+//         existingPlayer.setPosition(playerState.getPosition());
+//         existingPlayer.setRotationY(playerState.getRotationY());
+//     } else {
+//         logger.warn("Received move for unknown player: {}. Attempting to add.", playerState.getId());
+//         // 경고: 세션 ID 없이 등록될 경우 SessionDisconnectEvent에서 제거되지 않을 수 있습니다.
+//         // 이 경우 웹소켓 세션 ID를 알아내서 PlayerState에 설정해야 합니다.
+//         // 여기서는 임시적으로 PlayerState에 sessionId 필드가 null인 상태로 추가될 수 있습니다.
+//         // playerState.setSessionId(headerAccessor.getSessionId()); // 이 정보는 MessageMapping에서는 직접 얻기 어려움.
+//                                                                  // MessageMapping 메서드에 SimpMessageHeaderAccessor를 추가해야 합니다.
+//         playerService.addPlayer(playerState, null); // 임시로 null 전달
+//     }
+//
+//     // --- 추가된 로그 시작 ---
+//     logger.info("Broadcasting player locations after move. Total players: {}", playerService.getAllPlayers().size());
+//     // --- 추가된 로그 끝 ---
+//     messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+// }
+
+// @MessageMapping("/unregisterPlayer")
+// public void unregisterPlayer(PlayerState playerState) {
+//     playerService.removePlayerById(playerState.getId());
+//     logger.info("Player unregistered by client: {}", playerState.getId());
+//     // --- 추가된 로그 시작 ---
+//     logger.info("Broadcasting player locations after unregister. Total players: {}", playerService.getAllPlayers().size());
+//     // --- 추가된 로그 끝 ---
+//     messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+// }
+}

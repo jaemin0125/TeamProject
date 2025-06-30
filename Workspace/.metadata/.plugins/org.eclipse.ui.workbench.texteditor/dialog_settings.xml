@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <section name="Workbench">
+	<item key="hasShownOverlayPopupBefore" value="true"/>
 	<section name="java.lang.Class">
 		<item key="wrap" value="true"/>
 		<item key="casesensitive" value="false"/>
@@ -7,7 +8,14 @@
 		<item key="incremental" value="false"/>
 		<item key="isRegEx" value="false"/>
 		<item key="selection" value="0.8739314079284668"/>
+		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="WebSocketEventListener"/>
+			<item value="total"/>
+			<item value="sockjs-client"/>
+			<item value="spring-boot-starter-websocket"/>
+			<item value="spring-boot-starter-security"/>
+			<item value="org.springframework.boot"/>
 			<item value="0.8739314079284668"/>
 		</list>
 		<list key="replacehistory">
