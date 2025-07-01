@@ -1,0 +1,42 @@
+package com.example.demo.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data; // @Data 어노테이션은 그대로 둡니다.
+import lombok.NoArgsConstructor;
+
+// AnimationState DTO
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class AnimationState {
+    private boolean isWalking;
+    private boolean isBackward;
+    private boolean isLeft;
+    private boolean isRight;
+    private boolean isJumping;
+    private boolean isRunning;
+    private boolean isSitted;
+    private boolean isSittedAndWalk;
+    private boolean isLyingDown;
+    private boolean isLyingDownAndWalk;
+    private boolean isPunching;
+    private boolean isIdle;
+
+    // 명시적으로 getter를 추가합니다.
+    // Lombok의 기본 isXXX() getter와 충돌할 수 있지만, Jackson이 이 명시적인 getter를 선호할 수 있습니다.
+    public boolean getIsWalking() { return isWalking; }
+    public boolean getIsBackward() { return isBackward; }
+    public boolean getIsLeft() { return isLeft; }
+    public boolean getIsRight() { return isRight; }
+    public boolean getIsJumping() { return isJumping; }
+    public boolean getIsRunning() { return isRunning; }
+    public boolean getIsSitted() { return isSitted; }
+    public boolean getIsSittedAndWalk() { return isSittedAndWalk; }
+    public boolean getIsLyingDown() { return isLyingDown; }
+    public boolean getIsLyingDownAndWalk() { return isLyingDownAndWalk; }
+    public boolean getIsPunching() { return isPunching; }
+    public boolean getIsIdle() { return isIdle; }
+
+    // setter는 Lombok이 자동으로 처리하도록 둡니다. (setXXX 형태)
+    // 혹은 필요하다면 setIsWalking() 등도 명시적으로 추가할 수 있지만, getter가 더 중요합니다.
+}
