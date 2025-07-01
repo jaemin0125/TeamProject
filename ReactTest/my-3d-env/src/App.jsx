@@ -26,6 +26,7 @@ const controlsMap = [
   { name: 'right', keys: ['KeyD'] },
   { name: 'jump', keys: ['Space'] },
   { name: 'toggleView', keys: ['KeyV'] },
+  { name: 'runFast', keys: ['ShiftLeft'] },
 ];
 
 // 전역 STOMP 클라이언트 (Player 컴포넌트 외부에서 접근 가능하도록 let으로 선언)
@@ -70,38 +71,45 @@ function OtherPlayer({ id, position, rotationY }) {
         <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
         <meshStandardMaterial color={color} />
       </mesh>
-      
+
     </group>
   );
 }
 
 // 현재 플레이어를 제어하고 서버와 통신하는 컴포넌트
 function Player({ onHudUpdate }) {
-    const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
-    const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
-    const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
-    const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
-    const [isGrounded, setIsGrounded] = useState(false); // 플레이어의 착지 상태
-    const [viewMode, setViewMode] = useState('firstPerson'); // 카메라 뷰 모드: 'firstPerson' 또는 'thirdPerson'
-    const [currentAction, setCurrentAction] = useState('Idle');
-    
-    const pitch = useRef(0); // 카메라 상하 회전 (피치)
-    const yaw = useRef(0);   // 카메라 좌우 회전 (요)
-    
-    const [jumpImpulse] = useState(4); // 점프 힘 상수
-    // Leva를 사용하여 이동 속도 제어 UI 제공
-    const { speed } = useControls({ speed: { value: 5, min: 1, max: 20 } });
-    
-    const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
-    
-    // modelRef는 플레이어의 3D 모델 그룹을 참조합니다.
-    // 이 그룹은 플레이어의 위치 및 회전과 동기화됩니다.
-    // useEffect 대신 직접 JSX에서 렌더링하고 ref를 연결합니다.
-    // useFrame에서 modelRef.current의 위치/회전을 직접 업데이트합니다.
-    
-    // ======================================================================
-    // ===== 웹소켓 연결 및 구독 로직 =====
-    // 이 useEffect는 컴포넌트 마운트 시 한 번만 실행되며, 클린업 함수를 통해 연결을 정리합니다.
+  const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
+  const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
+  const [sitToggle, setSitToggle] = useState(false);
+  const [lieToggle, setLieToggle] = useState(false);
+  const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
+  const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
+  const [isGrounded, setIsGrounded] = useState(false); // 플레이어의 착지 상태
+  const [viewMode, setViewMode] = useState('firstPerson'); // 카메라 뷰 모드: 'firstPerson' 또는 'thirdPerson'
+  const [currentAction, setCurrentAction] = useState('Idle');
+  const [isPunching, setIsPunching] = useState(false);
+
+  const pitch = useRef(0); // 카메라 상하 회전 (피치)
+  const yaw = useRef(0);   // 카메라 좌우 회전 (요)
+
+
+  // Leva를 사용하여 이동 속도 제어 UI 제공
+  const { speed, jumpImpulse } = useControls({
+    speed: { value: 5, min: 1, max: 20 }
+    , jumpImpulse: { value: 4, min: 1, max: 10 }
+  }
+  );
+
+  const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
+
+  // modelRef는 플레이어의 3D 모델 그룹을 참조합니다.
+  // 이 그룹은 플레이어의 위치 및 회전과 동기화됩니다.
+  // useEffect 대신 직접 JSX에서 렌더링하고 ref를 연결합니다.
+  // useFrame에서 modelRef.current의 위치/회전을 직접 업데이트합니다.
+
+  // ======================================================================
+  // ===== 웹소켓 연결 및 구독 로직 =====
+  // 이 useEffect는 컴포넌트 마운트 시 한 번만 실행되며, 클린업 함수를 통해 연결을 정리합니다.
   // ======================================================================
   useEffect(() => {
     const WS_URL = 'http://localhost:8080/ws'; // Spring Boot WebSocket 엔드포인트와 일치
@@ -140,7 +148,7 @@ function Player({ onHudUpdate }) {
           rotationY: yaw.current
 
 
- // 3D 모델의 정면을 맞추기 위한 보정
+          // 3D 모델의 정면을 맞추기 위한 보정
         };
         //console.log('[STOMP Publish] Sending initial player registration:', initialPlayerState); // Debug: 등록 메시지 확인
         stompClient.publish({
@@ -180,6 +188,27 @@ function Player({ onHudUpdate }) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []); // 빈 배열: 컴포넌트 마운트 시 한 번만 실행 (Player Ref가 없을 수 있으므로 초기 위치는 0,0,0으로 설정)
+  useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.code === 'KeyC') {
+      setSitToggle(prev => {
+        const next = !prev;
+        if (next) setLieToggle(false); // C가 켜질 경우 Z 끔
+        return next;
+      });
+    }
+    if (e.code === 'KeyZ') {
+      setLieToggle(prev => {
+        const next = !prev;
+        if (next) setSitToggle(false); // Z가 켜질 경우 C 끔
+        return next;
+      });
+    }
+  };
+  window.addEventListener('keydown', handleKeyDown);
+  return () => window.removeEventListener('keydown', handleKeyDown);
+}, []);
+
 
   // 뷰 모드 전환 (1인칭/3인칭) 로직
   useEffect(() => {
@@ -241,6 +270,22 @@ function Player({ onHudUpdate }) {
     };
   }, [onMouseMove]);
 
+  useEffect(() => {
+    const handleMouseDown = (e) => {
+      if (e.button === 0) setIsPunching(true); // 좌클릭
+    };
+    const handleMouseUp = (e) => {
+      if (e.button === 0) setIsPunching(false);
+    };
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
   // 매 프레임마다 플레이어 움직임 및 서버 업데이트 로직
   useFrame(() => {
     const keys = getKeys(); // 현재 눌려진 키 상태 가져오기
@@ -270,28 +315,44 @@ function Player({ onHudUpdate }) {
     const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(cameraOrientationQ).normalize();
     const rightVector = new THREE.Vector3().crossVectors(forwardVector, new THREE.Vector3(0, 1, 0)).normalize();
 
+    let actualSpeed = speed;
+
+    if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = Math.max(speed * 0.5, 1.5); // 앉은 채 이동
+    } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = Math.max(speed * 0.15, 1.2); // 누운 채 이동
+    } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = speed + 2; // 달리기
+    }
+
     let vx = 0, vz = 0;
-    if (keys.forward) { vx += forwardVector.x * speed; vz += forwardVector.z * speed; }
-    if (keys.backward) { vx -= forwardVector.x * speed; vz -= forwardVector.z * speed; }
-    if (keys.left) { vx -= rightVector.x * speed; vz -= rightVector.z * speed; }
-    if (keys.right) { vx += rightVector.x * speed; vz += rightVector.z * speed; }
-    playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true); // 플레이어의 선형 속도 설정
+
+    // 방향에 따라 actualSpeed 사용
+    if (keys.forward) {
+      vx += forwardVector.x * actualSpeed;
+      vz += forwardVector.z * actualSpeed;
+    }
+    if (keys.backward) {
+      vx -= forwardVector.x * actualSpeed; // 뒤로 가기는 일반 speed
+      vz -= forwardVector.z * actualSpeed;
+    }
+    if (keys.left) {
+      vx -= rightVector.x * actualSpeed;
+      vz -= rightVector.z * actualSpeed;
+    }
+    if (keys.right) {
+      vx += rightVector.x * actualSpeed;
+      vz += rightVector.z * actualSpeed;
+    }
+
+    // 최종 적용
+    playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
+
 
     // 점프 로직
     if (keys.jump && isGrounded && vel.y <= 0.1) {
       playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
       setIsGrounded(false);
-      setCurrentAction('Jump'); 
-    } else if (keys.forward) {
-      setCurrentAction('WalkForward');
-    } else if (keys.backward) {
-      setCurrentAction('WalkForward');
-    } else if (keys.left) {
-      setCurrentAction('WalkForward');
-    } else if (keys.right) {
-      setCurrentAction('WalkForward');
-    } else {
-      setCurrentAction('Idle');
     }
 
 
@@ -307,14 +368,14 @@ function Player({ onHudUpdate }) {
 
       const horizontalMovementLengthSq = vx * vx + vz * vz;
       if (horizontalMovementLengthSq > 0.01) {
-          // 움직일 때만 모델 방향을 이동 방향으로 회전
-          const targetRotationY = Math.atan2(vx, vz);
- // Three.js Y축 회전 보정
-          modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetRotationY, 0.15);
+        // 움직일 때만 모델 방향을 이동 방향으로 회전
+        const targetRotationY = Math.atan2(vx, vz);
+        // Three.js Y축 회전 보정
+        modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetRotationY, 0.15);
       } else {
-          // 멈췄을 때는 카메라 방향으로 모델 회전
-          modelRef.current.rotation.y = yaw.current;
- // Three.js Y축 회전 보정
+        // 멈췄을 때는 카메라 방향으로 모델 회전
+        modelRef.current.rotation.y = yaw.current;
+        // Three.js Y축 회전 보정
       }
     }
 
@@ -353,6 +414,8 @@ function Player({ onHudUpdate }) {
     }));
   });
 
+
+
   const keys = getKeys();
 
   return (
@@ -370,15 +433,21 @@ function Player({ onHudUpdate }) {
       </RigidBody>
 
       {/* 현재 플레이어의 3D 모델 (3인칭 뷰에서만 보임) */}
-            <CharacterModel
-            ref={modelRef}
-            isWalking={keys.forward}
-            isBackward={keys.backward}
-            isLeft={keys.left}
-            isRight={keys.right}
-            isJumping={keys.jump}
-            isIdle={!keys.forward && !keys.backward && !keys.jump}
-            />
+      <CharacterModel
+        ref={modelRef}
+        isWalking={keys.forward}
+        isBackward={keys.backward}
+        isLeft={keys.left}
+        isRight={keys.right}
+        isJumping={keys.jump}
+        isRunning={keys.runFast && (keys.forward || keys.left || keys.right || keys.backward)}
+        isSittedAndWalk={sitToggle && (keys.forward || keys.left || keys.right || keys.backward)}
+        isSitted={sitToggle}
+        isLyingDownAndWalk={lieToggle && (keys.forward || keys.left || keys.right || keys.backward)}
+        isLyingDown={lieToggle}
+        isIdle={!keys.forward && !keys.backward && !keys.jump}
+        isPunching={isPunching}
+      />
     </>
   );
 }
@@ -411,7 +480,7 @@ function PlayerHUD({ state }) {
       <div><strong>Yaw:</strong> {state.yaw?.toFixed(2) ?? 'N/A'}</div>
       <div><strong>Pitch:</strong> {state.pitch?.toFixed(2) ?? 'N/A'}</div>
       <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
-      <br/>
+      <br />
       <div><strong>-- Other Players --</strong></div>
       {state.otherPlayers && Object.values(state.otherPlayers).length > 1 &&
         <div>Total Other Players: {Object.values(state.otherPlayers).filter(p => p.id !== currentPlayerId).length}</div>

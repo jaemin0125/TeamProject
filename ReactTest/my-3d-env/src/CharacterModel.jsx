@@ -3,21 +3,27 @@ import { useGLTF, useAnimations } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 
 export const CharacterModel = React.forwardRef(
-  ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
+  ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
     const { scene, animations } = useGLTF('/models/character.glb');
     const { actions, mixer } = useAnimations(animations, scene);
     const currentAction = useRef(null);
-
+    
     useEffect(() => {
+      
       if (!actions) return;
       let nextActionName = null;
       if (isJumping) nextActionName = 'Jump';
-      else if (isWalking) nextActionName = 'WalkingForward';
-      else if (isBackward) nextActionName = 'WalkingForward';
-      else if (isLeft) nextActionName = 'WalkingForward';
-      else if (isRight) nextActionName = 'WalkingForward';
+      else if (isRunning) nextActionName = 'Run';
+      else if (isSittedAndWalk) nextActionName = 'SneakWalk';
+      else if (isLyingDownAndWalk) nextActionName = 'Crawl';
+      else if (isWalking || isBackward || isLeft || isRight) nextActionName = 'WalkForward';
+      else if (isSitted) nextActionName = 'Crouch';
+      else if (isLyingDown) nextActionName = 'LieDown';
+      else if (isLanding) nextActionName = 'Landing';
+      else if (isPunching) nextActionName = 'Punching';
       else if (isIdle) nextActionName = 'Idle';
-
+      
+      
       if (nextActionName && actions[nextActionName]) {
         const nextAction = actions[nextActionName];
 
@@ -27,7 +33,7 @@ export const CharacterModel = React.forwardRef(
           currentAction.current = nextAction;
         }
       }
-    }, [isWalking, isJumping, isLeft, isRight, isIdle, actions]);
+    }, [isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, actions]);
 
     useFrame((_, delta) => {
       mixer?.update(delta);
