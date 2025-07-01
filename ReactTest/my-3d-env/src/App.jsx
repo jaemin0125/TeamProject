@@ -11,6 +11,7 @@ import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { Leva, useControls } from 'leva';
 // Three.js
 import * as THREE from 'three';
+import { CharacterModel, CharacterModel2 } from './CharacterModel'; // CharacterModel 및 CharacterModel2 임포트
 
 // 웹소켓 라이브러리 import
 import { Client } from '@stomp/stompjs';
@@ -25,6 +26,7 @@ const controlsMap = [
   { name: 'right', keys: ['KeyD'] },
   { name: 'jump', keys: ['Space'] },
   { name: 'toggleView', keys: ['KeyV'] },
+  { name: 'runFast', keys: ['ShiftLeft'] },
 ];
 
 // 전역 STOMP 클라이언트 (Player 컴포넌트 외부에서 접근 가능하도록 let으로 선언)
@@ -50,34 +52,56 @@ const currentPlayerId = getOrCreatePlayerId();
 
 // 다른 플레이어를 렌더링하는 컴포넌트
 function OtherPlayer({ id, position, rotationY }) {
-  const meshGroupRef = useRef(); // 메시와 텍스트를 담을 그룹에 대한 참조
+  const modelGroupRef = useRef(); // 모델 그룹에 대한 참조
+  const previousPosition = useRef(new THREE.Vector3(position.x, position.y, position.z));
+  const [currentAction, setCurrentAction] = useState('Idle'); // 애니메이션 상태
 
   useFrame(() => {
-    // meshGroupRef.current가 존재하는지 확인하고, 서버에서 받은 위치와 회전으로 부드럽게 보간(lerp)합니다.
-    if (meshGroupRef.current) {
-      meshGroupRef.current.position.lerp(new THREE.Vector3(position.x, position.y - 0.725, position.z), 0.2);
-      meshGroupRef.current.rotation.y = THREE.MathUtils.lerp(meshGroupRef.current.rotation.y, rotationY, 0.2);
+    if (modelGroupRef.current) {
+      // 서버에서 받은 위치로 모델의 위치를 부드럽게 보간합니다.
+      // CharacterModel은 바닥에 맞춰져 있으므로, y축 오프셋을 조정하여 Rapier의 Rigidbody 중심에 맞춥니다.
+      // 수정: y축 오프셋을 조정하여 캐릭터가 지면에 제대로 서도록 합니다. (이전 수정 유지)
+      modelGroupRef.current.position.lerp(new THREE.Vector3(position.x, position.y - 1.63, position.z), 0.2);
+
+      // 서버에서 받은 회전 값으로 모델의 Y축 회전을 부드럽게 보간합니다.
+      // 수정: 회전 값에 Math.PI를 더하여 캐릭터가 올바른 방향을 바라보도록 합니다. (이전 수정 유지)
+      modelGroupRef.current.rotation.y = THREE.MathUtils.lerp(modelGroupRef.current.rotation.y, rotationY + Math.PI, 0.2);
+
+      // --- 애니메이션 로직 추가 ---
+      // 현재 프레임의 위치와 이전 프레임의 위치를 비교하여 움직임 감지
+      const currentModelPosition = modelGroupRef.current.position;
+      const distanceMoved = currentModelPosition.distanceTo(previousPosition.current);
+
+      if (distanceMoved > 0.01) { // 일정 거리 이상 움직였으면 'WalkForward'
+        setCurrentAction('WalkForward');
+      } else { // 아니면 'Idle'
+        setCurrentAction('Idle');
+      }
+      // 현재 위치를 이전 위치로 저장하여 다음 프레임에 사용
+      previousPosition.current.copy(currentModelPosition);
     }
   });
 
-  // 플레이어마다 고유한 색상 부여 (재렌더링 시에도 동일한 색상 유지)
-  const color = useMemo(() => new THREE.Color().setHSL(Math.random(), 0.7, 0.5), []);
-
   return (
-    <group ref={meshGroupRef}> {/* 메시와 텍스트를 묶을 그룹 */}
-      <mesh>
-        <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
-        <meshStandardMaterial color={color} />
-      </mesh>
-      {/* 플레이어 ID 텍스트 */}
+    <group ref={modelGroupRef}> {/* 모델과 텍스트를 묶을 그룹 */}
+      {/* CharacterModel2는 이미 primitive object를 렌더링하므로, <mesh> 태그로 감쌀 필요가 없습니다. */}
+      <CharacterModel2
+        isWalking={currentAction === 'WalkForward'}
+        isBackward={false} // 이 값들은 서버에서 추가 정보를 받아야 더 정확해집니다.
+        isLeft={false}
+        isRight={false}
+        isJumping={false} // 점프 상태도 서버에서 받아와야 합니다.
+        isIdle={currentAction === 'Idle'}
+      // 여기에 다른 플레이어를 위한 특정 props를 추가할 수 있습니다.
+      />
+      {/* 다른 플레이어의 ID를 표시하는 텍스트 추가 */}
       <Text
-        position={[0, 1.0, 0]} // 캡슐 상단에 위치하도록 조정
+        position={[0, 2.6, 0]} // 캐릭터 머리 위쪽으로 위치 조정
         fontSize={0.2}
         color="black"
         anchorX="center"
         anchorY="middle"
-        outlineColor="white"
-        outlineWidth={0.01}
+        billboard // 이 속성을 추가하여 텍스트가 항상 카메라를 바라보게 합니다.
       >
         {id.substring(0, 5)} {/* ID의 앞 5자리만 표시 */}
       </Text>
@@ -89,16 +113,23 @@ function OtherPlayer({ id, position, rotationY }) {
 function Player({ onHudUpdate }) {
   const { camera, gl, scene } = useThree(); // Three.js 카메라 및 WebGL 렌더러 인스턴스 가져오기
   const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 입력 상태 구독
+  const [sitToggle, setSitToggle] = useState(false);
+  const [lieToggle, setLieToggle] = useState(false);
   const playerRef = useRef(); // 물리 객체 (Rapier RigidBody) 참조
   const modelRef = useRef(); // 플레이어 3D 모델(메쉬) 참조
   const [isGrounded, setIsGrounded] = useState(false); // 플레이어의 착지 상태
   const [viewMode, setViewMode] = useState('firstPerson'); // 카메라 뷰 모드: 'firstPerson' 또는 'thirdPerson'
+  const [currentAction, setCurrentAction] = useState('Idle');
+  const [isPunching, setIsPunching] = useState(false);
+
   const pitch = useRef(0); // 카메라 상하 회전 (피치)
   const yaw = useRef(0);   // 카메라 좌우 회전 (요)
 
-  const [jumpImpulse] = useState(30); // 점프 힘 상수
   // Leva를 사용하여 이동 속도 제어 UI 제공
-  const { speed } = useControls({ speed: { value: 5, min: 1, max: 20 } });
+  const { speed, jumpImpulse } = useControls({ // jumpImpulse를 useControls에 추가
+    speed: { value: 5, min: 1, max: 2000 },
+    jumpImpulse: { value: 25, min: 0, max: 50 } // 점프력 조절 추가 (값 범위는 필요에 따라 조정)
+  });
 
   const toggleViewPressed = useRef(false); // 'V' 키 중복 입력 방지 플래그
 
@@ -145,7 +176,7 @@ function Player({ onHudUpdate }) {
           id: currentPlayerId,
           // playerRef.current가 아직 null일 수 있으므로 기본값 0,0,0 사용
           position: { x: playerRef.current?.translation().x || 0, y: playerRef.current?.translation().y || 0, z: playerRef.current?.translation().z || 0 },
-          rotationY: yaw.current + Math.PI // 3D 모델의 정면을 맞추기 위한 보정
+          rotationY: yaw.current + Math.PI // 3D 모델의 정면을 맞추기 위한 회전 보정
         };
         //console.log('[STOMP Publish] Sending initial player registration:', initialPlayerState); // Debug: 등록 메시지 확인
         stompClient.publish({
@@ -185,6 +216,44 @@ function Player({ onHudUpdate }) {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, []); // 빈 배열: 컴포넌트 마운트 시 한 번만 실행 (Player Ref가 없을 수 있으므로 초기 위치는 0,0,0으로 설정)
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.code === 'KeyC') {
+        setSitToggle(prev => {
+          const next = !prev;
+          if (next) setLieToggle(false); // C가 켜질 경우 Z 끔
+          return next;
+        });
+      }
+      if (e.code === 'KeyZ') {
+        setLieToggle(prev => {
+          const next = !prev;
+          if (next) setSitToggle(false); // Z가 켜질 경우 C 끔
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  useEffect(() => {
+    const handleMouseDown = (e) => {
+      if (e.button === 0) setIsPunching(true); // 좌클릭
+    };
+    const handleMouseUp = (e) => {
+      if (e.button === 0) setIsPunching(false);
+    };
+
+    window.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      window.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
 
   // 뷰 모드 전환 (1인칭/3인칭) 로직
   useEffect(() => {
@@ -274,19 +343,50 @@ function Player({ onHudUpdate }) {
     const cameraOrientationQ = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw.current, 0));
     const forwardVector = new THREE.Vector3(0, 0, 1).applyQuaternion(cameraOrientationQ).normalize();
     const rightVector = new THREE.Vector3().crossVectors(forwardVector, new THREE.Vector3(0, 1, 0)).normalize();
+    let actualSpeed = speed;
+
+    if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = Math.max(speed * 0.5, 1.5); // 앉은 채 이동
+    } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = Math.max(speed * 0.15, 1.2); // 누운 채 이동
+    } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
+      actualSpeed = speed + 2; // 달리기
+    }
 
     let vx = 0, vz = 0;
-    if (keys.forward) { vx += forwardVector.x * speed; vz += forwardVector.z * speed; }
-    if (keys.backward) { vx -= forwardVector.x * speed; vz -= forwardVector.z * speed; }
-    if (keys.left) { vx -= rightVector.x * speed; vz -= rightVector.z * speed; }
-    if (keys.right) { vx += rightVector.x * speed; vz += rightVector.z * speed; }
-    playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true); // 플레이어의 선형 속도 설정
+
+    // 방향에 따라 actualSpeed 사용
+    if (keys.forward) {
+      vx += forwardVector.x * actualSpeed;
+      vz += forwardVector.z * actualSpeed;
+    }
+    if (keys.backward) {
+      vx -= forwardVector.x * actualSpeed; // 뒤로 가기는 일반 speed
+      vz -= forwardVector.z * actualSpeed;
+    }
+    if (keys.left) {
+      vx -= rightVector.x * actualSpeed;
+      vz -= rightVector.z * actualSpeed;
+    }
+    if (keys.right) {
+      vx += rightVector.x * actualSpeed;
+      vz += rightVector.z * actualSpeed;
+    }
+
+    // 최종 적용
+    playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
     // 점프 로직
     if (keys.jump && isGrounded && vel.y <= 0.1) {
-      playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true); // 점프 힘 적용
-      setIsGrounded(false); // 점프 후 착지 상태 해제
+      playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
+      setIsGrounded(false);
+      setCurrentAction('Jump');
+    } else if (keys.forward || keys.backward || keys.left || keys.right) { // 이동 키가 눌리면 걷는 애니메이션
+      setCurrentAction('WalkForward');
+    } else {
+      setCurrentAction('Idle');
     }
+
 
     const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z);
     const headOffset = new THREE.Vector3(0, 0.3, 0); // 카메라 또는 모델의 머리 위치 오프셋
@@ -299,12 +399,15 @@ function Player({ onHudUpdate }) {
 
       const horizontalMovementLengthSq = vx * vx + vz * vz;
       if (horizontalMovementLengthSq > 0.01) {
-          // 움직일 때만 모델 방향을 이동 방향으로 회전
-          const targetRotationY = Math.atan2(vx, vz) + Math.PI; // Three.js Y축 회전 보정
-          modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetRotationY, 0.15);
+        // 움직일 때만 모델 방향을 이동 방향으로 회전
+        const targetRotationY = Math.atan2(vx, vz);
+        // Three.js Y축 회전 보정 (나의 모델이 이동 방향을 바라보도록 보정)
+        // 사용자 요청에 따라 이 부분의 Math.PI 보정을 제거합니다.
+        modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetRotationY, 0.15);
       } else {
-          // 멈췄을 때는 카메라 방향으로 모델 회전
-          modelRef.current.rotation.y = yaw.current + Math.PI; // Three.js Y축 회전 보정
+        // 멈췄을 때는 카메라가 바라보는 방향을 바라보도록 보정
+        // 사용자 요청에 따라 이 부분의 Math.PI 보정을 제거합니다.
+        modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, yaw.current, 0.15);
       }
     }
 
@@ -343,6 +446,8 @@ function Player({ onHudUpdate }) {
     }));
   });
 
+  const keys = getKeys();
+
   return (
     <>
       {/* 현재 플레이어 물리 RigidBody (Rapier 물리 엔진) */}
@@ -354,28 +459,25 @@ function Player({ onHudUpdate }) {
         onCollisionEnter={() => setIsGrounded(true)} // 다른 객체와 충돌 시 착지 상태 활성화
         onCollisionExit={() => setIsGrounded(false)} // 충돌 해제 시 착지 상태 비활성화
       >
-        <CapsuleCollider args={[0.35, 0.75]} /> {/* 플레이어 충돌체 (캡슐 형태) */}
+        <CapsuleCollider args={[0.35, 0.4]} /> {/* 플레이어 충돌체 (캡슐 형태) */}
       </RigidBody>
 
       {/* 현재 플레이어의 3D 모델 (3인칭 뷰에서만 보임) */}
-      <group ref={modelRef}>
-        <mesh position={[0, -0.725, 0]}> {/* 캡슐의 중심을 Rapier 물리 바디에 맞추기 위한 Y 오프셋 */}
-          <capsuleGeometry args={[0.35, 0.75, 8, 16]} />
-          <meshStandardMaterial color={'#00f'} /> {/* 플레이어 모델의 색상 (파란색) */}
-        </mesh>
-        {/* 플레이어 ID 텍스트 */}
-        <Text
-          position={[0, 1.0, 0]} // 캡슐 상단에 위치하도록 조정
-          fontSize={0.2}
-          color="black"
-          anchorX="center"
-          anchorY="middle"
-          outlineColor="white"
-          outlineWidth={0.01}
-        >
-          {currentPlayerId.substring(0, 5)} {/* ID의 앞 5자리만 표시 */}
-        </Text>
-      </group>
+      <CharacterModel
+        ref={modelRef}
+        isWalking={keys.forward}
+        isBackward={keys.backward}
+        isLeft={keys.left}
+        isRight={keys.right}
+        isJumping={keys.jump}
+        isRunning={keys.runFast && (keys.forward || keys.left || keys.right || keys.backward)}
+        isSittedAndWalk={sitToggle && (keys.forward || keys.left || keys.right || keys.backward)}
+        isSitted={sitToggle}
+        isLyingDownAndWalk={lieToggle && (keys.forward || keys.left || keys.right || keys.backward)}
+        isLyingDown={lieToggle}
+        isIdle={!keys.forward && !keys.backward && !keys.jump}
+        isPunching={isPunching}
+      />
     </>
   );
 }
@@ -408,7 +510,7 @@ function PlayerHUD({ state }) {
       <div><strong>Yaw:</strong> {state.yaw?.toFixed(2) ?? 'N/A'}</div>
       <div><strong>Pitch:</strong> {state.pitch?.toFixed(2) ?? 'N/A'}</div>
       <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
-      <br/>
+      <br />
       <div><strong>-- Other Players --</strong></div>
       {state.otherPlayers && Object.values(state.otherPlayers).length > 1 &&
         <div>Total Other Players: {Object.values(state.otherPlayers).filter(p => p.id !== currentPlayerId).length}</div>
@@ -426,7 +528,7 @@ export default function App() {
     if (hudState.otherPlayers) {
       //console.log('[App] hudState.otherPlayers updated:', hudState.otherPlayers);
       //console.log('[App] Number of players in hudState.otherPlayers:', hudState.otherPlayers.length);
-      //hudState.otherPlayers.forEach(p => (`  - HUD Player ID: ${p.id.substring(0,5)}, SessionID: ${p.sessionId?.substring(0,5) ?? 'N/A'}, Pos: (${p.position.x.toFixed(1)}, ${p.position.y.toFixed(1)}, ${p.position.z.toFixed(1)})`));
+      //hudState.otherPlayers.forEach(p => (`  - HUD Player ID: ${p.id.substring(0,5)}, SessionID: ${p.sessionId?.substring(0,5) ?? 'N/A'}, Pos: (${p.position.x.toFixed(1)}, ${p.position.y.toFixed(1)}, ${p.position.z.toFixed(1)})`));
     }
   }, [hudState.otherPlayers]);
 
