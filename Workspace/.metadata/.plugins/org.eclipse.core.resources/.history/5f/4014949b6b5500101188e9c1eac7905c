@@ -1,0 +1,24 @@
+package com.example.demo.dto;
+
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data // Lombok: Getter, Setter, toString, equals, hashCode 자동 생성
+@NoArgsConstructor // Lombok: 기본 생성자 자동 생성
+@AllArgsConstructor // Lombok: 모든 필드를 인자로 받는 생성자 자동 생성
+public class PlayerState {
+    private String id;
+    private Position position;
+    private double rotationY; // Y축 회전 값
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Position {
+        private double x;
+        private double y;
+        private double z;
+    }
+}

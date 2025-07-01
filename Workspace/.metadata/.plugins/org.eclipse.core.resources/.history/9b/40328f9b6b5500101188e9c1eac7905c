@@ -1,0 +1,95 @@
+package com.example.demo.config;
+
+
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.messaging.SessionConnectedEvent;
+import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+
+import com.example.demo.dto.PlayerState;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+@Component
+public class WebSocketEventListener {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketEventListener.class);
+    private final SimpMessagingTemplate messagingTemplate;
+    private final Map<String, PlayerState> connectedPlayers; // GameController와 동일한 Map 참조
+
+    // GameController에서 사용되는 Map과 동일한 인스턴스를 주입받아야 합니다.
+    // 여기서는 간단하게 동일한 Map을 사용한다고 가정하지만, 실제 앱에서는 싱글톤 서비스 등으로 관리하는 것이 좋습니다.
+    // GameController의 connectedPlayers 필드를 static으로 만들거나,
+    // GameController에서 이벤트를 받아 Map을 직접 업데이트하는 방식으로 수정할 수 있습니다.
+    // 편의상 여기서는 새로운 Map을 만들고 GameController의 Map과 동기화하는 로직은 생략합니다.
+    // (실제 사용 시 GameController의 Map을 주입받도록 수정 필요)
+    // 현재는 GameController가 이미 Map을 관리하므로, 이 클래스는 생략하거나,
+    // GameController의 Map을 @Autowired로 주입받아서 사용하는 식으로 수정해야 합니다.
+    // 예시: @Autowired private GameController gameController;
+    // 그리고 gameController.removePlayer(playerId); 이런 식으로 호출.
+
+    // 현재 GameController의 Map이 private final 이므로 직접 접근하기 어렵습니다.
+    // 실제로는 별도의 PlayerService 같은 곳에서 Map을 관리하고,
+    // GameController와 WebSocketEventListener 모두 해당 서비스를 주입받아 사용해야 합니다.
+    // 여기서는 간략화를 위해 GameController에서 Map을 직접 관리하고,
+    // WebSocketEventListener는 참고용으로만 제공하며, 실제 연결 해제 처리는 GameController의 unregisterPlayer 또는
+    // GameController의 Map을 외부에 노출시켜 접근하는 방식이 필요합니다.
+    // 가장 좋은 방법은 GameController에 플레이어 정보를 추가/제거하는 메서드를 만들고,
+    // WebSocketEventListener에서 해당 메서드를 호출하는 것입니다.
+
+    // 임시로 독립적인 Map을 사용하지만, 실제로는 GameController의 Map과 연동해야 합니다.
+    private static final Map<String, PlayerState> GLOBAL_CONNECTED_PLAYERS_FOR_EVENT_LISTENER = new ConcurrentHashMap<>();
+
+    public WebSocketEventListener(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
+        this.connectedPlayers = GLOBAL_CONNECTED_PLAYERS_FOR_EVENT_LISTENER; // 임시로 새로운 Map 사용 (연동 필요)
+    }
+
+    @EventListener
+    public void handleWebSocketConnectListener(SessionConnectedEvent event) {
+        SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.wrap(event.getMessage());
+        // 여기서는 아직 클라이언트가 PlayerState를 보낼 준비가 안 되어 있어서 ID를 알기 어렵습니다.
+        // 클라이언트가 /app/registerPlayer로 메시지를 보낼 때 ID를 맵에 추가하는 것이 좋습니다.
+        logger.info("Received a new web socket connection. Session ID: {}", headerAccessor.getSessionId());
+    }
+
+    @EventListener
+    public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
+        SimpMessageHeaderAccessor headerAccessor = SimpMessageHeaderAccessor.wrap(event.getMessage());
+        String sessionId = headerAccessor.getSessionId();
+
+        // 여기서 세션 ID로 플레이어 ID를 찾아서 제거해야 합니다.
+        // 현재 GameController의 Map과 연동되어 있지 않으므로, 이 로직은 현재 GameController의 `unregisterPlayer`와 동기화되지 않습니다.
+        // 따라서 GameController에서 명시적으로 disconnect 메시지를 받을 때 처리하거나,
+        // GameController와 이 리스너가 동일한 플레이어 목록(PlayerService 등)을 공유해야 합니다.
+        // 여기서는 GameController의 Map을 그대로 사용한다고 가정하고, 주석으로 남깁니다.
+        // GameController에서 연결된 플레이어 맵을 static 또는 public으로 만들고 접근하거나,
+        // PlayerService를 만들어 두 컨트롤러가 공유하도록 하는 것이 바람직합니다.
+
+        // 실제 구현에서는 GameController의 Map에서 sessionId에 해당하는 플레이어를 찾아 제거해야 합니다.
+        // GameController에서 Map을 static으로 만들 경우:
+        // String playerIdToRemove = null;
+        // for (PlayerState player : GameController.getConnectedPlayers().values()) {
+        //     if (player.getSessionId().equals(sessionId)) { // PlayerState에 sessionId 필드 추가 필요
+        //         playerIdToRemove = player.getId();
+        //         break;
+        //     }
+        // }
+        // if (playerIdToRemove != null) {
+        //     GameController.getConnectedPlayers().remove(playerIdToRemove);
+        //     logger.info("Player disconnected: {}", playerIdToRemove);
+        //     messagingTemplate.convertAndSend("/topic/playerLocations", GameController.getConnectedPlayers().values());
+        // }
+        logger.info("Web socket disconnected. Session ID: {}", sessionId);
+        // 클라이언트가 명시적으로 unregisterPlayer를 보내지 않고 연결이 끊겼을 때만 이 이벤트를 처리하는 것이 좋습니다.
+        // GameController에서 connectedPlayers를 private Map<String, PlayerState>로 가지고 있으므로,
+        // 직접 접근이 어렵습니다. GameController에 `removePlayerBySessionId(String sessionId)`와 같은 메서드를
+        // 추가하고 이벤트를 받아서 호출하는 방식으로 구성하는 것이 가장 좋습니다.
+    }
+}
