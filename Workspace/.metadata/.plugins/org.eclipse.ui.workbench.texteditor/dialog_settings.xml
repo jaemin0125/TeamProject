@@ -10,13 +10,21 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="localhost"/>
+			<item value="local"/>
+			<item value="Received AnimationState"/>
+			<item value="Systye"/>
+			<item value="System"/>
+			<item value="println"/>
+			<item value="print"/>
+			<item value="Attem"/>
+			<item value="log"/>
 			<item value="WebSocketEventListener"/>
 			<item value="total"/>
 			<item value="sockjs-client"/>
 			<item value="spring-boot-starter-websocket"/>
 			<item value="spring-boot-starter-security"/>
 			<item value="org.springframework.boot"/>
-			<item value="0.8739314079284668"/>
 		</list>
 		<list key="replacehistory">
 		</list>

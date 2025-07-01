@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -8,6 +10,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.service.PlayerService;
 
@@ -60,8 +63,16 @@ public class GameController {
 		// playerState.getPosition().getX(), playerState.getPosition().getY(),
 		// playerState.getPosition().getZ());
 
+		
 		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+	}
+	
+	@MessageMapping("/sceneObjects")
+	public void updateObjectState(List<ObjectState> objectStates) {
+	    // 모든 클라이언트에게 브로드캐스트
+		
+	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
 	}
 
 	/**

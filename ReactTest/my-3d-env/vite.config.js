@@ -1,4 +1,3 @@
-// vite.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -10,19 +9,12 @@ export default defineConfig({
     global: 'window',
   },
   server: {
-    // CORS 문제를 해결하기 위한 프록시 설정 (선택 사항이지만 개발에 유용)
-    // Spring Boot 서버가 8080 포트에서 실행될 경우, 클라이언트 요청을 프록시합니다.
-    proxy: {
-      '/ws-connect': { // 웹소켓 엔드포인트
-        target: 'http://localhost:8080',
-        ws: true, // 웹소켓 프록시 활성화
-        changeOrigin: true,
-      },
-      // 다른 API 엔드포인트가 있다면 여기에 추가
-      // '/api': {
-      //   target: 'http://localhost:8080',
-      //   changeOrigin: true,
-      // },
-    },
+    // 프록시 설정은 더 이상 필요 없습니다.
+    // 백엔드 서버가 AWS EC2에 배포되었으므로, 클라이언트는 직접 AWS IP로 통신합니다.
+    // 'proxy' 설정을 아예 제거하거나 주석 처리하세요.
+    
+    // 이 부분만 추가/수정합니다:
+    host: '192.168.5.16', // 당신의 내부 IP 주소를 명시
+    port: 5173 // React 개발 서버 포트
   },
 });
