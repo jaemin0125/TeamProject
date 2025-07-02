@@ -1,0 +1,92 @@
+package com.example.demo.controller;
+
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import com.example.demo.dto.ObjectState;
+import com.example.demo.dto.PlayerState;
+import com.example.demo.service.PlayerService;
+
+@Controller
+public class GameController {
+
+	private static final Logger logger = LoggerFactory.getLogger(GameController.class);
+	private final SimpMessagingTemplate messagingTemplate;
+	private final PlayerService playerService;
+
+	public GameController(SimpMessagingTemplate messagingTemplate, PlayerService playerService) {
+		this.messagingTemplate = messagingTemplate;
+		this.playerService = playerService;
+	}
+
+	@GetMapping("/api/hello")
+	public String hello() {
+		return "Hello from Spring Boot!";
+	}
+
+	@MessageMapping("/registerPlayer")
+	public void registerPlayer(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
+		String sessionId = headerAccessor.getSessionId();
+		playerState.setSessionId(sessionId); // 세션 ID 설정
+
+		// 🚨 중요한 로그 추가: 클라이언트로부터 받은 닉네임이 여기 제대로 들어오는지 확인
+		logger.info("[GameController] Player registration request: ID={}, Nickname='{}', Session={}",
+				playerState.getId(), playerState.getNickname(), sessionId);
+
+		playerService.addPlayer(playerState, sessionId); // 플레이어 추가/업데이트
+
+		// 모든 플레이어에게 현재 플레이어 목록 브로드캐스팅
+		logger.info("[GameController] Broadcasting player locations after register. Total players: {}",
+				playerService.getAllPlayers().size());
+		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+	}
+
+	@MessageMapping("/playerMove")
+	public void playerMove(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
+        // 🚨 playerMove 메시지에서도 nickname이 넘어오므로, 이걸 PlayerService로 함께 전달해야 합니다.
+        // 현재 playerService.updatePlayerState는 nickname을 받지 않고 있습니다.
+        // 이것을 수정해야 합니다.
+
+		// 🚨 중요한 로그 추가: 클라이언트로부터 받은 닉네임이 여기 제대로 들어오는지 확인
+		logger.info("[GameController] Player move request: ID={}, Nickname='{}', Position={}, RotationY={}, Animation={}",
+				playerState.getId(), playerState.getNickname(), playerState.getPosition(),
+				playerState.getRotationY(), playerState.getAnimationState());
+
+
+		// playerService의 updatePlayerState 메서드를 수정하여 nickname을 받도록 합니다.
+		// 아니면, playerState 객체 자체를 넘겨서 서비스 내부에서 필요한 값들을 업데이트하도록 합니다.
+		// 후자(playerState 객체 전체 전달)가 더 깔끔합니다.
+		playerService.updatePlayerState(playerState); // 변경될 메서드 시그니처
+
+		// logger.debug("Player moved: {} at ({}, {}, {})", playerState.getId(),
+		// playerState.getPosition().getX(), playerState.getPosition().getY(),
+		// playerState.getPosition().getZ());
+
+		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
+		logger.info("[GameController] Broadcasting player locations after move. Total players: {}",
+				playerService.getAllPlayers().size());
+		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+	}
+
+//	@MessageMapping("/sceneObjects")
+//	public void updateObjectState(List<ObjectState> objectStates) {
+//	    // 모든 클라이언트에게 브로드캐스트
+//	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
+//	}
+
+	public void unregisterPlayer(String sessionId) {
+		String playerId = playerService.getPlayerIdBySessionId(sessionId); // 세션 ID로 플레이어 ID 가져오기
+		playerService.removePlayerBySessionId(sessionId);
+		logger.info("[GameController] Player unregistered (session disconnected): Session={}, Player ID={}. Remaining players: {}",
+				sessionId, playerId != null ? playerId : "N/A", playerService.getAllPlayers().size());
+		// 플레이어 제거 후, 업데이트된 플레이어 목록을 브로드캐스팅
+		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+	}
+}

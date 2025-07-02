@@ -11,12 +11,11 @@ import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { Leva, useControls } from 'leva';
 // Three.js
 import * as THREE from 'three';
-import { CharacterModel, CharacterModel2 } from './CharacterModel'; // CharacterModel 및 CharacterModel2 임포트
-
+import { CharacterModel, CharacterModel2, CharacterModel3 } from './CharacterModel'; // CharacterModel 및 CharacterModel2 임포트
 // 웹소켓 라이브러리 import
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
-import { v4 as uuidv4 } from 'uuid'; // uuid 라이브러리 임포트
+import { v4 as uuidv4 } from 'uuid'; // uuid 라이브포트
 
 // 키보드 컨트롤 맵 정의
 const controlsMap = [
@@ -29,50 +28,81 @@ const controlsMap = [
     { name: 'runFast', keys: ['ShiftLeft'] },
 ];
 
-// 플레이어 ID를 localStorage에서 로드하거나 새로 생성합니다.
-const getOrCreatePlayerId = () => {
+// 플레이어 ID와 닉네임을 localStorage에서 로드하거나 새로 생성합니다.
+const getOrCreatePlayerInfo = () => {
     let storedPlayerId = localStorage.getItem('myPlayerId');
     if (!storedPlayerId) {
         storedPlayerId = uuidv4();
         localStorage.setItem('myPlayerId', storedPlayerId);
     }
-    return storedPlayerId;
+    let storedNickname = localStorage.getItem('myNickname');
+    return { id: storedPlayerId, nickname: storedNickname || '' };
 };
 
-const currentPlayerId = getOrCreatePlayerId();
+const currentPlayerInfo = getOrCreatePlayerInfo();
 
-// --- OtherPlayer 컴포넌트 (변경 없음) ---
-function OtherPlayer({ id, position, rotationY, animationState }) {
-    const modelGroupRef = useRef();
+// --- OtherPlayer 컴포넌트 (RigidBody와 CapsuleCollider 추가) ---
+function OtherPlayer({ id, nickname, position, rotationY, animationState }) {
+    const rigidBodyRef = useRef(); // RigidBody에 대한 ref 추가
+    const modelGroupRef = useRef(); // 모델 그룹에 대한 ref 유지
 
     useFrame(() => {
+        if (rigidBodyRef.current && position) {
+            // 서버에서 받은 위치 정보를 기반으로 RigidBody의 위치를 직접 설정합니다.
+            const newPos = new THREE.Vector3(position.x, position.y, position.z);
+            rigidBodyRef.current.setTranslation(newPos, true); // true는 wakeUp을 의미, 다른 객체와 상호작용 가능하게 함
+        }
+
         if (modelGroupRef.current) {
-            modelGroupRef.current.position.lerp(new THREE.Vector3(position.x, position.y - 1.63, position.z), 0.2);
+            // 모델의 시각적인 회전만 부드럽게 보간합니다.
             modelGroupRef.current.rotation.y = THREE.MathUtils.lerp(modelGroupRef.current.rotation.y, rotationY + Math.PI, 0.2);
         }
     });
 
     const safeAnimationState = animationState || {};
+    const displayNickname = nickname || id.substring(0, 5); // 닉네임이 없으면 UUID 5글자
 
     return (
-        <group ref={modelGroupRef}>
-            <CharacterModel2 {...safeAnimationState} />
-            <Text
-                position={[0, 2.6, 0]}
-                fontSize={0.2}
-                color="black"
-                anchorX="center"
-                anchorY="middle"
-                billboard
-            >
-                {id.substring(0, 5)}
-            </Text>
-        </group>
+        <RigidBody
+            ref={rigidBodyRef}
+            position={[position.x, position.y, position.z]} // 초기 위치 설정
+            colliders={false} // RigidBody 자체의 자동 충돌체 생성을 끔
+            type="kinematicPosition" // 외부에서 위치를 제어할 수 있도록 설정
+            enabledRotations={[false, false, false]} // 회전 제한 (필요에 따라 변경)
+        >
+            {/* 캡슐 충돌체 추가: 플레이어 모델의 대략적인 크기에 맞춥니다. */}
+            <CapsuleCollider args={[0.35, 0.4]} />
+
+            {/* CharacterModel2를 RigidBody의 자식으로 둡니다. */}
+            {/* 모델의 Pivot이 바닥에 오도록 y축 오프셋을 조정합니다. (Player 컴포넌트와 동일) */}
+            <group ref={modelGroupRef} position-y={-1.65}>
+                {id.endsWith('1') ? (
+                    <CharacterModel2 {...safeAnimationState} />
+                ) : (
+                    <CharacterModel3 {...safeAnimationState} />
+                )}
+
+                {/* 플레이어 ID 텍스트는 모델 위에 표시되도록 그룹 내부로 이동 */}
+                {/* 닉네임의 Y 위치는 이제 modelGroupRef의 로컬 좌표계에서 조정됩니다. */}
+                {/* modelGroupRef의 position-y가 -1.65이므로, 닉네임 위치는 이제 이 그룹의 0,0,0을 기준으로 합니다. */}
+                {/* 따라서 텍스트가 캐릭터 머리 위에 오도록 대략 2.3 정도로 조정합니다. */}
+                <Text
+                    position={[0, 2.6, 0]} // 모델 Y 오프셋(-1.65)은 이미 그룹에 적용되었으므로, 닉네임은 그룹 내에서 상대적으로 위로 올립니다.
+                    fontSize={0.2}
+                    color="black"
+                    anchorX="center"
+                    anchorY="middle"
+                    //rotation={[0, Math.PI, 0]} // Y축 180도 회전은 여전히 필요합니다.
+                >
+                    {displayNickname}
+                </Text>
+            </group>
+        </RigidBody>
     );
 }
 
 // --- Player 컴포넌트 (STOMP 클라이언트 로직을 prop으로 받도록 수정) ---
-function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUpdate, onPlayerLocationsUpdate }) {
+function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUpdate, nickname }) {
     const { camera, gl } = useThree();
     const [subscribeKeys, getKeys] = useKeyboardControls();
     const [sitToggle, setSitToggle] = useState(false);
@@ -94,13 +124,13 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
     const toggleViewPressed = useRef(false);
     
     // Initial player registration when Player component mounts and STOMP is connected
-    // This runs only once per Player component mount when stompClientInstance becomes available
     useEffect(() => {
         if (stompClientInstance && stompClientInstance.connected) {
             console.log("[Player] Initial player registration upon mount.");
             const initialPlayerState = {
-                id: currentPlayerId,
-                position: { x: 0, y: 0, z: 0 },
+                id: currentPlayerInfo.id,
+                nickname: nickname, // 닉네임 추가
+                position: { x: 0, y: 0, z: 0 }, // 초기 위치 (서버에서 관리될 수도 있음)
                 rotationY: yaw.current + Math.PI,
                 animationState: {
                     isWalking: false, isBackward: false, isLeft: false, isRight: false,
@@ -113,7 +143,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
                 body: JSON.stringify(initialPlayerState)
             });
         }
-    }, [stompClientInstance]); // stompClientInstance가 준비되면 실행
+    }, [stompClientInstance, nickname]); // nickname을 의존성 배열에 추가
 
     // 'C' (앉기) 및 'Z' (눕기) 토글 로직
     useEffect(() => {
@@ -208,7 +238,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('pointerlockchange', handlePointerLockChange);
         };
-    }, [onMouseMove]);
+    }, [onMouseMove, gl.domElement]); // gl.domElement도 의존성 배열에 추가
 
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
@@ -219,7 +249,8 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
         // 플레이어 위치 및 애니메이션 정보 서버로 전송 (멀티플레이어 핵심)
         if (stompClientInstance && stompClientInstance.connected) {
             const playerState = {
-                id: currentPlayerId,
+                id: currentPlayerInfo.id,
+                nickname: nickname, // 닉네임 전송
                 position: { x: pos.x, y: pos.y, z: pos.z },
                 rotationY: yaw.current + Math.PI, // 3D 모델의 정면을 맞추기 위한 회전 보정
                 animationState: {
@@ -231,7 +262,6 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
                     isIdle: !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching) && !sitToggle && !lieToggle
                 }
             };
-            // console.log("[Player] Publishing playerMove:", playerState); // 디버깅 시에만 활성화
             stompClientInstance.publish({
                 destination: `/app/playerMove`,
                 body: JSON.stringify(playerState)
@@ -245,7 +275,6 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, onSceneObjectsUp
                 });
 
             if (objectPositions.length > 0) {
-                // console.log("[Player] Publishing sceneObjects:", objectPositions); // 디버깅 시에만 활성화
                 stompClientInstance.publish({
                     destination: '/app/sceneObjects',
                     body: JSON.stringify(objectPositions),
@@ -385,9 +414,14 @@ function PlayerHUD({ state }) {
     // state.otherPlayers는 이제 Map 객체
     const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
     const otherPlayersInfo = otherPlayersArray
-        .filter(p => p.id !== currentPlayerId)
-        .map(p => `ID: ${p.id.substring(0, 5)}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
+        .filter(p => p.id !== currentPlayerInfo.id) // 현재 플레이어 ID와 일치하지 않는 플레이어만 필터링
+        .map(p => {
+            const displayNickname = p.nickname || p.id.substring(0, 5); // 닉네임이 없으면 UUID 5글자
+            return `ID: ${displayNickname}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`;
+        })
         .join('\n');
+
+    const myDisplayNickname = currentPlayerInfo.nickname || currentPlayerInfo.id.substring(0, 5);
 
     return (
         <div style={{
@@ -401,7 +435,7 @@ function PlayerHUD({ state }) {
             borderRadius: 8,
             zIndex: 100
         }}>
-            <div><strong>Current Player ID:</strong> {currentPlayerId.substring(0, 5)}</div>
+            <div><strong>Current Player ID:</strong> {myDisplayNickname}</div>
             <div><strong>View:</strong> {state.viewMode}</div>
             <div><strong>isGrounded:</strong> {state.isGrounded ? '✅' : '❌'}</div>
             <div><strong>Position:</strong> {state.position}</div>
@@ -410,11 +444,11 @@ function PlayerHUD({ state }) {
             <div><strong>Pitch:</strong> {state.pitch?.toFixed(2) ?? 'N/A'}</div>
             <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
             <br />
-            <div><strong>-- Other Players --</strong></div>
-            {otherPlayersArray.filter(p => p.id !== currentPlayerId).length > 0 &&
-                <div>Total Other Players: {otherPlayersArray.filter(p => p.id !== currentPlayerId).length}</div>
+            <div><strong>-- 다른 플레이어 --</strong></div>
+            {otherPlayersArray.filter(p => p.id !== currentPlayerInfo.id).length > 0 &&
+                <div>총 다른 플레이어 수: {otherPlayersArray.filter(p => p.id !== currentPlayerInfo.id).length}</div>
             }
-            <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "No other players"}</pre>
+            <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "다른 플레이어 없음"}</pre>
         </div>
     );
 }
@@ -462,6 +496,84 @@ function SceneObject({ obj, objectRefs }) {
 
 // 메인 App 컴포넌트
 export default function App() {
+    // sessionStorage에서 'enteredGame' 상태를 로드합니다.
+    const [enteredGame, setEnteredGame] = useState(() => {
+        const storedEnteredGame = sessionStorage.getItem('enteredGame');
+        return storedEnteredGame === 'true'; // 문자열 'true'를 불리언 true로 변환
+    });
+    const [nicknameInput, setNicknameInput] = useState(currentPlayerInfo.nickname);
+    const [nicknameError, setNicknameError] = useState('');
+
+    // enteredGame 상태가 변경될 때마다 sessionStorage에 저장합니다.
+    useEffect(() => {
+        sessionStorage.setItem('enteredGame', enteredGame.toString());
+    }, [enteredGame]);
+
+    const handleGameEntry = () => {
+        const trimmedNickname = nicknameInput.trim();
+        if (trimmedNickname.length === 0) { // 닉네임이 비어있는 경우도 추가
+            setNicknameError('닉네임을 입력해주세요.');
+            return;
+        }
+        if (trimmedNickname.length > 6) {
+            setNicknameError('닉네임은 6글자 이하여야 합니다.');
+            return;
+        }
+        if (trimmedNickname.includes(' ')) {
+            setNicknameError('닉네임에 공백을 포함할 수 없습니다.');
+            return;
+        }
+
+        // 닉네임 유효성 검사 통과 시
+        localStorage.setItem('myNickname', trimmedNickname);
+        currentPlayerInfo.nickname = trimmedNickname; // 전역 currentPlayerInfo 업데이트
+        setEnteredGame(true);
+    };
+
+    if (enteredGame) {
+        return <GameCanvas nickname={currentPlayerInfo.nickname} />;
+    }
+
+    return (
+        <div
+            className="w-screen h-screen bg-cover bg-center flex items-center justify-center"
+            // 여기에 배경 이미지 스타일 추가 (tailwind.config.js에서 정의한 경우)
+            // style={{ backgroundImage: `url('...')` }}
+        >
+            {/* 오버레이 블러 + 유리효과 카드 */}
+            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-10 max-w-lg w-full text-center shadow-2xl border border-white/20">
+                <h1 className="text-5xl font-extrabold text-white mb-6 drop-shadow-lg">
+                    🕹️ 멀티플레이어 3D 게임
+                </h1>
+                <p className="text-lg text-gray-100 mb-4">
+                    게임 입장을 위해 닉네임을 입력하세요. (최대 6글자, 공백 불가)
+                </p>
+                <input
+                    type="text"
+                    value={nicknameInput}
+                    onChange={(e) => {
+                        setNicknameInput(e.target.value);
+                        setNicknameError(''); // 입력 시 에러 메시지 초기화
+                    }}
+                    placeholder="닉네임을 입력하세요"
+                    maxLength={6}
+                    className="px-4 py-2 mb-4 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
+                />
+                {nicknameError && (
+                    <p className="text-red-400 text-sm mb-4">{nicknameError}</p>
+                )}
+                <button
+                    onClick={handleGameEntry}
+                    className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white text-lg font-semibold rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+                >
+                    🚪 게임 입장하기
+                </button>
+            </div>
+        </div>
+    );
+}
+
+export function GameCanvas({ nickname }) { // nickname prop을 받습니다.
     const [hudState, setHudState] = useState({});
     const [sceneObjects, setSceneObjects] = useState([
         {
@@ -534,7 +646,6 @@ export default function App() {
             
             // 플레이어 위치 구독
             client.subscribe('/topic/playerLocations', (message) => {
-                // console.log("[STOMP] Received playerLocations message:", message.body); // 디버깅 시에만 활성화
                 try {
                     const allPlayerPositions = JSON.parse(message.body);
                     // Map 객체로 변환하여 효율적으로 관리
@@ -550,10 +661,8 @@ export default function App() {
 
             // 오브젝트 상태 구독
             client.subscribe('/topic/sceneObjects', (message) => {
-                // console.log("[STOMP] Received sceneObjects message:", message.body); // 디버깅 시에만 활성화
                 try {
                     const updatedObjects = JSON.parse(message.body);
-                    // console.log("[STOMP] Parsed sceneObjects:", updatedObjects); // 디버깅 시에만 활성화
                     handleSceneObjectsUpdate(updatedObjects);
                 } catch (e) {
                     console.error("[STOMP Subscribe] Failed to parse scene objects message:", e, message.body);
@@ -580,14 +689,14 @@ export default function App() {
             // 새로고침 또는 탭 닫기 전 플레이어 등록 해제 메시지 전송
             const handleBeforeUnload = () => {
                 if (client && client.connected) {
-                    client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
-                    client.deactivate();
+                    client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerInfo.id }) });
                 }
             };
             window.addEventListener('beforeunload', handleBeforeUnload);
 
+            // 컴포넌트가 언마운트될 때 (페이지 이동 등) 연결 해제
             if (client && client.connected) {
-                client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
+                client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerInfo.id }) });
                 client.deactivate();
             }
             window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -627,11 +736,10 @@ export default function App() {
                     shadows
                     camera={{ fov: 60, position: [0, 5, 10] }}
                     style={{ width: '100vw', height: '100vh' }}
-                    linear={false} // <--- 이 부분을 추가하여 전체적인 톤을 어둡게 만듭니다.
+                    linear={false}
                 >
                     {/* 배경색을 어둡게 설정합니다. 완전 검정색이나 아주 어두운 회색을 사용하세요. */}
                     <color attach="background" args={['#8fafdb']} /> {/* 어두운 회색 */}
-                    {/* 또는 완전 검정색: <color attach="background" args={['black']} /> */}
 
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
@@ -676,16 +784,17 @@ export default function App() {
                                 onHudUpdate={setHudState}
                                 objectRefs={objectRefs}
                                 stompClientInstance={stompClient} // stompClient 인스턴스 전달
-                                onSceneObjectsUpdate={handleSceneObjectsUpdate}
+                                nickname={nickname} // App에서 GameCanvas로 전달받은 nickname을 Player 컴포넌트로 전달
                             />
                         )}
 
-                        {/* 다른 플레이어들 렌더링 */}
+                        {/* 다른 플레이어 렌더링 */}
                         {hudState.otherPlayers && Array.from(hudState.otherPlayers.values()).map((player) => (
-                            player.id !== currentPlayerId && (
+                            player.id !== currentPlayerInfo.id && (
                                 <OtherPlayer
                                     key={player.id}
                                     id={player.id}
+                                    nickname={player.nickname} // 서버에서 받은 nickname을 OtherPlayer에 전달
                                     position={player.position}
                                     rotationY={player.rotationY}
                                     animationState={player.animationState}
@@ -693,13 +802,9 @@ export default function App() {
                             )
                         ))}
 
-                        {/* 물리 상호작용을 위한 구체 오브젝트들 (SceneObject 컴포넌트로 대체) */}
+                        {/* 씬 오브젝트 렌더링 */}
                         {sceneObjects.map((obj) => (
-                            <SceneObject
-                                key={obj.id}
-                                obj={obj}
-                                objectRefs={objectRefs}
-                            />
+                            <SceneObject key={obj.id} obj={obj} objectRefs={objectRefs} />
                         ))}
 
                     </Physics>
@@ -708,3 +813,32 @@ export default function App() {
         </>
     );
 }
+
+// CharacterModel, CharacterModel2, CharacterModel3 컴포넌트 코드가 여기에 포함되어야 합니다.
+// 예를 들어, CharacterModel.jsx (또는 별도 파일)에 정의되어야 합니다.
+// 예시:
+/*
+// CharacterModel.jsx (separate file)
+import { useGLTF, useAnimations } from '@react-three/drei';
+import React, { useEffect, useRef } from 'react';
+
+export function CharacterModel(props) {
+  const group = useRef();
+  const { nodes, materials, animations } = useGLTF('/path/to/your/character.glb');
+  const { actions } = useAnimations(animations, group);
+
+  // Animation logic based on props
+  useEffect(() => {
+    // Implement your animation logic here
+    // e.g., if (props.isWalking) actions.walk.play(); else actions.walk.stop();
+  }, [actions, props]);
+
+  return (
+    <group ref={group} {...props} dispose={null}>
+      // Your 3D model JSX goes here
+    </group>
+  );
+}
+
+// CharacterModel2, CharacterModel3도 유사하게 구성
+*/

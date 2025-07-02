@@ -10,6 +10,7 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="registerPlayer"/>
 			<item value="localhost"/>
 			<item value="local"/>
 			<item value="Received AnimationState"/>
@@ -24,7 +25,6 @@
 			<item value="sockjs-client"/>
 			<item value="spring-boot-starter-websocket"/>
 			<item value="spring-boot-starter-security"/>
-			<item value="org.springframework.boot"/>
 		</list>
 		<list key="replacehistory">
 		</list>
