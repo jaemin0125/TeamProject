@@ -12,14 +12,11 @@ import { Leva, useControls } from 'leva'; // 수정: '=' 기호 제거
 // Three.js
 import * as THREE from 'three';
 // CharacterModel, CharacterModel2, CharacterModel3 임포트
-import { CharacterModel, CharacterModel2, CharacterModel3 } from './CharacterModel'; 
-
+import { CharacterModel, CharacterModel2, CharacterModel3 } from './CharacterModel';
 // 웹소켓 라이브러리 import
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { v4 as uuidv4 } from 'uuid'; // uuid 라이브러리 임포트
-
-// 키보드 컨트롤 맵 정의
 const controlsMap = [
     { name: 'forward', keys: ['KeyW'] },
     { name: 'backward', keys: ['KeyS'] },
@@ -31,20 +28,21 @@ const controlsMap = [
 ];
 
 // 플레이어 ID를 localStorage에서 로드하거나 새로 생성합니다.
-const getOrCreatePlayerId = () => {
+const getOrCreatePlayerInfo = () => {
     let storedPlayerId = localStorage.getItem('myPlayerId');
     if (!storedPlayerId) {
         storedPlayerId = uuidv4();
         localStorage.setItem('myPlayerId', storedPlayerId);
     }
-    return storedPlayerId;
+    let storedNickname = localStorage.getItem('myNickname');
+    return { id: storedPlayerId, nickname: storedNickname || '' };
 };
 
-const currentPlayerId = getOrCreatePlayerId();
 
+const currentPlayerInfo = getOrCreatePlayerInfo()
 // --- OtherPlayer 컴포넌트 (RigidBody와 CapsuleCollider 추가) ---
 // 다른 플레이어의 모델, 위치, 애니메이션 상태를 렌더링합니다.
-function OtherPlayer({ id, position, rotationY, animationState }) {
+function OtherPlayer({ id, nickname, position, rotationY, animationState }) {
     const rigidBodyRef = useRef(); // RigidBody에 대한 ref
     const modelGroupRef = useRef(); // 모델 그룹에 대한 ref
 
@@ -62,6 +60,7 @@ function OtherPlayer({ id, position, rotationY, animationState }) {
     });
 
     const safeAnimationState = animationState || {};
+    const displayNickname = nickname || id.substring(0, 5);
 
     // 플레이어 ID의 마지막 문자에 따라 다른 캐릭터 모델을 렌더링합니다.
     // 이는 서버에서 characterType을 명시적으로 보내주지 않을 경우의 임시 로직입니다.
@@ -88,25 +87,24 @@ function OtherPlayer({ id, position, rotationY, animationState }) {
             enabledRotations={[false, false, false]} // 회전 제한
         >
             {/* 캡슐 충돌체 추가: 플레이어 모델의 대략적인 크기에 맞춥니다. */}
-            <CapsuleCollider args={[0.35, 0.4]} /> 
+            <CapsuleCollider args={[0.35, 0.4]} />
 
             {/* 선택된 CharacterModel 컴포넌트를 RigidBody의 자식으로 둡니다. */}
             {/* 모델의 Pivot이 바닥에 오도록 y축 오프셋을 조정합니다. (Player 컴포넌트와 동일) */}
             <group ref={modelGroupRef} position-y={-1.65}>
                 <CharacterToRender {...safeAnimationState} />
-            </group>
 
-            {/* 플레이어 ID 텍스트는 모델 위에 표시되도록 합니다. */}
-            <Text
-                position={[0, 2.6 - 0.725, 0]} // 모델 Y 오프셋을 고려하여 텍스트 위치 조정
-                fontSize={0.2}
-                color="black"
-                anchorX="center"
-                anchorY="middle"
-                billboard
-            >
-                {id.substring(0, 5)}
-            </Text>
+                {/* 플레이어 ID 텍스트는 모델 위에 표시되도록 합니다. */}
+                <Text
+                    position={[0, 2.6, 0]} // 모델 Y 오프셋을 고려하여 텍스트 위치 조정
+                    fontSize={0.2}
+                    color="black"
+                    anchorX="center"
+                    anchorY="middle"
+                >
+                    {displayNickname}
+                </Text>
+            </group>
         </RigidBody>
     );
 }
@@ -126,12 +124,12 @@ function checkHit(attackerPos, attackerQuat, targetPos) {
     // console.log(`🎯 거리: ${distance.toFixed(2)} / 각도(deg): ${(angle * 180 / Math.PI).toFixed(1)}`);
 
     // 거리가 1.2 미만이고, 공격자의 정면 45도 이내 (Math.PI / 4)에 있을 때 히트로 간주
-    return distance < 1.2 && angle < Math.PI / 4; 
+    return distance < 1.2 && angle < Math.PI / 4;
 }
 
 // --- Player 컴포넌트 (현재 플레이어의 로직) ---
 // isPlayerHitted prop을 추가하여 GameCanvas로부터 직접 피격 상태를 받습니다.
-function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }) {
+function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, nickname }) {
     const { camera, gl } = useThree();
     const [subscribeKeys, getKeys] = useKeyboardControls();
     const [sitToggle, setSitToggle] = useState(false);
@@ -152,7 +150,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
     });
 
     const toggleViewPressed = useRef(false);
-    
+
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
         // isPunching이 true이고 STOMP 클라이언트가 연결되어 있을 때만 실행
@@ -165,7 +163,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
         // window.onlinePlayers는 GameCanvas에서 업데이트된 다른 플레이어들의 위치 정보 (Map 객체)
         // Map.prototype.forEach()를 사용하여 올바르게 순회합니다.
         (window.onlinePlayers || new Map()).forEach((targetPlayer, id) => {
-            if (id === currentPlayerId) return; // 자기 자신은 제외
+            if (id === currentPlayerInfo.id) return; // 자기 자신은 제외
 
             const targetPos = targetPlayer.position; // Map에서 가져온 플레이어 객체에서 position 접근
             const isHit = checkHit(attackerPos, attackerQuat, targetPos);
@@ -176,7 +174,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
                 stompClientInstance.publish({
                     destination: '/app/playerHit',
                     body: JSON.stringify({
-                        fromId: currentPlayerId, // 공격자 ID
+                        fromId: currentPlayerInfo.id, // 공격자 ID
                         targetId: id, // 피격자 ID
                     }),
                 });
@@ -189,7 +187,8 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
         if (stompClientInstance && stompClientInstance.connected) {
             console.log("[Player] Initial player registration upon mount.");
             const initialPlayerState = {
-                id: currentPlayerId,
+                id: currentPlayerInfo.id,
+                nickname: nickname,
                 position: { x: 0, y: 0, z: 0 },
                 rotationY: yaw.current + Math.PI,
                 animationState: {
@@ -203,7 +202,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
                 body: JSON.stringify(initialPlayerState)
             });
         }
-    }, [stompClientInstance]); // stompClientInstance가 준비되면 실행
+    }, [stompClientInstance, nickname]); // stompClientInstance가 준비되면 실행
 
     // 'C' (앉기) 및 'Z' (눕기) 토글 로직
     useEffect(() => {
@@ -233,7 +232,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
             if (e.button === 0) { // 좌클릭
                 setIsPunching(true);
                 // 펀치 애니메이션 지속 시간 후 isPunching 상태를 false로 변경
-                setTimeout(() => setIsPunching(false), 500); 
+                setTimeout(() => setIsPunching(false), 500);
             }
         };
 
@@ -290,7 +289,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
             }
         };
         // 초기 마운트 시 포인터 락 상태 확인
-        if (document.pointerLockElement === canvas) { 
+        if (document.pointerLockElement === canvas) {
             document.addEventListener('mousemove', onMouseMove);
         }
         document.addEventListener('pointerlockchange', handlePointerLockChange);
@@ -309,7 +308,8 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
         // 플레이어 위치 및 애니메이션 정보 서버로 전송 (멀티플레이어 핵심)
         if (stompClientInstance && stompClientInstance.connected) {
             const playerState = {
-                id: currentPlayerId,
+                id: currentPlayerInfo.id,
+                nickname: nickname,
                 position: { x: pos.x, y: pos.y, z: pos.z },
                 rotationY: yaw.current + Math.PI, // 3D 모델의 정면을 맞추기 위한 회전 보정
                 animationState: {
@@ -349,11 +349,11 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted }
         let actualSpeed = speed;
 
         if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.5, 1.5); 
+            actualSpeed = Math.max(speed * 0.5, 1.5);
         } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.15, 1.2); 
+            actualSpeed = Math.max(speed * 0.15, 1.2);
         } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = speed + 2; 
+            actualSpeed = speed + 2;
         }
 
         let vx = 0, vz = 0;
@@ -477,9 +477,14 @@ function PlayerHUD({ state }) {
 
     const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
     const otherPlayersInfo = otherPlayersArray
-        .filter(p => p.id !== currentPlayerId)
-        .map(p => `ID: ${p.id.substring(0, 5)}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
+        .filter(p => p.id !== currentPlayerInfo.id)
+        .map(p => {
+            const displayNickname = p.nickname || p.id.substring(0, 5); // 닉네임이 없으면 UUID 5글자
+            return `ID: ${displayNickname}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`;
+        })
         .join('\n');
+
+    const myDisplayNickname = currentPlayerInfo.nickname || currentPlayerInfo.id.substring(0, 5);
 
     return (
         <>
@@ -494,7 +499,7 @@ function PlayerHUD({ state }) {
                 borderRadius: 8,
                 zIndex: 40
             }}>
-                <div><strong>Current Player ID:</strong> {currentPlayerId.substring(0, 5)}</div>
+                <div><strong>Current Player ID:</strong> {currentPlayerInfo.nickname}</div>
                 <div><strong>View:</strong> {state.viewMode}</div>
                 <div><strong>isGrounded:</strong> {state.isGrounded ? '✅' : '❌'}</div>
                 <div><strong>Position:</strong> {state.position}</div>
@@ -504,8 +509,8 @@ function PlayerHUD({ state }) {
                 <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
                 <br />
                 <div><strong>-- Other Players --</strong></div>
-                {otherPlayersArray.filter(p => p.id !== currentPlayerId).length > 0 &&
-                    <div>Total Other Players: {otherPlayersArray.filter(p => p.id !== currentPlayerId).length}</div>
+                {otherPlayersArray.filter(p => p.id !== currentPlayerInfo.id).length > 0 &&
+                    <div>Total Other Players: {otherPlayersArray.filter(p => p.id !== currentPlayerInfo.id).length}</div>
                 }
                 <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "No other players"}</pre>
                 <div className="mb-2 text-sm">💖 체력: {health} / 100</div>
@@ -546,9 +551,9 @@ function SceneObject({ obj, objectRefs }) {
             <mesh castShadow receiveShadow>
                 {/* obj.type이 'box'이면 boxGeometry를, 아니면 sphereGeometry를 사용합니다. */}
                 {obj.type === 'box' ? (
-                    <boxGeometry args={[obj.size.x, obj.size.y, obj.size.z]} /> 
+                    <boxGeometry args={[obj.size.x, obj.size.y, obj.size.z]} />
                 ) : (
-                    <sphereGeometry args={[obj.radius, 32, 32]} /> 
+                    <sphereGeometry args={[obj.radius, 32, 32]} />
                 )}
                 <meshStandardMaterial color={obj.color} />
             </mesh>
@@ -558,26 +563,74 @@ function SceneObject({ obj, objectRefs }) {
 
 // 메인 App 컴포넌트
 export default function App() {
-    const [enteredGame, setEnteredGame] = useState(false);
+    // sessionStorage에서 'enteredGame' 상태를 로드합니다.
+    const [enteredGame, setEnteredGame] = useState(() => {
+        const storedEnteredGame = sessionStorage.getItem('enteredGame');
+        return storedEnteredGame === 'true'; // 문자열 'true'를 불리언 true로 변환
+    });
+    const [nicknameInput, setNicknameInput] = useState(currentPlayerInfo.nickname);
+    const [nicknameError, setNicknameError] = useState('');
+
+    // enteredGame 상태가 변경될 때마다 sessionStorage에 저장합니다.
+    useEffect(() => {
+        sessionStorage.setItem('enteredGame', enteredGame.toString());
+    }, [enteredGame]);
+
+    const handleGameEntry = () => {
+        const trimmedNickname = nicknameInput.trim();
+        if (trimmedNickname.length === 0) { // 닉네임이 비어있는 경우도 추가
+            setNicknameError('닉네임을 입력해주세요.');
+            return;
+        }
+        if (trimmedNickname.length > 6) {
+            setNicknameError('닉네임은 6글자 이하여야 합니다.');
+            return;
+        }
+        if (trimmedNickname.includes(' ')) {
+            setNicknameError('닉네임에 공백을 포함할 수 없습니다.');
+            return;
+        }
+
+        // 닉네임 유효성 검사 통과 시
+        localStorage.setItem('myNickname', trimmedNickname);
+        currentPlayerInfo.nickname = trimmedNickname; // 전역 currentPlayerInfo 업데이트
+        setEnteredGame(true);
+    };
 
     if (enteredGame) {
-        return <GameCanvas />;
+        return <GameCanvas nickname={currentPlayerInfo.nickname} />;
     }
 
     return (
         <div
             className="w-screen h-screen bg-cover bg-center flex items-center justify-center"
+        // 여기에 배경 이미지 스타일 추가 (tailwind.config.js에서 정의한 경우)
+        // style={{ backgroundImage: `url('...')` }}
         >
             {/* 오버레이 블러 + 유리효과 카드 */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-10 max-w-lg w-full text-center shadow-2xl border border-white/20">
                 <h1 className="text-5xl font-extrabold text-white mb-6 drop-shadow-lg">
                     🕹️ 멀티플레이어 3D 게임
                 </h1>
-                <p className="text-lg text-gray-100 mb-8">
-                    아래 버튼을 눌러 게임을 시작하세요.
+                <p className="text-lg text-gray-100 mb-4">
+                    게임 입장을 위해 닉네임을 입력하세요. (최대 6글자, 공백 불가)
                 </p>
+                <input
+                    type="text"
+                    value={nicknameInput}
+                    onChange={(e) => {
+                        setNicknameInput(e.target.value);
+                        setNicknameError(''); // 입력 시 에러 메시지 초기화
+                    }}
+                    placeholder="닉네임을 입력하세요"
+                    maxLength={6}
+                    className="px-4 py-2 mb-4 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500 text-gray-800"
+                />
+                {nicknameError && (
+                    <p className="text-red-400 text-sm mb-4">{nicknameError}</p>
+                )}
                 <button
-                    onClick={() => setEnteredGame(true)}
+                    onClick={handleGameEntry}
                     className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white text-lg font-semibold rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95"
                 >
                     🚪 게임 입장하기
@@ -586,8 +639,7 @@ export default function App() {
         </div>
     );
 }
-
-export function GameCanvas() {
+export function GameCanvas({ nickname }) {
     const [hudState, setHudState] = useState({
         health: 100,   // 초기 HP 설정
         isHit: false,  // 피격 상태를 관리하는 새로운 상태
@@ -635,12 +687,12 @@ export function GameCanvas() {
             collider: 'ball',
         },
         {
-            id: 'myBox1', 
-            type: 'box', 
-            position: { x: 3, y: 0.5, z: -2 }, 
-            size: { x: 2, y: 1, z: 2 }, 
-            color: 'red', 
-            collider: 'cuboid', 
+            id: 'myBox1',
+            type: 'box',
+            position: { x: 3, y: 0.5, z: -2 },
+            size: { x: 2, y: 1, z: 2 },
+            color: 'red',
+            collider: 'cuboid',
         },
     ]);
     const objectRefs = useRef({});
@@ -661,14 +713,15 @@ export function GameCanvas() {
 
         client.onConnect = (frame) => {
             console.log("[STOMP] Connected to WebSocket from App.jsx!", frame);
-            
+
             // 플레이어 위치 구독
             client.subscribe('/topic/playerLocations', (message) => {
                 try {
+                    console.log("[STOMP] Received playerLocations:", message.body); // 이 줄을 추가
                     const allPlayerPositions = JSON.parse(message.body);
                     // Map 객체로 변환하여 효율적으로 관리
                     // window.onlinePlayers에 Map 객체 저장
-                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p])); 
+                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p]));
                     setHudState(prev => ({
                         ...prev,
                         otherPlayers: window.onlinePlayers // Map 객체로 저장
@@ -695,7 +748,7 @@ export function GameCanvas() {
                     console.log('[STOMP] playerHit 메시지 수신:', data);
 
                     // 현재 클라이언트가 피격자일 경우 (내 캐릭터)
-                    if (data.targetId === currentPlayerId) {
+                    if (data.targetId === currentPlayerInfo.id) {
                         console.log('💢 GameCanvas: 내가 맞았습니다! isHit 상태 true로 설정.');
                         setHudState(prev => ({
                             ...prev,
@@ -713,7 +766,7 @@ export function GameCanvas() {
                             const newOtherPlayers = new Map(prev.otherPlayers);
                             const targetPlayer = newOtherPlayers.get(data.targetId);
                             if (targetPlayer) {
-                                console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0,5)}가 맞았습니다!`);
+                                console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0, 5)}가 맞았습니다!`);
                                 // 타겟 플레이어의 animationState에 isHitted를 true로 설정
                                 newOtherPlayers.set(data.targetId, {
                                     ...targetPlayer,
@@ -729,7 +782,7 @@ export function GameCanvas() {
                                         const innerNewOtherPlayers = new Map(innerPrev.otherPlayers);
                                         const innerTargetPlayer = innerNewOtherPlayers.get(data.targetId);
                                         if (innerTargetPlayer) {
-                                            console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0,5)} isHitted 상태 false로 재설정.`);
+                                            console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0, 5)} isHitted 상태 false로 재설정.`);
                                             innerNewOtherPlayers.set(data.targetId, {
                                                 ...innerTargetPlayer,
                                                 animationState: {
@@ -748,7 +801,7 @@ export function GameCanvas() {
                     }
 
                     // (선택) 내가 공격자일 경우 UI 처리하거나 무시
-                    if (data.fromId === currentPlayerId) {
+                    if (data.fromId === currentPlayerInfo.id) {
                         console.log('🥊 GameCanvas: 내가 공격했습니다!');
                     }
 
@@ -776,14 +829,14 @@ export function GameCanvas() {
         return () => {
             const handleBeforeUnload = () => {
                 if (client && client.connected) {
-                    client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
+                    client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerInfo.id }) });
                     client.deactivate();
                 }
             };
             window.addEventListener('beforeunload', handleBeforeUnload);
 
             if (client && client.connected) {
-                client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerId }) });
+                client.publish({ destination: '/app/unregisterPlayer', body: JSON.stringify({ id: currentPlayerInfo.id }) });
                 client.deactivate();
             }
             window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -825,7 +878,7 @@ export function GameCanvas() {
                     linear={false}
                 >
                     {/* 배경색을 어둡게 설정합니다. */}
-                    <color attach="background" args={['#8fafdb']} /> 
+                    <color attach="background" args={['#8fafdb']} />
 
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
@@ -871,15 +924,17 @@ export function GameCanvas() {
                                 objectRefs={objectRefs}
                                 stompClientInstance={stompClient} // stompClient 인스턴스 전달
                                 isPlayerHitted={hudState.isHit} // GameCanvas의 isHit 상태를 직접 prop으로 전달
+                                nickname={nickname}
                             />
                         )}
 
                         {/* 다른 플레이어들 렌더링 */}
                         {hudState.otherPlayers && Array.from(hudState.otherPlayers.values()).map((player) => (
-                            player.id !== currentPlayerId && (
+                            player.id !== currentPlayerInfo.id && (
                                 <OtherPlayer
                                     key={player.id}
                                     id={player.id}
+                                    nickname={player.nickname}
                                     position={player.position}
                                     rotationY={player.rotationY}
                                     animationState={player.animationState}

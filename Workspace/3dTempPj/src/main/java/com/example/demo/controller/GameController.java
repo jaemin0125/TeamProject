@@ -39,11 +39,6 @@ public class GameController {
 		playerState.setSessionId(sessionId); // 세션 ID 설정
 
 		playerService.addPlayer(playerState, sessionId); // 플레이어 추가/업데이트
-		//logger.info("Player registered: {} (Session: {})", playerState.getId(), sessionId);
-
-		// 모든 플레이어에게 현재 플레이어 목록 브로드캐스팅
-		//logger.info("Broadcasting player locations after register. Total players: {}",
-				//playerService.getAllPlayers().size());
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
 
@@ -63,9 +58,10 @@ public class GameController {
 		// logger.debug("Player moved: {} at ({}, {}, {})", playerState.getId(),
 		// playerState.getPosition().getX(), playerState.getPosition().getY(),
 		// playerState.getPosition().getZ());
-
 		
-		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
+		/*
+		 * playerService.updatePlayerState(playerState); // 변경된 메서드 시그니처
+		 */		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
 	

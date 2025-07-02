@@ -86,6 +86,27 @@ public class PlayerService {
             //logger.warn("Attempted to update non-existent player: {}", playerId);
         }
     }
+    
+    public void updatePlayerState(PlayerState updatedPlayerState) {
+        if (updatedPlayerState == null || updatedPlayerState.getId() == null) {
+            logger.warn("[PlayerService] Attempted to update with null player state or ID.");
+            return;
+        }
+
+        PlayerState player = connectedPlayers.get(updatedPlayerState.getId());
+        if (player != null) {
+            player.setNickname(updatedPlayerState.getNickname()); // <-- 이 줄이 닉네임을 설정합니다.
+            player.setPosition(updatedPlayerState.getPosition());
+            player.setRotationY(updatedPlayerState.getRotationY());
+            player.setAnimationState(updatedPlayerState.getAnimationState());
+            // 🚨 이 부분도 콘솔에 로그를 출력합니다.
+            logger.debug("[PlayerService] Updated player {} state (Nickname: {}, pos: {}, rotY: {}, anim: {})",
+                    updatedPlayerState.getId(), player.getNickname(), updatedPlayerState.getPosition(),
+                    updatedPlayerState.getRotationY(), updatedPlayerState.getAnimationState());
+        } else {
+            logger.warn("[PlayerService] Attempted to update non-existent player: {}", updatedPlayerState.getId());
+        }
+    }
 
     /**
      * 특정 플레이어 ID를 통해 플레이어를 제거합니다.
