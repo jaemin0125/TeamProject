@@ -72,6 +72,7 @@ public class GameController {
 	public void updateObjectState(List<ObjectState> objectStates) {
 	    // 모든 클라이언트에게 브로드캐스트
 		
+		
 	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
 	}
 
