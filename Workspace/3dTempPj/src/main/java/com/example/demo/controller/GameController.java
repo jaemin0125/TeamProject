@@ -11,6 +11,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.demo.dto.ObjectState;
+import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.service.PlayerService;
 
@@ -74,6 +75,13 @@ public class GameController {
 		
 		
 	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
+	}
+	
+	@MessageMapping("/playerHit")
+	public void handlePlayerHit(PlayerHitMessage message) {
+	    
+	    // 브로드캐스트: 모든 클라이언트가 피격 알 수 있도록
+	    messagingTemplate.convertAndSend("/topic/playerHit", message);
 	}
 
 	/**

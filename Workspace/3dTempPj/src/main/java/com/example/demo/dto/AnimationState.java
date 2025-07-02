@@ -18,6 +18,7 @@ public class AnimationState {
     private boolean isLyingDown;
     private boolean isLyingDownAndWalk;
     private boolean isPunching;
+    private boolean isHitted;
     private boolean isIdle;
 
     // 모든 getter를 수동으로 정의합니다 (getIsXxx 형태)
@@ -53,6 +54,9 @@ public class AnimationState {
 
     public boolean getIsPunching() { return isPunching; }
     public void setIsPunching(boolean isPunching) { this.isPunching = isPunching; }
+    
+    public boolean getIsHitted() { return isHitted; }
+    public void setIsHitted(boolean isHitted) { this.isHitted = isHitted; }
 
     public boolean getIsIdle() { return isIdle; }
     public void setIsIdle(boolean isIdle) { this.isIdle = isIdle; }
@@ -72,6 +76,7 @@ public class AnimationState {
                ", isLyingDown=" + isLyingDown +
                ", isLyingDownAndWalk=" + isLyingDownAndWalk +
                ", isPunching=" + isPunching +
+               ", isHitted=" + isHitted +
                ", isIdle=" + isIdle +
                '}';
     }
