@@ -10,6 +10,8 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="playerlocation"/>
+			<item value="playerstate"/>
 			<item value="WebSocketEventListener"/>
 			<item value="total"/>
 			<item value="sockjs-client"/>

@@ -12,7 +12,7 @@ import { Leva, useControls } from 'leva'; // 수정: '=' 기호 제거
 // Three.js
 import * as THREE from 'three';
 // CharacterModel, CharacterModel2, CharacterModel3 임포트
-import { CharacterModel, CharacterModel2, CharacterModel3 } from './CharacterModel';
+import { CharacterModel, CharacterModel2, CharacterModel3 } from './CharacterModel'; 
 // 웹소켓 라이브러리 import
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -60,7 +60,7 @@ function OtherPlayer({ id, nickname, position, rotationY, animationState }) {
     });
 
     const safeAnimationState = animationState || {};
-    const displayNickname = nickname || id.substring(0, 5);
+    const displayNickname = nickname || id.substring(0,5);
 
     // 플레이어 ID의 마지막 문자에 따라 다른 캐릭터 모델을 렌더링합니다.
     // 이는 서버에서 characterType을 명시적으로 보내주지 않을 경우의 임시 로직입니다.
@@ -87,24 +87,24 @@ function OtherPlayer({ id, nickname, position, rotationY, animationState }) {
             enabledRotations={[false, false, false]} // 회전 제한
         >
             {/* 캡슐 충돌체 추가: 플레이어 모델의 대략적인 크기에 맞춥니다. */}
-            <CapsuleCollider args={[0.35, 0.4]} />
+            <CapsuleCollider args={[0.35, 0.4]} /> 
 
             {/* 선택된 CharacterModel 컴포넌트를 RigidBody의 자식으로 둡니다. */}
             {/* 모델의 Pivot이 바닥에 오도록 y축 오프셋을 조정합니다. (Player 컴포넌트와 동일) */}
             <group ref={modelGroupRef} position-y={-1.65}>
                 <CharacterToRender {...safeAnimationState} />
 
-                {/* 플레이어 ID 텍스트는 모델 위에 표시되도록 합니다. */}
-                <Text
-                    position={[0, 2.6, 0]} // 모델 Y 오프셋을 고려하여 텍스트 위치 조정
-                    fontSize={0.2}
-                    color="black"
-                    anchorX="center"
-                    anchorY="middle"
+            {/* 플레이어 ID 텍스트는 모델 위에 표시되도록 합니다. */}
+            <Text
+                position={[0, 2.6, 0]} // 모델 Y 오프셋을 고려하여 텍스트 위치 조정
+                fontSize={0.2}
+                color="black"
+                anchorX="center"
+                anchorY="middle"
                 >
-                    {displayNickname}
-                </Text>
-            </group>
+                {displayNickname}
+            </Text>
+                </group>
         </RigidBody>
     );
 }
@@ -124,7 +124,7 @@ function checkHit(attackerPos, attackerQuat, targetPos) {
     // console.log(`🎯 거리: ${distance.toFixed(2)} / 각도(deg): ${(angle * 180 / Math.PI).toFixed(1)}`);
 
     // 거리가 1.2 미만이고, 공격자의 정면 45도 이내 (Math.PI / 4)에 있을 때 히트로 간주
-    return distance < 1.2 && angle < Math.PI / 4;
+    return distance < 1.2 && angle < Math.PI / 4; 
 }
 
 // --- Player 컴포넌트 (현재 플레이어의 로직) ---
@@ -150,7 +150,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
     });
 
     const toggleViewPressed = useRef(false);
-
+    
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
         // isPunching이 true이고 STOMP 클라이언트가 연결되어 있을 때만 실행
@@ -232,7 +232,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
             if (e.button === 0) { // 좌클릭
                 setIsPunching(true);
                 // 펀치 애니메이션 지속 시간 후 isPunching 상태를 false로 변경
-                setTimeout(() => setIsPunching(false), 500);
+                setTimeout(() => setIsPunching(false), 500); 
             }
         };
 
@@ -289,7 +289,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
             }
         };
         // 초기 마운트 시 포인터 락 상태 확인
-        if (document.pointerLockElement === canvas) {
+        if (document.pointerLockElement === canvas) { 
             document.addEventListener('mousemove', onMouseMove);
         }
         document.addEventListener('pointerlockchange', handlePointerLockChange);
@@ -309,7 +309,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
         if (stompClientInstance && stompClientInstance.connected) {
             const playerState = {
                 id: currentPlayerInfo.id,
-                nickname: nickname,
+                nickname:nickname,
                 position: { x: pos.x, y: pos.y, z: pos.z },
                 rotationY: yaw.current + Math.PI, // 3D 모델의 정면을 맞추기 위한 회전 보정
                 animationState: {
@@ -349,11 +349,11 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
         let actualSpeed = speed;
 
         if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.5, 1.5);
+            actualSpeed = Math.max(speed * 0.5, 1.5); 
         } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.15, 1.2);
+            actualSpeed = Math.max(speed * 0.15, 1.2); 
         } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = speed + 2;
+            actualSpeed = speed + 2; 
         }
 
         let vx = 0, vz = 0;
@@ -490,7 +490,7 @@ function PlayerHUD({ state }) {
         <>
             <div style={{
                 position: 'absolute',
-                top: 100,
+                top: 10,
                 left: 20,
                 color: 'white',
                 fontSize: 14,
@@ -513,8 +513,22 @@ function PlayerHUD({ state }) {
                     <div>Total Other Players: {otherPlayersArray.filter(p => p.id !== currentPlayerInfo.id).length}</div>
                 }
                 <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "No other players"}</pre>
-                <div className="mb-2 text-sm">💖 체력: {health} / 100</div>
-                {isHit && <div className="mt-2 text-sm text-red-400 animate-pulse">공격받음!</div>}
+                
+            </div>
+            <div style={{
+                position: 'absolute',
+                bottom: 20,
+                left: 20,
+                color: 'white',
+                fontSize: 30,
+                backgroundColor: 'rgba(0,0,0,0.8)',
+                padding: 10,
+                borderRadius: 8,
+                zIndex: 40
+            }}>
+                <div className="mb-2 !text-2xl">HP: {health} / 100</div>
+                {isHit && <span className="mt-2 !text-xl text-red-400 animate-pulse">공격받음!</span>}
+
             </div>
         </>
     );
@@ -551,9 +565,9 @@ function SceneObject({ obj, objectRefs }) {
             <mesh castShadow receiveShadow>
                 {/* obj.type이 'box'이면 boxGeometry를, 아니면 sphereGeometry를 사용합니다. */}
                 {obj.type === 'box' ? (
-                    <boxGeometry args={[obj.size.x, obj.size.y, obj.size.z]} />
+                    <boxGeometry args={[obj.size.x, obj.size.y, obj.size.z]} /> 
                 ) : (
-                    <sphereGeometry args={[obj.radius, 32, 32]} />
+                    <sphereGeometry args={[obj.radius, 32, 32]} /> 
                 )}
                 <meshStandardMaterial color={obj.color} />
             </mesh>
@@ -604,8 +618,8 @@ export default function App() {
     return (
         <div
             className="w-screen h-screen bg-cover bg-center flex items-center justify-center"
-        // 여기에 배경 이미지 스타일 추가 (tailwind.config.js에서 정의한 경우)
-        // style={{ backgroundImage: `url('...')` }}
+            // 여기에 배경 이미지 스타일 추가 (tailwind.config.js에서 정의한 경우)
+            // style={{ backgroundImage: `url('...')` }}
         >
             {/* 오버레이 블러 + 유리효과 카드 */}
             <div className="bg-white/10 backdrop-blur-md rounded-2xl p-10 max-w-lg w-full text-center shadow-2xl border border-white/20">
@@ -639,7 +653,7 @@ export default function App() {
         </div>
     );
 }
-export function GameCanvas({ nickname }) {
+export function GameCanvas({nickname}) {
     const [hudState, setHudState] = useState({
         health: 100,   // 초기 HP 설정
         isHit: false,  // 피격 상태를 관리하는 새로운 상태
@@ -687,12 +701,12 @@ export function GameCanvas({ nickname }) {
             collider: 'ball',
         },
         {
-            id: 'myBox1',
-            type: 'box',
-            position: { x: 3, y: 0.5, z: -2 },
-            size: { x: 2, y: 1, z: 2 },
-            color: 'red',
-            collider: 'cuboid',
+            id: 'myBox1', 
+            type: 'box', 
+            position: { x: 3, y: 0.5, z: -2 }, 
+            size: { x: 2, y: 1, z: 2 }, 
+            color: 'red', 
+            collider: 'cuboid', 
         },
     ]);
     const objectRefs = useRef({});
@@ -713,15 +727,15 @@ export function GameCanvas({ nickname }) {
 
         client.onConnect = (frame) => {
             console.log("[STOMP] Connected to WebSocket from App.jsx!", frame);
-
+            
             // 플레이어 위치 구독
             client.subscribe('/topic/playerLocations', (message) => {
                 try {
-                    console.log("[STOMP] Received playerLocations:", message.body); // 이 줄을 추가
+                    
                     const allPlayerPositions = JSON.parse(message.body);
                     // Map 객체로 변환하여 효율적으로 관리
                     // window.onlinePlayers에 Map 객체 저장
-                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p]));
+                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p])); 
                     setHudState(prev => ({
                         ...prev,
                         otherPlayers: window.onlinePlayers // Map 객체로 저장
@@ -766,7 +780,7 @@ export function GameCanvas({ nickname }) {
                             const newOtherPlayers = new Map(prev.otherPlayers);
                             const targetPlayer = newOtherPlayers.get(data.targetId);
                             if (targetPlayer) {
-                                console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0, 5)}가 맞았습니다!`);
+                                console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0,5)}가 맞았습니다!`);
                                 // 타겟 플레이어의 animationState에 isHitted를 true로 설정
                                 newOtherPlayers.set(data.targetId, {
                                     ...targetPlayer,
@@ -782,7 +796,7 @@ export function GameCanvas({ nickname }) {
                                         const innerNewOtherPlayers = new Map(innerPrev.otherPlayers);
                                         const innerTargetPlayer = innerNewOtherPlayers.get(data.targetId);
                                         if (innerTargetPlayer) {
-                                            console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0, 5)} isHitted 상태 false로 재설정.`);
+                                            console.log(`💥 GameCanvas: 다른 플레이어 ${data.targetId.substring(0,5)} isHitted 상태 false로 재설정.`);
                                             innerNewOtherPlayers.set(data.targetId, {
                                                 ...innerTargetPlayer,
                                                 animationState: {
@@ -819,7 +833,7 @@ export function GameCanvas({ nickname }) {
         };
 
         client.onDisconnect = () => {
-            console.log('[STOMP] Disconnected from WebSocket from App.jsx.');
+            // console.log('[STOMP] Disconnected from WebSocket from App.jsx.');
             setStompClient(null); // 연결 해제 시 클라이언트 상태 null로
         };
 
@@ -878,7 +892,7 @@ export function GameCanvas({ nickname }) {
                     linear={false}
                 >
                     {/* 배경색을 어둡게 설정합니다. */}
-                    <color attach="background" args={['#8fafdb']} />
+                    <color attach="background" args={['#8fafdb']} /> 
 
                     <ambientLight intensity={0.5} />
                     <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
