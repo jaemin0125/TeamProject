@@ -2,7 +2,7 @@
 // React Hooks
 import React, { useRef, useState, useEffect, useMemo, useCallback } from 'react';
 // React Three Fiber
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame, useThree, extend } from '@react-three/fiber'; // extend import 추가
 // React Three Drei: KeyboardControls, useKeyboardControls, Text 컴포넌트 임포트
 import { KeyboardControls, useKeyboardControls, Text } from '@react-three/drei';
 // React Three Rapier
@@ -11,13 +11,22 @@ import { Physics, RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { Leva, useControls } from 'leva';
 // Three.js
 import * as THREE from 'three';
-// CharacterModel, CharacterModel2, CharacterModel3 임포트
+// CharacterModel 임포트
 import { CharacterModel} from './CharacterModel';
 
 // 웹소켓 라이브러리 import
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { v4 as uuidv4 } from 'uuid'; // uuid 라이브러리 임포트
+
+// H2 오류 해결을 위한 임시 확장 (CharacterModel 내부의 미확인 객체에 대한 추정)
+// CharacterModel에서 H2라는 이름으로 어떤 Three.js 객체를 생성하려고 시도하는 것으로 보입니다.
+// 정확한 해결을 위해서는 CharacterModel.jsx 파일을 확인하여 H2가 무엇을 의미하는지 파악하고
+// 해당 Three.js 클래스를 여기에 extend 해야 합니다.
+// 현재는 임시로 Object3D를 H2로 등록하여 렌더링 오류를 회피합니다.
+class H2DummyObject extends THREE.Object3D {}
+extend({ H2: H2DummyObject });
+
 
 // 키보드 컨트롤 맵 정의
 const controlsMap = [
@@ -50,12 +59,12 @@ function OtherPlayer({ id, position, rotationY, animationState, nickname }) {
 
     // OtherPlayer가 마운트될 때 로그를 추가하여 어떤 모델이 선택되는지 확인
     useEffect(() => {
-        console.log(`[OtherPlayer] Mounted: ID: ${id.substring(0, 5)} - Initial Position: (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
+        //console.log(`[OtherPlayer] Mounted: ID: ${id.substring(0, 5)} - Initial Position: (${position.x.toFixed(2)}, ${position.y.toFixed(2)}, ${position.z.toFixed(2)})`);
         let modelTypeName;
        
         modelTypeName = 'CharacterModel (character.glb)';
        
-        console.log(`[OtherPlayer] ID: ${id.substring(0, 5)} assigned model type: ${modelTypeName}`);
+        //console.log(`[OtherPlayer] ID: ${id.substring(0, 5)} assigned model type: ${modelTypeName}`);
     }, [id, position]);
 
     useFrame(() => {
@@ -122,11 +131,12 @@ function checkHit(attackerPos, attackerQuat, targetPos) {
 
     const angle = forward.angleTo(directionToTarget);
 
-    return distance < 1.2 && angle < Math.PI / 4;
+    return distance < 1.2 && angle < Math.PI / 6;
 }
 
 // --- Player 컴포넌트 (현재 플레이어의 로직) ---
-function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname }) {
+// isDead, setIsDead props 추가
+function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode }) { // setViewMode prop 추가
     const { camera, gl } = useThree();
     const [subscribeKeys, getKeys] = useKeyboardControls();
     const [sitToggle, setSitToggle] = useState(false);
@@ -134,11 +144,18 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
     const playerRef = useRef();
     const modelRef = useRef();
     const [isGrounded, setIsGrounded] = useState(false);
-    const [viewMode, setViewMode] = useState('firstPerson');
+    const [currentViewMode, setCurrentViewMode] = useState('firstPerson'); // Player 내부의 viewMode 상태
     const [isPunching, setIsPunching] = useState(false);
+    const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태 추가
 
     const pitch = useRef(0);
     const yaw = useRef(0);
+    const roll = useRef(0); // 카메라 roll(Z축 회전) 상태 추가
+
+    // 사망 시 카메라 애니메이션을 위한 참조
+    const deathCameraTargetY = useRef(0.1); // 카메라가 최종적으로 도달할 Y 위치 (바닥에 가까움)
+    const deathCameraTargetPitch = useRef(0); // 카메라가 최종적으로 바라볼 각도 (수평으로 시작)
+    const deathCameraTargetRoll = useRef(Math.PI / 4); // 카메라가 최종적으로 옆으로 쓰러질 각도 (90도 -> 45도)
 
     const { speed, jumpImpulse } = useControls({
         speed: { value: 5, min: 1, max: 2000 },
@@ -148,11 +165,15 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
     const toggleViewPressed = useRef(false);
 
     // 펀치 시 타격 감지 및 서버 전송 로직
+    // isPunching이 true가 되고, canPunch가 true일 때만 실행되도록 수정
     useEffect(() => {
-        if (!isPunching || !stompClientInstance || !stompClientInstance.connected) return;
+        // 플레이어가 죽은 상태일 때는 펀치 로직을 실행하지 않음
+        if (!isPunching || !canPunch || !stompClientInstance || !stompClientInstance.connected || isDead) return;
 
         const attackerPos = playerRef.current?.translation();
         const attackerQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw.current, 0));
+
+        let hitOccurred = false; // 타격 발생 여부 플래그
 
         (window.onlinePlayers || new Map()).forEach((targetPlayer, id) => {
             if (id === currentPlayerId) return;
@@ -161,7 +182,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
             const isHit = checkHit(attackerPos, attackerQuat, targetPos);
 
             if (isHit) {
-                console.log(`[🥊 Player] 타격 성공 -> 대상: ${id}`);
+               // console.log(`[🥊 Player] 타격 성공 -> 대상: ${id}`);
                 stompClientInstance.publish({
                     destination: '/app/playerHit',
                     body: JSON.stringify({
@@ -169,14 +190,22 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
                         targetId: id,
                     }),
                 });
+                hitOccurred = true; // 타격이 발생했음을 표시
             }
         });
-    }, [isPunching, stompClientInstance]);
+
+        if (hitOccurred) { // 타격이 발생했을 때만 쿨타임 적용
+            setCanPunch(false); // 쿨타임 시작
+            setTimeout(() => {
+                setCanPunch(true); // 500ms 후 쿨타임 종료
+            }, 500);
+        }
+    }, [isPunching, canPunch, stompClientInstance, isDead]); // isDead 의존성 추가
 
     // 컴포넌트 마운트 시 초기 플레이어 등록
     useEffect(() => {
         if (stompClientInstance && stompClientInstance.connected) {
-            console.log("[Player] Initial player registration upon mount.");
+            //console.log("[Player] Initial player registration upon mount.");
             const initialPlayerState = {
                 id: currentPlayerId,
                 nickname: playerNickname,
@@ -185,7 +214,8 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
                 animationState: {
                     isWalking: false, isBackward: false, isLeft: false, isRight: false,
                     isJumping: false, isRunning: false, isSitted: false, isSittedAndWalk: false,
-                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isIdle: true // isHitted 추가
+                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isIdle: true,
+                    isDead: false // 죽음 상태 추가
                 }
             };
             stompClientInstance.publish({
@@ -198,6 +228,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
     // 'C' (앉기) 및 'Z' (눕기) 토글 로직
     useEffect(() => {
         const handleKeyDown = (e) => {
+            if (isDead) return; // 죽음 상태일 때 움직임 비활성화
             if (e.code === 'KeyC') {
                 setSitToggle(prev => {
                     const next = !prev;
@@ -215,14 +246,18 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [isDead]); // isDead 의존성 추가
 
     // 마우스 클릭 (펀치) 로직
     useEffect(() => {
         const handleMouseDown = (e) => {
-            if (e.button === 0) {
+            if (isDead) return; // 죽음 상태일 때 펀치 비활성화
+            if (e.button === 0 && canPunch) { // canPunch가 true일 때만 펀치 시작
                 setIsPunching(true);
+                // 애니메이션 지속 시간 (0.5초) 후에 isPunching을 false로
                 setTimeout(() => setIsPunching(false), 500);
+                // 기존에 여기에 있던 setCanPunch(false) 및 setTimeout 로직은 아래 useEffect로 이동하여
+                // 실제로 타격이 발생했을 때만 쿨타임이 적용되도록 수정합니다.
             }
         };
 
@@ -230,56 +265,70 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
         return () => {
             window.removeEventListener('mousedown', handleMouseDown);
         };
-    }, []);
+    }, [canPunch, isDead]); // isDead 의존성 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
     useEffect(() => {
         const unsubscribe = subscribeKeys(
             (s) => s.toggleView,
             (pressed) => {
+                if (isDead) return; // 죽음 상태일 때 뷰 모드 전환 비활성화
                 if (pressed && !toggleViewPressed.current) {
-                    setViewMode((prev) => (prev === 'firstPerson' ? 'thirdPerson' : 'firstPerson'));
+                    setCurrentViewMode((prev) => {
+                        const newMode = (prev === 'firstPerson' ? 'thirdPerson' : 'firstPerson');
+                        // 3인칭에서 1인칭으로 전환 시 pitch 보정
+                        if (newMode === 'firstPerson' && prev === 'thirdPerson') {
+                            pitch.current = 0; // 1인칭 전환 시 pitch를 0으로 초기화 (정면)
+                        }
+                        setViewMode(newMode); // GameCanvas의 viewMode도 업데이트
+                        return newMode;
+                    });
                 }
                 toggleViewPressed.current = pressed;
             }
         );
         return () => unsubscribe();
-    }, [subscribeKeys]);
+    }, [subscribeKeys, isDead, setViewMode]); // isDead, setViewMode 의존성 추가
 
     // 마우스 움직임으로 카메라 회전 로직
     const onMouseMove = useCallback((e) => {
+        if (isDead) return; // 죽음 상태일 때 마우스 움직임 비활성화
         yaw.current -= e.movementX * 0.002;
         // yaw 값을 -PI에서 PI 사이로 정규화 (시점 깨짐 방지)
         yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
 
-        if (viewMode === 'firstPerson') {
+        if (currentViewMode === 'firstPerson') {
             pitch.current -= e.movementY * 0.002;
         } else {
             pitch.current += e.movementY * 0.002;
         }
 
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
-    }, [viewMode]);
+    }, [currentViewMode, isDead]); // isDead 의존성 추가
 
     // 캔버스 클릭 시 포인터 락 요청 로직
     useEffect(() => {
         const canvas = gl.domElement;
-        const requestPointerLock = () => { canvas.requestPointerLock(); };
+        const requestPointerLock = () => {
+            if (isDead) return; // 죽음 상태일 때 포인터 락 비활성화
+            canvas.requestPointerLock();
+        };
         canvas.addEventListener('click', requestPointerLock);
         return () => { canvas.removeEventListener('click', requestPointerLock); };
-    }, [gl]);
+    }, [gl, isDead]); // isDead 의존성 추가
 
     // 포인터 락 상태 변경 감지 및 마우스 이벤트 리스너 추가/제거 로직
     useEffect(() => {
         const canvas = gl.domElement;
         const handlePointerLockChange = () => {
-            if (document.pointerLockElement === canvas) {
+            if (document.pointerLockElement === canvas && !isDead) { // isDead 상태 체크 추가
                 document.addEventListener('mousemove', onMouseMove);
             } else {
                 document.removeEventListener('mousemove', onMouseMove);
             }
         };
-        if (document.pointerLockElement === canvas) {
+        // 초기 렌더링 시 포인터 락 상태에 따라 이벤트 리스너 설정
+        if (document.pointerLockElement === canvas && !isDead) {
             document.addEventListener('mousemove', onMouseMove);
         }
         document.addEventListener('pointerlockchange', handlePointerLockChange);
@@ -287,7 +336,38 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('pointerlockchange', handlePointerLockChange);
         };
-    }, [onMouseMove]);
+    }, [onMouseMove, isDead]); // isDead 의존성 추가
+
+    // 플레이어 사망/리스폰 시 시점 및 위치 초기화 로직
+    useEffect(() => {
+        // isDead가 true로 바뀌면 (사망 시)
+        if (isDead) {
+            console.log("Player 컴포넌트: 사망! 1인칭 시점으로 강제 전환.");
+            setCurrentViewMode('firstPerson'); // Player 내부 viewMode를 1인칭으로 설정
+            setViewMode('firstPerson'); // GameCanvas의 viewMode도 1인칭으로 업데이트
+
+            // 사망 시 플레이어의 움직임을 멈추고 중력에 의해 떨어지도록
+            if (playerRef.current) {
+                playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+                playerRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+                // 필요하다면 RigidBody의 type을 'dynamic'으로 변경하여 사망 애니메이션과 물리 효과를 줄 수 있습니다.
+                // playerRef.current.setType('dynamic');
+            }
+        }
+        // isDead가 false로 바뀌면 (리스폰 시)
+        else if (!isDead && playerRef.current) {
+            console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
+            playerRef.current.setTranslation(new THREE.Vector3(0, 1.1, 0), true);
+            playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            playerRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            // 필요하다면 RigidBody의 type을 다시 'kinematicPosition'으로 변경
+            // playerRef.current.setType('kinematicPosition');
+            setCurrentViewMode('firstPerson'); // 리스폰 후에도 1인칭 시점 유지
+            setViewMode('firstPerson'); // GameCanvas의 viewMode도 업데이트
+            roll.current = 0; // 리스폰 시 roll 각도 초기화
+        }
+    }, [isDead, setViewMode]);
+
 
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
@@ -302,13 +382,20 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
                 position: { x: pos.x, y: pos.y, z: pos.z },
                 rotationY: yaw.current + Math.PI,
                 animationState: {
-                    isWalking: keys.forward, isBackward: keys.backward, isLeft: keys.left, isRight: keys.right,
-                    isJumping: keys.jump, isRunning: keys.runFast && (keys.forward || keys.left || keys.right || keys.backward),
-                    isSitted: sitToggle, isSittedAndWalk: sitToggle && (keys.forward || keys.left || keys.right || keys.backward),
-                    isLyingDown: lieToggle, isLyingDownAndWalk: lieToggle && (keys.forward || keys.left || keys.right || keys.backward),
-                    isPunching: isPunching,
-                    isHitted: isPlayerHitted, // isHitted 상태 전달
-                    isIdle: !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle
+                    isWalking: keys.forward && !isDead, // 죽음 상태일 때 애니메이션 비활성화
+                    isBackward: keys.backward && !isDead,
+                    isLeft: keys.left && !isDead,
+                    isRight: keys.right && !isDead,
+                    isJumping: keys.jump && !isDead,
+                    isRunning: keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
+                    isSitted: sitToggle && !isDead,
+                    isSittedAndWalk: sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
+                    isLyingDown: lieToggle && !isDead,
+                    isLyingDownAndWalk: lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
+                    isPunching: isPunching && !isDead,
+                    isHitted: isPlayerHitted && !isDead, // isHitted 상태 전달
+                    isIdle: !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead,
+                    isDead: isDead // 죽음 상태 전달
                 }
             };
             stompClientInstance.publish({
@@ -335,63 +422,90 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
         const rightVector = new THREE.Vector3().crossVectors(forwardVector, new THREE.Vector3(0, 1, 0)).normalize();
         let actualSpeed = speed;
 
-        if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.5, 1.5);
-        } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = Math.max(speed * 0.15, 1.2);
-        } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
-            actualSpeed = speed + 2;
-        }
+        if (!isDead) { // 죽음 상태일 때는 움직임 비활성화
+            if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                actualSpeed = Math.max(speed * 0.5, 1.5);
+            } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                actualSpeed = Math.max(speed * 0.15, 1.2);
+            } else if (keys.runFast && (keys.forward || keys.backward || keys.left || keys.right)) {
+                actualSpeed = speed + 2;
+            }
 
-        let vx = 0, vz = 0;
+            let vx = 0, vz = 0;
 
-        if (keys.forward) {
-            vx += forwardVector.x * actualSpeed;
-            vz += forwardVector.z * actualSpeed;
-        }
-        if (keys.backward) {
-            vx -= forwardVector.x * actualSpeed;
-            vz -= forwardVector.z * actualSpeed;
-        }
-        if (keys.left) {
-            vx -= rightVector.x * actualSpeed;
-            vz -= rightVector.z * actualSpeed;
-        }
-        if (keys.right) {
-            vx += rightVector.x * actualSpeed;
-            vz += rightVector.z * actualSpeed;
-        }
+            if (keys.forward) {
+                vx += forwardVector.x * actualSpeed;
+                vz += forwardVector.z * actualSpeed;
+            }
+            if (keys.backward) {
+                vx -= forwardVector.x * actualSpeed;
+                vz -= forwardVector.z * actualSpeed;
+            }
+            if (keys.left) {
+                vx -= rightVector.x * actualSpeed;
+                vz -= rightVector.z * actualSpeed;
+            }
+            if (keys.right) {
+                vx += rightVector.x * actualSpeed;
+                vz += rightVector.z * actualSpeed;
+            }
 
-        playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
+            playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
-        if (keys.jump && isGrounded && vel.y <= 0.1) {
-            playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
-            setIsGrounded(false);
+            if (keys.jump && isGrounded && vel.y <= 0.1) {
+                playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
+                setIsGrounded(false);
+            }
+        } else {
+            // 플레이어가 죽었을 때 움직임 멈춤 (이미 처리됨)
+            playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
 
         const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z);
-        const headOffset = new THREE.Vector3(0, 0.3, 0);
+        const headOffset = new THREE.Vector3(0, 0.3, 0); // 기본 카메라 오프셋
 
         if (modelRef.current) {
             modelRef.current.position.copy(playerBodyPos);
             modelRef.current.position.y += -0.725;
-            modelRef.current.visible = viewMode === 'thirdPerson';
+            modelRef.current.visible = currentViewMode === 'thirdPerson';
 
-            const horizontalMovementLengthSq = vx * vx + vz * vz;
+            const horizontalMovementLengthSq = vel.x * vel.x + vel.z * vel.z;
             if (horizontalMovementLengthSq > 0.01) {
-                const targetRotationY = Math.atan2(vx, vz);
+                const targetRotationY = Math.atan2(vel.x, vel.z);
                 modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, targetRotationY, 0.15);
             } else {
                 modelRef.current.rotation.y = THREE.MathUtils.lerp(modelRef.current.rotation.y, yaw.current, 0.15);
             }
         }
 
-        if (viewMode === 'firstPerson') {
+        // 카메라 위치 및 회전 로직
+        if (isDead) {
+            // 사망 시 카메라 쓰러짐 효과
+            const targetCamY = playerBodyPos.y + deathCameraTargetY.current; // 바닥에 가까운 목표 Y
+            const targetCamPitch = deathCameraTargetPitch.current; // 카메라가 최종적으로 바라볼 각도 (수평)
+            const targetCamRoll = deathCameraTargetRoll.current; // 카메라가 최종적으로 옆으로 쓰러질 각도 (90도 -> 45도)
+
+            // 카메라 Y 위치를 부드럽게 보간
+            camera.position.y = THREE.MathUtils.lerp(camera.position.y, targetCamY, 0.05);
+            // 카메라 피치(상하 회전)를 부드럽게 보간
+            pitch.current = THREE.MathUtils.lerp(pitch.current, targetCamPitch, 0.05);
+            // 카메라 롤(Z축 회전)을 부드럽게 보간
+            roll.current = THREE.MathUtils.lerp(roll.current, targetCamRoll, 0.05);
+
+            // 카메라 위치는 플레이어의 마지막 위치를 기반으로
+            camera.position.x = playerBodyPos.x;
+            camera.position.z = playerBodyPos.z;
+
+            // 카메라 회전 적용 (roll 각도 적용)
+            const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, roll.current, 'YXZ');
+            camera.quaternion.setFromEuler(cameraRotation);
+
+        } else if (currentViewMode === 'firstPerson') {
             const cameraPosition = playerBodyPos.clone().add(headOffset);
             camera.position.copy(cameraPosition);
-            const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, 0, 'YXZ');
+            const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
             camera.quaternion.setFromEuler(cameraRotation);
-        } else {
+        } else { // thirdPerson
             const dist = 5;
             const phi = Math.PI / 2 - pitch.current;
             const theta = yaw.current + Math.PI;
@@ -408,7 +522,7 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
 
         onHudUpdate?.(prev => ({
             ...prev,
-            viewMode,
+            viewMode: currentViewMode, // Player 내부 viewMode 전달
             isGrounded,
             position: `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`,
             velocity: `(${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`,
@@ -435,19 +549,20 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
 
             <CharacterModel
                 ref={modelRef}
-                isWalking={keys.forward}
-                isBackward={keys.backward}
-                isLeft={keys.left}
-                isRight={keys.right}
-                isJumping={keys.jump}
-                isRunning={keys.runFast && (keys.forward || keys.left || keys.right || keys.backward)}
-                isSittedAndWalk={sitToggle && (keys.forward || keys.left || keys.right || keys.backward)}
-                isSitted={sitToggle}
-                isLyingDownAndWalk={lieToggle && (keys.forward || keys.left || keys.right || keys.backward)}
-                isLyingDown={lieToggle}
-                isIdle={!(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle}
-                isPunching={isPunching}
-                isHitted={isPlayerHitted} // isHitted prop 전달
+                isWalking={keys.forward && !isDead} // 죽음 상태일 때 애니메이션 비활성화
+                isBackward={keys.backward && !isDead}
+                isLeft={keys.left && !isDead}
+                isRight={keys.right && !isDead}
+                isJumping={keys.jump && !isDead}
+                isRunning={keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
+                isSittedAndWalk={sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
+                isSitted={sitToggle && !isDead}
+                isLyingDownAndWalk={lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
+                isLyingDown={lieToggle && !isDead}
+                isIdle={!(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead}
+                isPunching={isPunching && !isDead}
+                isHitted={isPlayerHitted && !isDead} // isHitted prop 전달
+                isDead={isDead} // isDead prop 전달
             />
         </>
     );
@@ -455,13 +570,16 @@ function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, 
 
 // 플레이어 HUD (Head-Up Display) 컴포넌트
 function PlayerHUD({ state, playerNickname }) {
-    const { health = 100, isHit } = state;
+    const { health = 100, isHit, isDead, respawnProgress = 0 } = state; // respawnProgress 상태를 state에서 가져옴
 
     const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
     const otherPlayersInfo = otherPlayersArray
         .filter(p => p.id !== currentPlayerId)
         .map(p => `ID: ${p.id.substring(0, 5)}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
         .join('\n');
+
+    // 프로그레스 바 너비 계산 (5초 기준)
+    const progressBarWidth = (respawnProgress / 5) * 100;
 
     return (
         <>
@@ -503,8 +621,75 @@ function PlayerHUD({ state, playerNickname }) {
                 borderRadius: 8,
                 zIndex: 40
             }}>
-                <div className="mb-2 text-sm">💖 HP: {health} / 100 {isHit && <span className="mt-2 text-sm text-red-400 animate-pulse">공격받음!</span>}</div>          
+                <div className="mb-2 text-sm">💖 HP: {health} / 100 </div>          
+                {isHit && <span className="mt-2 text-sm text-red-400 animate-pulse">아파요!</span>}
             </div>
+            {isDead && (
+                <div style={{
+                    position: 'absolute',
+                    top: '50%',
+                    left: '0', // 왼쪽 끝으로 정렬
+                    transform: 'translateY(-50%)', // Y축만 중앙 정렬
+                    color: 'red',
+                    fontSize: 120, // GTA 이미지에 가깝게 글자 크기 더 키움
+                    fontWeight: '900', // 더 굵게
+                    // 배경색 투명도를 높여서 게임 화면이 더 잘 보이도록 함 (GTA 스타일)
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    padding: '20px 0', // 좌우 패딩 제거
+                    borderRadius: '5px', // 모서리를 둥글게 하지 않음 (GTA 스타일)
+                    zIndex: 50,
+                    // 테두리 제거 (GTA 스타일은 텍스트 자체에 강렬한 그림자를 가짐)
+                    border: 'none',
+                    // 텍스트 그림자 강화 (GTA 스타일)
+                    textShadow: '8px 8px 0px rgba(0,0,0,0.7), 10px 10px 0px rgba(0,0,0,0.5)',
+                    letterSpacing: '5px', // 글자 간격 유지
+                    // GTA 스타일 폰트 (웹 폰트가 없으므로 시스템 폰트 중 비슷한 느낌 선택)
+                    fontFamily: '"Anton", "Impact", "Arial Black", sans-serif',
+                    // 애니메이션은 유지하되, 흔들림 강도 조절
+                    animation: 'wastedFadeIn 1.5s forwards, wastedShake 0.1s infinite alternate', // 흔들림 이펙트 강도 줄임 (0.5s -> 0.1s)
+                    whiteSpace: 'nowrap', // 텍스트가 줄 바꿈되지 않도록
+                    width: '100vw', // 뷰포트 가로 전체 너비
+                    textAlign: 'center', // 텍스트 중앙 정렬
+                    boxSizing: 'border-box',
+                }}>
+                    WASTED!
+                    {/* 리스폰 프로그레스 바 */}
+                    <div style={{
+                        width: '80%', // 바 컨테이너 너비 (화면 중앙에 오도록)
+                        height: '20px',
+                        backgroundColor: 'rgba(255, 255, 255, 0.2)', // 반투명 흰색 배경
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        margin: '20px auto 0 auto', // 가로 중앙 정렬, 상단 여백
+                        border: '2px solid white', // 흰색 테두리
+                        boxShadow: '0 0 10px rgba(255,255,255,0.5)', // 은은한 그림자
+                    }}>
+                        <div style={{
+                            width: `${progressBarWidth}%`, // 진행도에 따른 동적 너비
+                            height: '100%',
+                            backgroundColor: 'red', // 빨간색 채움
+                            borderRadius: '8px', // 컨테이너보다 약간 작은 둥근 모서리
+                            transition: 'width 0.1s linear', // 너비 변화 부드럽게
+                        }}></div>
+                    </div>
+                </div>
+            )}
+            {/* WASTED! 애니메이션을 위한 스타일 태그 추가 */}
+            <style>
+                {`
+                @keyframes wastedFadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes wastedShake {
+                    0% { transform: translateY(-50%) rotate(0deg); }
+                    25% { transform: translateY(-50.2%) rotate(0.05deg); } // 흔들림 강도 더 줄임
+                    50% { transform: translateY(-49.8%) rotate(-0.05deg); } // 흔들림 강도 더 줄임
+                    75% { transform: translateY(-50.2%) rotate(0.05deg); } // 흔들림 강도 더 줄임
+                    100% { transform: translateY(-50%) rotate(0deg); }
+                }
+                `}
+            </style>
         </>
     );
 }
@@ -539,7 +724,7 @@ function SceneObject({ obj, objectRefs }) {
         >
             <mesh castShadow receiveShadow>
                 {obj.type === 'box' ? (
-                    <boxGeometry args={[obj.size.x, obj.size.y, obj.size.z]} />
+                    <boxGeometry args={[obj.size.x, obj.size.y, obj.z]} />
                 ) : (
                     <sphereGeometry args={[obj.radius, 32, 32]} />
                 )}
@@ -551,7 +736,11 @@ function SceneObject({ obj, objectRefs }) {
 
 // 메인 App 컴포넌트
 export default function App() {
-    const [enteredGame, setEnteredGame] = useState(false);
+       // sessionStorage에서 'enteredGame' 상태를 로드합니다.
+    const [enteredGame, setEnteredGame] = useState(() => {
+        const storedEnteredGame = sessionStorage.getItem('enteredGame');
+        return storedEnteredGame === 'true'; // 문자열 'true'를 불리언 true로 변환
+    });
     // localStorage에서 닉네임을 불러와 초기값으로 설정합니다.
     // 만약 이전에 설정된 닉네임이 없다면 '플레이어_' + ID 앞 5자리로 설정합니다.
     const [nickname, setNickname] = useState(() => {
@@ -562,6 +751,11 @@ export default function App() {
         }
         return storedNickname;
     });
+
+    useEffect(() => {
+        sessionStorage.setItem('enteredGame', enteredGame.toString());
+
+    }, [enteredGame]);
 
     const handleNicknameSubmit = () => {
         localStorage.setItem('myNickname', nickname); // 입력된 닉네임 저장
@@ -634,7 +828,7 @@ class ErrorBoundary extends React.Component {
                 }}>
                     <h2>게임 중 오류가 발생했습니다!</h2>
                     <p>콘솔을 확인하여 상세 오류를 파악해주세요.</p>
-                    {this.state.error && <p>오류: {this.state.error.message}</p>}
+                    {this.state.error && <p>오류: {this.state.error.message}</p>} {/* error.message로 변경 */}
                     <button
                         onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
                         style={{ marginTop: '10px', padding: '8px 15px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
@@ -660,6 +854,9 @@ export function GameCanvas({playerNickname}) {
         health: 100,
         isHit: false,
         otherPlayers: new Map(),
+        isDead: false, // isDead 상태를 GameCanvas로 올림
+        viewMode: 'firstPerson', // GameCanvas에서도 viewMode 상태를 관리
+        respawnProgress: 0, // 리스폰 진행도 상태 추가
     });
     const [sceneObjects, setSceneObjects] = useState([
         {
@@ -715,6 +912,74 @@ export function GameCanvas({playerNickname}) {
 
     const [stompClient, setStompClient] = useState(null);
 
+    // isDead 상태를 직접 제어하는 함수를 HUD 업데이트 함수와 분리
+    const setIsDeadInGameCanvas = useCallback((deadState) => {
+        setHudState(prev => ({ ...prev, isDead: deadState }));
+    }, []);
+
+    // Player 컴포넌트에서 viewMode를 업데이트할 수 있도록 함수 전달
+    const setViewModeInGameCanvas = useCallback((mode) => {
+        setHudState(prev => ({ ...prev, viewMode: mode }));
+    }, []);
+
+
+    // 플레이어 죽음 및 리스폰 로직 (GameCanvas에서 관리)
+    useEffect(() => {
+        let respawnTimer;
+        let progressInterval;
+
+        // isDead 상태가 true가 될 때만 리스폰 타이머와 진행도 인터벌을 시작
+        if (hudState.isDead) {
+            console.log("플레이어 사망! 리스폰 타이머 시작 (5초)...");
+            // 사망 시 1인칭 시점으로 강제 변경
+            setViewModeInGameCanvas('firstPerson');
+
+            // 진행도 초기화 및 인터벌 시작
+            setHudState(prev => ({ ...prev, respawnProgress: 0 })); // 사망 시 진행도 0으로 리셋
+            let currentProgress = 0;
+            progressInterval = setInterval(() => {
+                currentProgress += 0.1; // 100ms마다 0.1초씩 증가 (총 5초)
+                if (currentProgress >= 5) {
+                    currentProgress = 5; // 5초 이상 넘어가지 않도록 제한
+                    clearInterval(progressInterval); // 인터벌 종료
+                }
+                setHudState(prev => ({ ...prev, respawnProgress: currentProgress }));
+            }, 100); // 100ms마다 업데이트
+
+            // 실제 리스폰 타이머
+            respawnTimer = setTimeout(() => {
+                console.log("플레이어 리스폰 중...");
+                // HP 100으로 리셋, isDead 상태 해제, 진행도 0으로 리셋
+                setHudState(prev => ({ ...prev, health: 100, isDead: false, respawnProgress: 0 }));
+                console.log("플레이어가 리스폰되었습니다.");
+
+                if (stompClient && stompClient.connected) {
+                    stompClient.publish({
+                        destination: '/app/playerRespawn',
+                        body: JSON.stringify({
+                            id: currentPlayerId,
+                            position: { x: 0, y: 1.1, z: 0 }, // 서버에 리스폰 위치 전달
+                            health: 100
+                        })
+                    });
+                }
+            }, 5000); // 5초 후 리스폰
+
+        }
+
+        // Cleanup function for useEffect
+        return () => {
+            if (respawnTimer) {
+                clearTimeout(respawnTimer);
+                console.log("리스폰 타이머 클리어됨.");
+            }
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                console.log("진행도 인터벌 클리어됨.");
+            }
+        };
+    }, [hudState.isDead, stompClient, setHudState, setViewModeInGameCanvas]); // setHudState도 의존성에 추가
+
     useEffect(() => {
         const WS_URL = 'http://3.106.193.56:8080/ws';
         const socket = new SockJS(WS_URL);
@@ -726,16 +991,16 @@ export function GameCanvas({playerNickname}) {
         });
 
         client.onConnect = (frame) => {
-            console.log("[STOMP] Connected to WebSocket from App.jsx!", frame);
+            //("[STOMP] Connected to WebSocket from App.jsx!", frame);
 
             client.subscribe('/topic/playerLocations', (message) => {
                 try {
                     const allPlayerPositions = JSON.parse(message.body);
-                    console.log(`[STOMP Rx] Raw message body:`, message.body);
-                    console.log(`[STOMP Rx] Parsed allPlayerPositions:`, allPlayerPositions);
+                    //console.log(`[STOMP Rx] Raw message body:`, message.body);
+                    //console.log(`[STOMP Rx] Parsed allPlayerPositions:`, allPlayerPositions);
                     window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p]));
-                    console.log(`[STOMP Rx] window.onlinePlayers updated. Size: ${window.onlinePlayers.size}`);
-                    console.log(`[STOMP Rx] Current otherPlayers IDs:`, Array.from(window.onlinePlayers.keys()));
+                    //console.log(`[STOMP Rx] window.onlinePlayers updated. Size: ${window.onlinePlayers.size}`);
+                    //console.log(`[STOMP Rx] Current otherPlayers IDs:`, Array.from(window.onlinePlayers.keys()));
 
                     setHudState(prev => ({
                         ...prev,
@@ -763,11 +1028,15 @@ export function GameCanvas({playerNickname}) {
 
                     if (data.targetId === currentPlayerId) {
                         console.log('💢 GameCanvas: 내가 맞았습니다! isHit 상태 true로 설정.');
-                        setHudState(prev => ({
-                            ...prev,
-                            isHit: true,
-                            health: Math.max((prev.health ?? 100) - 10, 0),
-                        }));
+                        setHudState(prev => {
+                            const newHealth = Math.max((prev.health ?? 100) - 10, 0);
+                            return {
+                                ...prev,
+                                isHit: true,
+                                health: newHealth,
+                                isDead: newHealth <= 0 // HP가 0 이하면 isDead 상태를 true로 설정
+                            };
+                        });
 
                         setTimeout(() => {
                             console.log('💢 GameCanvas: isHit 상태 false로 재설정.');
@@ -801,7 +1070,7 @@ export function GameCanvas({playerNickname}) {
                                                 },
                                             });
                                         }
-                                        return { ...innerPrev, otherPlayers: innerNewOtherPlayers };
+                                        return { ...innerPrev, otherPlayers: newOtherPlayers };
                                     });
                                 }, 500);
 
@@ -848,7 +1117,7 @@ export function GameCanvas({playerNickname}) {
             }
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, []);
+    }, [setIsDeadInGameCanvas]); // setIsDeadInGameCanvas 의존성 추가
 
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
         setSceneObjects(prevObjects => {
@@ -880,7 +1149,11 @@ export function GameCanvas({playerNickname}) {
                 <Canvas
                     shadows
                     camera={{ fov: 60, position: [0, 5, 10] }}
-                    style={{ width: '100vw', height: '100vh' }}
+                    style={{
+                        width: '100vw',
+                        height: '100vh',
+                        filter: hudState.isDead ? 'grayscale(100%)' : 'none' // isDead 상태에 따라 흑백 필터 적용
+                    }}
                     linear={false}
                 >
                     <color attach="background" args={['#8fafdb']} />
@@ -930,6 +1203,9 @@ export function GameCanvas({playerNickname}) {
                                         stompClientInstance={stompClient}
                                         isPlayerHitted={hudState.isHit}
                                         playerNickname={playerNickname}
+                                        isDead={hudState.isDead} // isDead 상태 전달
+                                        setIsDead={setIsDeadInGameCanvas} // setIsDead 함수 전달
+                                        setViewMode={setViewModeInGameCanvas} // Player에서 viewMode 변경 가능하도록 추가
                                     />
                                 )}
                             </React.Suspense>
@@ -937,10 +1213,10 @@ export function GameCanvas({playerNickname}) {
 
                         {hudState.otherPlayers && Array.from(hudState.otherPlayers.values()).map((player) => {
                             if (player.id === currentPlayerId) {
-                                console.log(`[OtherPlayer Render Check] Skipping self: ${player.nickname} (${player.id})`);
+                                //console.log(`[OtherPlayer Render Check] Skipping self: ${player.nickname} (${player.id})`);
                                 return null;
                             }
-                            console.log(`[OtherPlayer Render Check] Preparing to render: ${player.nickname} (${player.id})`);
+                            //console.log(`[OtherPlayer Render Check] Preparing to render: ${player.nickname} (${player.id})`);
                             return (
                                 <ErrorBoundary key={`other-player-error-${player.id}`}>
                                     <React.Suspense fallback={<Text position={[player.position.x, player.position.y + 1, player.position.z]} color="gray">다른 플레이어 로딩 중...</Text>}>

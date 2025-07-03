@@ -32,7 +32,7 @@ export const CharacterModel = React.forwardRef(
                 console.error(`CharacterModel (${glbPath}): No animation actions extracted. Check useAnimations hook or animation names.`);
                 return;
             }
-            console.log(`CharacterModel (${glbPath}): Available animations:`, Object.keys(actions));
+            //console.log(`CharacterModel (${glbPath}): Available animations:`, Object.keys(actions));
 
             let nextActionName = null;
 
@@ -60,7 +60,7 @@ export const CharacterModel = React.forwardRef(
                 nextActionName = 'Idle';
             }
 
-            console.log(`CharacterModel (${glbPath}) - nextActionName:`, nextActionName, { isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted });
+            //console.log(`CharacterModel (${glbPath}) - nextActionName:`, nextActionName, { isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted });
 
             if (nextActionName && actions[nextActionName]) {
                 const nextAction = actions[nextActionName];
