@@ -1,11 +1,11 @@
 package com.example.demo.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Data; // @Data 어노테이션이 getter, setter, toString 등을 자동으로 생성해줍니다.
+import lombok.Data;
 import lombok.NoArgsConstructor;
 
 // PlayerState DTO
-@Data // 이 어노테이션이 getter, setter, equals, hashCode, toString을 자동으로 생성합니다.
+@Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class PlayerState {
@@ -14,7 +14,7 @@ public class PlayerState {
     private String nickname; // <-- 이 줄을 추가해야 합니다!
     private Position position;
     private double rotationY;
-    private AnimationState animationState; // <-- 이 부분은 이미 잘 추가되어 있습니다!
+    private AnimationState animationState; // <-- 이 부분이 새로 추가됩니다!
 
     @Data
     @NoArgsConstructor

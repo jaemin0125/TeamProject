@@ -70,7 +70,7 @@ public class AnimationState {
                ", isLeft=" + isLeft +
                ", isRight=" + isRight +
                ", isJumping=" + isJumping +
-               ", isRunning=" + isRunning + 
+               ", isRunning=" + isRunning +
                ", isSitted=" + isSitted +
                ", isSittedAndWalk=" + isSittedAndWalk +
                ", isLyingDown=" + isLyingDown +

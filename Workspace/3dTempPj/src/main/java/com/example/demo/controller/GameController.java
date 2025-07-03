@@ -1,5 +1,7 @@
 package com.example.demo.controller;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -8,6 +10,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.service.PlayerService;
@@ -26,6 +29,7 @@ public class GameController {
 
 	@GetMapping("/api/hello")
 	public String hello() {
+		//logger.info("Hello from Spring Boot server (HTTP request)!");
 		return "Hello from Spring Boot!";
 	}
 
@@ -34,46 +38,39 @@ public class GameController {
 		String sessionId = headerAccessor.getSessionId();
 		playerState.setSessionId(sessionId); // 세션 ID 설정
 
-		// 🚨 이 부분이 콘솔에 로그를 출력합니다.
-		logger.info("[GameController] Player registration request: ID={}, Nickname='{}', Session={}",
-				playerState.getId(), playerState.getNickname(), sessionId);
-
 		playerService.addPlayer(playerState, sessionId); // 플레이어 추가/업데이트
-
-		// 이 부분도 콘솔에 로그를 출력합니다.
-		logger.info("[GameController] Broadcasting player locations after register. Total players: {}",
-				playerService.getAllPlayers().size());
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
 
+	/**
+	 * 클라이언트로부터 플레이어의 이동 상태 및 애니메이션 업데이트를 수신하고, 이를 다른 모든 클라이언트에게 브로드캐스팅합니다. 이 메서드는
+	 * 클라이언트의 STOMP 메시지 Destination이 "/app/playerMove"일 때 호출됩니다.
+	 *
+	 * @param playerState    업데이트된 플레이어 상태 (ID, 위치, 회전, 애니메이션 상태 등 포함)
+	 * @param headerAccessor STOMP 메시지 헤더 접근자 (세션 ID 등 정보 추출 가능)
+	 */
 	@MessageMapping("/playerMove")
 	public void playerMove(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
-        // 🚨 이 부분이 콘솔에 로그를 출력합니다.
-		logger.info("[GameController] Player move request: ID={}, Nickname='{}', Position={}, RotationY={}, Animation={}",
-				playerState.getId(), playerState.getNickname(), playerState.getPosition(),
-				playerState.getRotationY(), playerState.getAnimationState());
 
-		playerService.updatePlayerState(playerState); // 변경된 메서드 시그니처
-
-		// 이 부분도 콘솔에 로그를 출력합니다.
-		logger.info("[GameController] Broadcasting player locations after move. Total players: {}",
-				playerService.getAllPlayers().size());
+		playerService.updatePlayerState(playerState.getId(), playerState.getPosition(), playerState.getRotationY(),
+				playerState.getAnimationState() // <-- 이 부분이 새로 추가됩니다!
+		);
+		// logger.debug("Player moved: {} at ({}, {}, {})", playerState.getId(),
+		// playerState.getPosition().getX(), playerState.getPosition().getY(),
+		// playerState.getPosition().getZ());
+		
+		/*
+		 * playerService.updatePlayerState(playerState); // 변경된 메서드 시그니처
+		 */		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
-
-//	@MessageMapping("/sceneObjects") // 이 부분은 주석 처리되어 있을 것입니다.
-//	public void updateObjectState(List<ObjectState> objectStates) {
-//	    // 모든 클라이언트에게 브로드캐스트
-//	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
-//	}
-
-	public void unregisterPlayer(String sessionId) {
-		String playerId = playerService.getPlayerIdBySessionId(sessionId); // 세션 ID로 플레이어 ID 가져오기
-		playerService.removePlayerBySessionId(sessionId);
-        // 이 부분도 콘솔에 로그를 출력합니다.
-		logger.info("[GameController] Player unregistered (session disconnected): Session={}, Player ID={}. Remaining players: {}",
-				sessionId, playerId != null ? playerId : "N/A", playerService.getAllPlayers().size());
-		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+	
+	@MessageMapping("/sceneObjects")
+	public void updateObjectState(List<ObjectState> objectStates) {
+	    // 모든 클라이언트에게 브로드캐스트
+		
+		
+	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
 	}
 	
 	@MessageMapping("/playerHit")
@@ -81,5 +78,19 @@ public class GameController {
 	    
 	    // 브로드캐스트: 모든 클라이언트가 피격 알 수 있도록
 	    messagingTemplate.convertAndSend("/topic/playerHit", message);
+	}
+
+	/**
+	 * 웹소켓 연결이 끊어졌을 때 호출되는 메서드. 이 메서드는 WebSocketEventListener의
+	 * SessionDisconnectEvent에서 호출됩니다.
+	 *
+	 * @param sessionId 연결이 끊긴 세션의 ID
+	 */
+	public void unregisterPlayer(String sessionId) {
+		playerService.removePlayerBySessionId(sessionId);
+		//logger.info("Player unregistered (session disconnected): Session: {}. Remaining players: {}", sessionId,
+			//	playerService.getAllPlayers().size());
+		// 플레이어 제거 후, 업데이트된 플레이어 목록을 브로드캐스팅
+		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
 }
