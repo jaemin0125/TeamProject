@@ -64,7 +64,6 @@ public class AnimationState {
 
     public boolean getIsIdle() { return isIdle; }
     public void setIsIdle(boolean isIdle) { this.isIdle = isIdle; }
-
     // toString() 메서드를 수동으로 오버라이드하여 로그에서 보기 좋게 만듭니다.
     @Override
     public String toString() {

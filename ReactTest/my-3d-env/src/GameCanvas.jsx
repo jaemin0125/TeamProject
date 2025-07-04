@@ -7,6 +7,7 @@ import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { GModMap } from './Map';
 
 // Local Imports
 import { Player } from './Player';
@@ -23,6 +24,13 @@ import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils
 class H2DummyObject extends THREE.Object3D {}
 extend({ H2: H2DummyObject });
 
+class PDummyObject extends THREE.Object3D {}
+extend({ P: PDummyObject }); // <--- 이 부분을 추가합니다.
+
+class ButtonDummyObject extends THREE.Object3D {}
+extend({ Button: ButtonDummyObject }); // 또는 extend({ Button: THREE.Mesh });
+class DivDummyObject extends THREE.Object3D {}
+extend({ Div: DivDummyObject });
 // 현재 플레이어 ID를 가져옵니다.
 const { id: currentPlayerId} = getOrCreatePlayerInfo();
 
@@ -90,54 +98,54 @@ export function GameCanvas({playerNickname}) {
     });
     // 씬에 배치될 오브젝트들의 초기 상태
     const [sceneObjects, setSceneObjects] = useState([
-        {
-            id: 'ball1',
-            type: 'sphere',
-            position: { x: 5, y: 1.5, z: -5 },
-            radius: 1,
-            color: 'purple',
-            collider: 'ball',
-        },
-        {
-            id: 'ball2',
-            type: 'sphere',
-            position: { x: -5, y: 2.5, z: 5 },
-            radius: 1.5,
-            color: 'cyan',
-            collider: 'ball',
-        },
-        {
-            id: 'ball3',
-            type: 'sphere',
-            position: { x: 0, y: 3.5, z: 7 },
-            radius: 0.8,
-            color: 'gold',
-            collider: 'ball',
-        },
-        {
-            id: 'ball4',
-            type: 'sphere',
-            position: { x: 8, y: 1, z: 0 },
-            radius: 0.6,
-            color: 'red',
-            collider: 'ball',
-        },
-        {
-            id: 'ball5',
-            type: 'sphere',
-            position: { x: -8, y: 1, z: -8 },
-            radius: 1.2,
-            color: 'lime',
-            collider: 'ball',
-        },
-        {
-            id: 'myBox1',
-            type: 'box',
-            position: { x: 3, y: 0.5, z: -2 },
-            size: { x: 2, y: 1, z: 2 },
-            color: 'red',
-            collider: 'cuboid',
-        },
+        // {
+        //     id: 'ball1',
+        //     type: 'sphere',
+        //     position: { x: 5, y: 1.5, z: -5 },
+        //     radius: 1,
+        //     color: 'purple',
+        //     collider: 'ball',
+        // },
+        // {
+        //     id: 'ball2',
+        //     type: 'sphere',
+        //     position: { x: -5, y: 2.5, z: 5 },
+        //     radius: 1.5,
+        //     color: 'cyan',
+        //     collider: 'ball',
+        // },
+        // {
+        //     id: 'ball3',
+        //     type: 'sphere',
+        //     position: { x: 0, y: 3.5, z: 7 },
+        //     radius: 0.8,
+        //     color: 'gold',
+        //     collider: 'ball',
+        // },
+        // {
+        //     id: 'ball4',
+        //     type: 'sphere',
+        //     position: { x: 8, y: 1, z: 0 },
+        //     radius: 0.6,
+        //     color: 'red',
+        //     collider: 'ball',
+        // },
+        // {
+        //     id: 'ball5',
+        //     type: 'sphere',
+        //     position: { x: -8, y: 1, z: -8 },
+        //     radius: 1.2,
+        //     color: 'lime',
+        //     collider: 'ball',
+        // },
+        // {
+        //     id: 'myBox1',
+        //     type: 'box',
+        //     position: { x: 3, y: 0.5, z: -2 },
+        //     size: { x: 2, y: 1, z: 2 },
+        //     color: 'red',
+        //     collider: 'cuboid',
+        // },
     ]);
     // 씬 오브젝트들의 RigidBody 참조를 저장하는 useRef
     const objectRefs = useRef({});
@@ -412,36 +420,42 @@ export function GameCanvas({playerNickname}) {
                     <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
                     <Physics gravity={[0, -9.81, 0]}>
-                        {/* 바닥 (고정된 물리 바디) */}
-                        <RigidBody type="fixed">
+                        {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
+                        <GModMap /> 
+                        
+                        {/* 기존 바닥 RigidBody 제거 - GModMap에 자체적인 물리 바디가 있을 것으로 예상 */}
+                        {/* <RigidBody type="fixed">
                             <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
                                 <planeGeometry args={[100, 100]} />
                                 <meshStandardMaterial color="green" />
                             </mesh>
-                        </RigidBody>
+                        </RigidBody> */}
 
-                        {/* 보이지 않는 경계 벽 (물리 충돌용) */}
-                        <RigidBody type="fixed" position={[0, 500, -50]}>
+                        {/* 보이지 않는 경계 벽 (물리 충돌용) - 새로운 맵 크기에 맞춰 조정 */}
+                        {/* GModMap의 크기를 고려하여 경계 벽의 위치와 크기를 조정했습니다. 
+                            gm_construct.glb 모델의 대략적인 크기가 가로, 세로 100 유닛 정도라고 가정하고 
+                            그보다 넓은 150 유닛으로 설정했습니다. 필요에 따라 조정하세요. */}
+                        <RigidBody type="fixed" position={[0, 75, -75]}>
                             <mesh>
-                                <boxGeometry args={[100, 1000, 1]} />
+                                <boxGeometry args={[150, 150, 1]} />
                                 <meshStandardMaterial transparent opacity={0} />
                             </mesh>
                         </RigidBody>
-                        <RigidBody type="fixed" position={[0, 500, 50]}>
+                        <RigidBody type="fixed" position={[0, 75, 75]}>
                             <mesh>
-                                <boxGeometry args={[100, 1000, 1]} />
+                                <boxGeometry args={[150, 150, 1]} />
                                 <meshStandardMaterial transparent opacity={0} />
                             </mesh>
                         </RigidBody>
-                        <RigidBody type="fixed" position={[50, 500, 0]}>
+                        <RigidBody type="fixed" position={[75, 75, 0]}>
                             <mesh>
-                                <boxGeometry args={[1, 1000, 100]} />
+                                <boxGeometry args={[1, 150, 150]} />
                                 <meshStandardMaterial transparent opacity={0} />
                             </mesh>
                         </RigidBody>
-                        <RigidBody type="fixed" position={[-50, 500, 0]}>
+                        <RigidBody type="fixed" position={[-75, 75, 0]}>
                             <mesh>
-                                <boxGeometry args={[1, 1000, 100]} />
+                                <boxGeometry args={[1, 150, 150]} />
                                 <meshStandardMaterial transparent opacity={0} />
                             </mesh>
                         </RigidBody>

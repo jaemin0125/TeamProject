@@ -28,7 +28,7 @@ export function SceneObject({ obj, objectRefs }) {
     }, [obj.position]); // obj.position이 변경될 때만 실행
 
     return (
-        <RigidBody
+        <RigidBody type='fixed'
             ref={rigidBodyRef}
             position={[obj.position.x, obj.position.y, obj.position.z]} // 초기 위치 설정
             colliders={obj.collider} // 콜라이더 타입 설정

@@ -59,7 +59,7 @@ export function PlayerHUD({ state, playerNickname }) {
                 zIndex: 40
             }}>
                 <div className="mb-2 text-sm">💖 HP: {health} / 100 </div>
-                {isHit && <span className="mt-2 text-sm text-red-400 animate-pulse">아파요!</span>}
+                {isHit && <span className="mt-2 text-sm text-red-400 animate-pulse">공격당함!</span>}
             </div>
             {/* 사망 시 WASTED! 화면 */}
             {isDead && (
@@ -90,7 +90,7 @@ export function PlayerHUD({ state, playerNickname }) {
                     textAlign: 'center', // 텍스트 중앙 정렬
                     boxSizing: 'border-box',
                 }}>
-                    WASTED!
+                    YOU DEAD!
                     {/* 리스폰 프로그레스 바 */}
                     <div style={{
                         width: '80%', // 바 컨테이너 너비 (화면 중앙에 오도록)
