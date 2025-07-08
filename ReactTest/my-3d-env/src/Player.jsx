@@ -3,7 +3,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
-import { useControls } from 'leva';
+import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
@@ -11,8 +11,7 @@ import { controlsMap } from './utils/constants'; // controlsMap 임포트
 import { checkHit } from './utils/gameUtils'; // checkHit 임포트
 
 // Player 컴포넌트 (현재 플레이어의 로직)
-// isDead, setIsDead props 추가
-export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode, currentPlayerId }) {
+export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode, currentPlayerId, onObjectProximityChange, onInteract, onUseItem, selectedInventorySlot, isItemSelected }) {
     const { camera, gl } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
     const [sitToggle, setSitToggle] = useState(false); // 앉기 토글 상태
@@ -22,7 +21,14 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     const [isGrounded, setIsGrounded] = useState(false); // 바닥에 닿았는지 여부
     const [currentViewMode, setCurrentViewMode] = useState('firstPerson'); // 플레이어 내부의 시점 모드
     const [isPunching, setIsPunching] = useState(false); // 펀치 동작 여부
+    const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
+    const interactableObjectIdRef = useRef(null); // 플레이어가 근접한 상호작용 가능 오브젝트 ID
+    const exitTimeoutRef = useRef(null); // 충돌 종료 지연을 위한 타이머 참조
+
+    // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
+    const lastJumpKeyStatus = useRef(false);
+    const lastInteractKeyState = useRef(false); // 'F' 키의 이전 상태를 저장하는 Ref 추가
 
     const pitch = useRef(0); // 카메라 상하 회전 (pitch)
     const yaw = useRef(0); // 카메라 좌우 회전 (yaw)
@@ -36,7 +42,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     // Leva를 통한 디버그 컨트롤 (속도, 점프 임펄스)
     const { speed, jumpImpulse } = useControls({
         speed: { value: 5, min: 1, max: 2000 },
-        jumpImpulse: { value: 3, min: 1, max: 50 }
+        jumpImpulse: { value: 20, min: 1, max: 100 } // 점프 임펄스 기본값 20으로 변경
     });
 
     const toggleViewPressed = useRef(false); // 시점 전환 키 눌림 상태
@@ -59,7 +65,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             const isHit = checkHit(attackerPos, attackerQuat, targetPos); // 히트 여부 확인
 
             if (isHit) {
-               // console.log(`[🥊 Player] 타격 성공 -> 대상: ${id}`);
+                // console.log(`[🥊 Player] 타격 성공 -> 대상: ${id}`);
                 // 서버에 플레이어 피격 메시지 전송
                 stompClientInstance.publish({
                     destination: '/app/playerHit',
@@ -127,22 +133,35 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isDead]); // isDead 의존성 추가
 
-    // 마우스 클릭 (펀치) 로직
+    // 마우스 클릭 (펀치 또는 아이템 사용) 로직
     useEffect(() => {
+        const canvas = gl.domElement; // 캔버스 요소 가져오기
         const handleMouseDown = (e) => {
-            if (isDead) return; // 죽음 상태일 때 펀치 비활성화
-            if (e.button === 0 && canPunch) { // canPunch가 true일 때만 펀치 시작
-                setIsPunching(true);
-                // 애니메이션 지속 시간 (0.5초) 후에 isPunching을 false로
-                setTimeout(() => setIsPunching(false), 500);
+            if (isDead) return; // 죽음 상태일 때 동작 비활성화
+            if (e.button === 0) { // 좌클릭
+                console.log(`[Player] Left click detected.`);
+                console.log(`[Player] isItemSelected (prop): ${isItemSelected}`);
+                console.log(`[Player] onUseItem (prop type): ${typeof onUseItem}`);
+                console.log(`[Player] canPunch (state): ${canPunch}`);
+
+                // 선택된 인벤토리 슬롯에 아이템이 있고, onUseItem 함수가 유효하다면 아이템 사용을 우선
+                if (isItemSelected && typeof onUseItem === 'function') {
+                    console.log(`[Player] Condition met: isItemSelected is true and onUseItem is a function. Calling onUseItem.`);
+                    onUseItem();
+                } else if (canPunch) { // 아이템 사용 조건이 아니면 펀치
+                    console.log(`[Player] Condition not met for item use. Performing punch.`);
+                    setIsPunching(true);
+                    setTimeout(() => setIsPunching(false), 500);
+                }
             }
         };
 
-        window.addEventListener('mousedown', handleMouseDown);
+        // 마우스 이벤트 리스너를 window 대신 캔버스에 직접 연결
+        canvas.addEventListener('mousedown', handleMouseDown);
         return () => {
-            window.removeEventListener('mousedown', handleMouseDown);
+            canvas.removeEventListener('mousedown', handleMouseDown);
         };
-    }, [canPunch, isDead]); // 의존성 배열
+    }, [canPunch, isDead, onUseItem, isItemSelected, gl]); // gl을 의존성 배열에 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
     useEffect(() => {
@@ -212,8 +231,9 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         return () => {
             document.removeEventListener('mousemove', onMouseMove);
             document.removeEventListener('pointerlockchange', handlePointerLockChange);
+
         };
-    }, [onMouseMove, isDead]); // 의존성 배열
+    }, [onMouseMove, isDead, gl]); // gl을 의존성 배열에 추가
 
     // 플레이어 사망/리스폰 시 시점 및 위치 초기화 로직
     useEffect(() => {
@@ -249,8 +269,26 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
         const keys = getKeys(); // 현재 눌린 키 상태 가져오기
+        const { jump } = keys; // 점프 키 상태 별도로 추출
         const vel = playerRef.current?.linvel() || { x: 0, y: 0, z: 0 }; // 플레이어 선형 속도
         const pos = playerRef.current?.translation() || { x: 0, y: 0, z: 0 }; // 플레이어 위치
+
+        // 애니메이션 상태 계산 (useFrame 내에서 직접 계산)
+        const isWalkingAnim = keys.forward && !isDead;
+        const isBackwardAnim = keys.backward && !isDead;
+        const isLeftAnim = keys.left && !isDead;
+        const isRightAnim = keys.right && !isDead;
+        const isRunningAnim = keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+        const isSittedAnim = sitToggle && !isDead;
+        const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+        const isLyingDownAnim = lieToggle && !isDead;
+        const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+        const isPunchingAnim = isPunching && !isDead;
+        const isHittedAnim = isPlayerHitted && !isDead;
+        const isJumpingAnim = isJumping && !isDead;
+        const isDeadAnim = isDead;
+        const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
+
 
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
         if (stompClientInstance && stompClientInstance.connected) {
@@ -260,40 +298,26 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 position: { x: pos.x, y: pos.y, z: pos.z },
                 rotationY: yaw.current + Math.PI,
                 animationState: {
-                    isWalking: keys.forward && !isDead, // 죽음 상태일 때 애니메이션 비활성화
-                    isBackward: keys.backward && !isDead,
-                    isLeft: keys.left && !isDead,
-                    isRight: keys.right && !isDead,
-                    isJumping: keys.jump && !isDead,
-                    isRunning: keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
-                    isSitted: sitToggle && !isDead,
-                    isSittedAndWalk: sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
-                    isLyingDown: lieToggle && !isDead,
-                    isLyingDownAndWalk: lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead,
-                    isPunching: isPunching && !isDead,
-                    isHitted: isPlayerHitted && !isDead, // isHitted 상태 전달
-                    isIdle: !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead,
-                    isDead: isDead // 죽음 상태 전달
+                    isWalking: isWalkingAnim,
+                    isBackward: isBackwardAnim,
+                    isLeft: isLeftAnim,
+                    isRight: isRightAnim,
+                    isJumping: isJumpingAnim,
+                    isRunning: isRunningAnim,
+                    isSitted: isSittedAnim,
+                    isSittedAndWalk: isSittedAndWalkAnim,
+                    isLyingDown: isLyingDownAnim,
+                    isLyingDownAndWalk: isLyingDownAndWalkAnim,
+                    isPunching: isPunchingAnim,
+                    isHitted: isHittedAnim,
+                    isIdle: isIdleAnim,
+                    isDead: isDeadAnim
                 }
             };
             stompClientInstance.publish({
                 destination: `/app/playerMove`,
                 body: JSON.stringify(playerState)
             });
-
-            // 씬 오브젝트 위치 업데이트 (서버로 전송)
-            const objectPositions = Object.entries(objectRefs.current)
-                .map(([id, ref]) => {
-                    const objPos = ref.translation();
-                    return { id, position: { x: objPos.x, y: objPos.y, z: objPos.z } };
-                });
-
-            if (objectPositions.length > 0) {
-                stompClientInstance.publish({
-                    destination: '/app/sceneObjects',
-                    body: JSON.stringify(objectPositions),
-                });
-            }
         }
 
         // 카메라 방향 계산
@@ -336,15 +360,37 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             // 플레이어 선형 속도 설정
             playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
-            // 점프 로직
-            if (keys.jump && isGrounded && vel.y <= 0.1) {
+            // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
+            if (jump && !lastJumpKeyStatus.current && isGrounded && vel.y <= 0.1) {
                 playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
-                setIsGrounded(false);
+                setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
+                setIsJumping(true); // 점프 애니메이션 시작
             }
+
+            // 점프 애니메이션 종료 로직: 땅에 닿았고, 수직 속도가 거의 없을 때 점프 상태 해제
+            if (isGrounded && isJumping && vel.y < 0.1) {
+                setIsJumping(false);
+            }
+
+            // 'F' 키 상호작용 트리거 (Player에서 직접 처리)
+            if (keys.interact && !lastInteractKeyState.current) { // 'interact' 키가 새로 눌렸을 때
+                console.log(`[Player] 'F' key pressed. Current interactableObjectIdRef.current: ${interactableObjectIdRef.current}`); // 추가된 로그
+                if (onInteract && interactableObjectIdRef.current) { // interactableObjectIdRef.current 사용
+                    onInteract(interactableObjectIdRef.current); // GameCanvas로 상호작용 요청
+                } else {
+                    console.log("[Player] No interactable object in range or onInteract is null.");
+                }
+            }
+            lastInteractKeyState.current = keys.interact; // 'interact' 키의 현재 상태 저장
+
         } else {
             // 플레이어가 죽었을 때 움직임 멈춤
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
         }
+
+        // 현재 점프 키 상태를 기록하여 다음 프레임에서 이전 상태와 비교
+        lastJumpKeyStatus.current = jump;
+
 
         const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z); // 플레이어 RigidBody 위치
         const headOffset = new THREE.Vector3(0, 0.3, 0); // 기본 카메라 오프셋 (플레이어 머리 위)
@@ -396,7 +442,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
             // 3인칭 시점: 플레이어 뒤에서 카메라가 따라다니도록 설정
-            const dist = 5; // 카메라와 플레이어 간의 거리
+            const dist = 3.5; // 카메라와 플레이어 간의 거리
             const phi = Math.PI / 2 - pitch.current; // 구면 좌표계의 phi (수직 각도)
             const theta = yaw.current + Math.PI; // 구면 좌표계의 theta (수평 각도)
 
@@ -420,11 +466,61 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             velocity: `(${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`,
             yaw: yaw.current,
             pitch: pitch.current,
-            keys,
+            keys, // 이 keys는 useFrame 스코프 내의 keys 임
         }));
     });
 
-    const keys = getKeys(); // 현재 키 상태 가져오기 (애니메이션 prop에 사용)
+    // CharacterModel로 전달할 props는 useFrame에서 계산된 애니메이션 상태 변수들을 사용합니다.
+    const keys = getKeys(); // Get keys for initial render of CharacterModel (before first useFrame)
+    const isWalkingAnim = keys.forward && !isDead;
+    const isBackwardAnim = keys.backward && !isDead;
+    const isLeftAnim = keys.left && !isDead;
+    const isRightAnim = keys.right && !isDead;
+    const isRunningAnim = keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+    const isSittedAnim = sitToggle && !isDead;
+    const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+    const isLyingDownAnim = lieToggle && !isDead;
+    const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
+    const isPunchingAnim = isPunching && !isDead;
+    const isHittedAnim = isPlayerHitted && !isDead;
+    const isJumpingAnim = isJumping && !isDead;
+    const isDeadAnim = isDead;
+    const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
+
+    // 충돌 감지 (사과 상호작용)
+    const handleCollisionEnter = useCallback((payload) => {
+        setIsGrounded(true); // 바닥 접지 여부 업데이트
+        // 충돌한 오브젝트가 SceneObject에서 설정한 userData를 가지고 있는지 확인
+        if (payload.other.rigidBodyObject?.userData?.type === 'apple') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
+                clearTimeout(exitTimeoutRef.current);
+                exitTimeoutRef.current = null;
+            }
+            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
+                interactableObjectIdRef.current = objectId;
+                onObjectProximityChange(objectId, true);
+                console.log("Player entered apple proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+            }
+        }
+    }, [onObjectProximityChange]);
+
+    const handleCollisionExit = useCallback((payload) => {
+        setIsGrounded(false); // 바닥 접지 여부 업데이트
+        // 충돌 해제된 오브젝트가 SceneObject에서 설정한 userData를 가지고 있는지 확인
+        if (payload.other.rigidBodyObject?.userData?.type === 'apple') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            // Set a timeout to clear the ID, allowing for brief re-entries
+            exitTimeoutRef.current = setTimeout(() => {
+                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
+                    interactableObjectIdRef.current = null;
+                    onObjectProximityChange(objectId, false);
+                    console.log("Player exited apple proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                }
+                exitTimeoutRef.current = null;
+            }, 200); // 200ms debounce로 변경
+        }
+    }, [onObjectProximityChange]);
 
     return (
         <>
@@ -434,30 +530,33 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
                 enabledRotations={[false, false, false]} // 회전 비활성화 (캐릭터가 넘어지지 않도록)
-                onCollisionEnter={() => setIsGrounded(true)} // 충돌 시작 시 바닥에 닿음
-                onCollisionExit={() => setIsGrounded(false)} // 충돌 종료 시 바닥에서 떨어짐
+                onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
+                onCollisionExit={handleCollisionExit}   // 충돌 종료 시
             >
-                {/* 플레이어의 캡슐 콜라이더 */}
+                {/* 플레이어의 캡슐 콜라이더 (실제 물리 충돌용) */}
                 <CapsuleCollider args={[0.35, 0.4]} />
+                {/* 추가: 아이템 줍기 감지를 위한 센서 콜라이더 */}
+                {/* 이 센서는 isSensor={true}로 설정되어 물리적 충돌을 일으키지 않고 겹침만 감지합니다. */}
+                <CapsuleCollider args={[0.8, 0.8]} sensor position={[0, 0, 0]} /> {/* 플레이어 주변의 넓은 센서 (크기 증가) */}
             </RigidBody>
 
             {/* 플레이어 3D 모델 */}
             <CharacterModel
                 ref={modelRef}
-                isWalking={keys.forward && !isDead} // 죽음 상태일 때 애니메이션 비활성화
-                isBackward={keys.backward && !isDead}
-                isLeft={keys.left && !isDead}
-                isRight={keys.right && !isDead}
-                isJumping={keys.jump && !isDead}
-                isRunning={keys.runFast && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
-                isSittedAndWalk={sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
-                isSitted={sitToggle && !isDead}
-                isLyingDownAndWalk={lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead}
-                isLyingDown={lieToggle && !isDead}
-                isIdle={!(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead}
-                isPunching={isPunching && !isDead}
-                isHitted={isPlayerHitted && !isDead} // isHitted prop 전달
-                isDead={isDead} // isDead prop 전달
+                isWalking={isWalkingAnim}
+                isBackward={isBackwardAnim}
+                isLeft={isLeftAnim}
+                isRight={isRightAnim}
+                isJumping={isJumpingAnim}
+                isRunning={isRunningAnim}
+                isSittedAndWalk={isSittedAndWalkAnim}
+                isSitted={isSittedAnim}
+                isLyingDownAndWalk={isLyingDownAndWalkAnim}
+                isLyingDown={isLyingDownAnim}
+                isPunching={isPunchingAnim} // isPunching 상태를 애니메이션 prop으로 전달
+                isHitted={isHittedAnim}
+                isDead={isDeadAnim}
+                isIdle={isIdleAnim}
             />
         </>
     );

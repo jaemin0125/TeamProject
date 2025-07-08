@@ -1,0 +1,30 @@
+package com.example.demo.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List; // List 임포트 추가
+
+// PlayerState DTO
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class PlayerState {
+    private String id; // 플레이어 ID (프론트에서 uuid로 생성하고 localStorage에 저장하여 유지)
+    private String sessionId; // WebSocket 세션 ID (서버에서 설정)
+    private String nickname;
+    private Position position;
+    private double rotationY;
+    private AnimationState animationState;
+    private List<InventoryItem> inventory; // 인벤토리 필드 추가
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Position {
+        private double x;
+        private double y;
+        private double z;
+    }
+}

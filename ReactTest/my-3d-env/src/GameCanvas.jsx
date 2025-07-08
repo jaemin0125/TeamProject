@@ -7,6 +7,7 @@ import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
+import { GModMap } from './Map';
 
 // Local Imports
 import { Player } from './Player';
@@ -15,13 +16,18 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 
-// H2 오류 해결을 위한 임시 확장 (CharacterModel 내부의 미확인 객체에 대한 추정)
-// CharacterModel에서 H2라는 이름으로 어떤 Three.js 객체를 생성하려고 시도하는 것으로 보입니다.
-// 정확한 해결을 위해서는 CharacterModel.jsx 파일을 확인하여 H2가 무엇을 의미하는지 파악하고
-// 해당 Three.js 클래스를 여기에 extend 해야 합니다.
-// 현재는 임시로 Object3D를 H2로 등록하여 렌더링 오류를 회피합니다.
+// Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D {}
 extend({ H2: H2DummyObject });
+
+class PDummyObject extends THREE.Object3D {}
+extend({ P: PDummyObject });
+
+class ButtonDummyObject extends THREE.Object3D {}
+extend({ Button: ButtonDummyObject });
+
+class DivDummyObject extends THREE.Object3D {}
+extend({ Div: DivDummyObject });
 
 // 현재 플레이어 ID를 가져옵니다.
 const { id: currentPlayerId} = getOrCreatePlayerInfo();
@@ -37,13 +43,13 @@ class ErrorBoundary extends React.Component {
 
     // 오류 발생 시 상태를 업데이트하여 다음 렌더링에서 대체 UI를 보여줍니다.
     static getDerivedStateFromError(error) {
-        return { hasError: true, error };
+        return { hasError: true, error: error };
     }
 
     // 오류 정보를 로깅합니다.
     componentDidCatch(error, errorInfo) {
         console.error("ErrorBoundary caught an error:", error, errorInfo);
-        this.setState({ error, errorInfo });
+        this.setState({ errorInfo: errorInfo });
     }
 
     render() {
@@ -57,7 +63,6 @@ class ErrorBoundary extends React.Component {
                 }}>
                     <h2>게임 중 오류가 발생했습니다!</h2>
                     <p>콘솔을 확인하여 상세 오류를 파악해주세요.</p>
-                    {this.state.error && <p>오류: {this.state.error.message}</p>}
                     <button
                         onClick={() => this.setState({ hasError: false, error: null, errorInfo: null })}
                         style={{ marginTop: '10px', padding: '8px 15px', backgroundColor: '#fff', color: '#000', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
@@ -77,6 +82,7 @@ class ErrorBoundary extends React.Component {
     }
 }
 
+
 // GameCanvas 컴포넌트: 게임의 주요 렌더링 및 로직을 담당합니다.
 export function GameCanvas({playerNickname}) {
     // HUD 상태 관리 (체력, 피격 여부, 다른 플레이어 정보, 사망 여부, 시점, 리스폰 진행도)
@@ -87,57 +93,38 @@ export function GameCanvas({playerNickname}) {
         isDead: false, // isDead 상태를 GameCanvas로 올림
         viewMode: 'firstPerson', // GameCanvas에서도 viewMode 상태를 관리
         respawnProgress: 0, // 리스폰 진행도 상태 추가
+        // PlayerHUD로 전달될 추가 상태
+        showInteractionPrompt: false,
+        interactableObjectId: null,
     });
+    // 인벤토리 상태 관리 (8칸 핫바)
+    const [inventory, setInventory] = useState([
+        null, // 슬롯 1
+        null, // 슬롯 2
+        null, // 슬롯 3
+        null, // 슬롯 4
+        null, // 슬롯 5
+        null, // 슬롯 6
+        null, // 슬롯 7
+        null  // 슬롯 8
+    ]);
+    // 선택된 인벤토리 슬롯 상태 추가 (0부터 시작)
+    const [selectedInventorySlot, setSelectedInventorySlot] = useState(0);
+
+    // 현재 선택된 인벤토리 슬롯에 아이템이 있는지 여부
+    const isItemSelected = inventory[selectedInventorySlot] !== null;
+
     // 씬에 배치될 오브젝트들의 초기 상태
     const [sceneObjects, setSceneObjects] = useState([
-        {
-            id: 'ball1',
-            type: 'sphere',
-            position: { x: 5, y: 1.5, z: -5 },
-            radius: 1,
-            color: 'purple',
-            collider: 'ball',
-        },
-        {
-            id: 'ball2',
-            type: 'sphere',
-            position: { x: -5, y: 2.5, z: 5 },
-            radius: 1.5,
-            color: 'cyan',
-            collider: 'ball',
-        },
-        {
-            id: 'ball3',
-            type: 'sphere',
-            position: { x: 0, y: 3.5, z: 7 },
-            radius: 0.8,
-            color: 'gold',
-            collider: 'ball',
-        },
-        {
-            id: 'ball4',
-            type: 'sphere',
-            position: { x: 8, y: 1, z: 0 },
-            radius: 0.6,
-            color: 'red',
-            collider: 'ball',
-        },
-        {
-            id: 'ball5',
-            type: 'sphere',
-            position: { x: -8, y: 1, z: -8 },
-            radius: 1.2,
-            color: 'lime',
-            collider: 'ball',
-        },
-        {
-            id: 'myBox1',
-            type: 'box',
-            position: { x: 3, y: 0.5, z: -2 },
-            size: { x: 2, y: 1, z: 2 },
-            color: 'red',
-            collider: 'cuboid',
-        },
+        // 사과 오브젝트 추가 (dynamic으로 설정하여 중력 영향 받음)
+        // mass를 높여 거의 움직이지 않게 하고, linearDamping으로 움직임을 빠르게 멈추게 합니다.
+        // restitution을 낮춰 튀는 정도를 줄입니다.
+        { id: 'apple1', type: 'apple', position: { x: 0, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
+        { id: 'apple2', type: 'apple', position: { x: 2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
+        { id: 'apple3', type: 'apple', position: { x: -2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
+        { id: 'apple4', type: 'apple', position: { x: 0, y: 2, z: 2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
+        { id: 'apple5', type: 'apple', position: { x: 0, y: 2, z: -2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 }
+        // 다른 오브젝트들은 필요에 따라 추가하거나 제거하세요.
     ]);
     // 씬 오브젝트들의 RigidBody 참조를 저장하는 useRef
     const objectRefs = useRef({});
@@ -213,9 +200,40 @@ export function GameCanvas({playerNickname}) {
         };
     }, [hudState.isDead, stompClient, setHudState, setViewModeInGameCanvas]); // 의존성 배열
 
+    // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            const key = event.key;
+            if (key >= '1' && key <= '8') {
+                const newSlot = parseInt(key) - 1; // 0-indexed
+                setSelectedInventorySlot(newSlot);
+            }
+        };
+
+        const handleWheel = (event) => {
+            event.preventDefault(); // 페이지 스크롤 방지
+            setSelectedInventorySlot(prevSlot => {
+                const numSlots = inventory.length; // 인벤토리 슬롯 개수
+                if (event.deltaY > 0) { // 휠 아래로 (다음 슬롯)
+                    return (prevSlot + 1) % numSlots;
+                } else { // 휠 위로 (이전 슬롯)
+                    return (prevSlot - 1 + numSlots) % numSlots;
+                }
+            });
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('wheel', handleWheel, { passive: false }); // passive: false로 설정하여 preventDefault() 가능하게 함
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('wheel', handleWheel); // 수정: handleWheel 리스너 제거
+        };
+    }, [inventory.length]); // inventory.length가 변경될 때만 이펙트 재실행
+
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://3.106.193.56:8080/ws'; // WebSocket 서버 URL
+        const WS_URL = 'http://localhost:8080/ws'; // WebSocket 서버 URL
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -226,7 +244,8 @@ export function GameCanvas({playerNickname}) {
 
         // STOMP 클라이언트 연결 시
         client.onConnect = (frame) => {
-            //console.log("[STOMP] Connected to WebSocket from App.jsx!", frame);
+            //console.log("[STOMP] Connected to WebSocket from App.jsx!", frame); // 주석 해제하여 확인 가능
+            setStompClient(client); // STOMP 클라이언트 인스턴스 저장
 
             // 플레이어 위치 정보 구독
             client.subscribe('/topic/playerLocations', (message) => {
@@ -306,7 +325,7 @@ export function GameCanvas({playerNickname}) {
                                                 },
                                             });
                                         }
-                                        return { ...innerPrev, otherPlayers: newOtherPlayers };
+                                        return { ...innerPrev, otherPlayers: innerNewOtherPlayers };
                                     });
                                 }, 500);
 
@@ -324,7 +343,34 @@ export function GameCanvas({playerNickname}) {
                 }
             });
 
-            setStompClient(client); // STOMP 클라이언트 인스턴스 저장
+            // 오브젝트 수집 이벤트 구독
+            client.subscribe('/topic/collectObject', (message) => {
+                try {
+                    const { objectId, collectorId } = JSON.parse(message.body);
+                    console.log(`[STOMP] Object ${objectId} collected by ${collectorId}`);
+
+                    // 씬에서 오브젝트 제거 (모든 클라이언트에서)
+                    setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== objectId));
+
+                    // 만약 현재 플레이어가 수집한 것이라면 인벤토리에 추가 (이미 GameCanvas의 'F' 키 로직에서 처리됨)
+                    // 다른 플레이어가 수집한 경우에도 해당 오브젝트를 씬에서 제거하기 위함
+                } catch (e) {
+                    console.error('[STOMP Subscribe] collectObject 메시지 파싱 실패:', e);
+                }
+            });
+
+
+            // 초기 플레이어 정보 전송 (연결 시)
+            client.publish({
+                destination: `/app/playerMove`, // 초기 등록 메시지
+                body: JSON.stringify({
+                    id: currentPlayerId,
+                    nickname: playerNickname,
+                    position: { x: 0, y: 1.1, z: 0 },
+                    rotationY: 0,
+                    animationState: { isIdle: true }
+                })
+            });
         };
 
         // STOMP 오류 발생 시
@@ -357,7 +403,7 @@ export function GameCanvas({playerNickname}) {
             }
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [setIsDeadInGameCanvas]); // setIsDeadInGameCanvas 의존성 추가
+    }, [playerNickname, setIsDeadInGameCanvas]); // 의존성 배열
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
@@ -383,12 +429,127 @@ export function GameCanvas({playerNickname}) {
         });
     }, []);
 
+    // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트
+    const onObjectProximityChange = useCallback((objectId, isNear) => {
+        setHudState(prev => ({
+            ...prev,
+            interactableObjectId: isNear ? objectId : null,
+            showInteractionPrompt: isNear,
+        }));
+    }, []);
+
+    // Player로부터 상호작용 요청을 받아 처리하는 함수
+    const handlePlayerInteract = useCallback((interactedObjectId) => {
+        console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
+        const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
+        console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
+
+        if (interactedObject && interactedObject.type === 'apple') {
+            console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'Apple');
+                if (existingItemIndex !== -1) {
+                    const newInventory = [...prevInventory];
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
+                    return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'Apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add apple.`); // 추가된 로그
+                    return prevInventory;
+                }
+            });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("Apple collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing apple with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing collectObject event for ${interactedObject.id}`); // 추가된 로그
+                stompClient.publish({
+                    destination: '/app/collectObject',
+                    body: JSON.stringify({ objectId: interactedObject.id, collectorId: currentPlayerId }),
+                });
+            }
+        } else {
+            console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
+        }
+    }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
+
+    // 선택된 아이템 사용 함수 (좌클릭 시 호출)
+    const handleUseSelectedItem = useCallback(() => {
+        if (selectedInventorySlot !== null) {
+            setInventory(prevInventory => {
+                const newInventory = [...prevInventory];
+                const itemToUse = newInventory[selectedInventorySlot];
+
+                if (itemToUse) {
+                    console.log(`[GameCanvas] Using item: ${itemToUse.name} from slot ${selectedInventorySlot}. Current count: ${itemToUse.count}`); // 상세 로그
+                    if (itemToUse.name === 'Apple') {
+                        // 사과 사용 로직: 체력 회복
+                        setHudState(prevHud => {
+                            const currentHealth = prevHud.health ?? 100;
+                            const newHealth = Math.min(currentHealth + 20, 100); // 체력 20 회복, 최대 100
+                            console.log(`[GameCanvas] Player health: ${currentHealth} -> ${newHealth}`); // 상세 로그
+                            return { ...prevHud, health: newHealth };
+                        });
+
+                        // 아이템 개수 감소 또는 슬롯 비우기
+                        if (itemToUse.count > 1) {
+                            newInventory[selectedInventorySlot] = { ...itemToUse, count: itemToUse.count - 1 };
+                            console.log(`[GameCanvas] Item count decreased. New count: ${newInventory[selectedInventorySlot].count}`); // 상세 로그
+                        } else {
+                            newInventory[selectedInventorySlot] = null; // 아이템 소진 시 슬롯 비움
+                            console.log(`[GameCanvas] Item consumed. Slot ${selectedInventorySlot} is now empty.`); // 상세 로그
+                        }
+
+                        // 서버에 아이템 사용 이벤트 발행
+                        if (stompClient && stompClient.connected) {
+                            console.log(`[GameCanvas] Publishing useItem event for ${itemToUse.name} (ID: ${itemToUse.id})`); // 상세 로그
+                            stompClient.publish({
+                                destination: '/app/useItem',
+                                body: JSON.stringify({
+                                    userId: currentPlayerId,
+                                    itemId: itemToUse.id, // 원래 오브젝트 ID 또는 아이템 타입
+                                    itemType: itemToUse.name, // 아이템 이름
+                                    slotIndex: selectedInventorySlot,
+                                }),
+                            });
+                        }
+                    } else {
+                        console.log(`[GameCanvas] Item ${itemToUse.name} is not consumable.`);
+                    }
+                } else {
+                    console.log(`[GameCanvas] No item found in selected slot ${selectedInventorySlot}.`); // 아이템이 없는 경우 로그
+                }
+                return newInventory;
+            });
+        } else {
+            console.log(`[GameCanvas] No slot selected for item use.`); // 슬롯이 선택되지 않은 경우 로그
+        }
+    }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
+
+
     return (
         <>
             {/* Leva 디버그 UI */}
-            <Leva collapsed={false} />
+            <Leva collapsed={true} /> {/* 기본적으로 접힌 상태로 시작 */}
             {/* 플레이어 HUD 컴포넌트 */}
-            <PlayerHUD state={hudState} playerNickname={playerNickname} />
+            <PlayerHUD
+                state={hudState}
+                playerNickname={playerNickname}
+                inventory={inventory} // inventory prop 전달
+                selectedInventorySlot={selectedInventorySlot} // selectedInventorySlot prop 전달
+            />
 
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
@@ -411,40 +572,9 @@ export function GameCanvas({playerNickname}) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[5, 10, 5]} intensity={1} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}>
-                        {/* 바닥 (고정된 물리 바디) */}
-                        <RigidBody type="fixed">
-                            <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-                                <planeGeometry args={[100, 100]} />
-                                <meshStandardMaterial color="green" />
-                            </mesh>
-                        </RigidBody>
-
-                        {/* 보이지 않는 경계 벽 (물리 충돌용) */}
-                        <RigidBody type="fixed" position={[0, 500, -50]}>
-                            <mesh>
-                                <boxGeometry args={[100, 1000, 1]} />
-                                <meshStandardMaterial transparent opacity={0} />
-                            </mesh>
-                        </RigidBody>
-                        <RigidBody type="fixed" position={[0, 500, 50]}>
-                            <mesh>
-                                <boxGeometry args={[100, 1000, 1]} />
-                                <meshStandardMaterial transparent opacity={0} />
-                            </mesh>
-                        </RigidBody>
-                        <RigidBody type="fixed" position={[50, 500, 0]}>
-                            <mesh>
-                                <boxGeometry args={[1, 1000, 100]} />
-                                <meshStandardMaterial transparent opacity={0} />
-                            </mesh>
-                        </RigidBody>
-                        <RigidBody type="fixed" position={[-50, 500, 0]}>
-                            <mesh>
-                                <boxGeometry args={[1, 1000, 100]} />
-                                <meshStandardMaterial transparent opacity={0} />
-                            </mesh>
-                        </RigidBody>
+                    <Physics gravity={[0, -9.81, 0]}> {/* 중력 설정 */}
+                        {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
+                        <GModMap />
 
                         {/* ErrorBoundary와 Suspense로 모델 로딩 오류 처리 및 로딩 중 대체 UI 제공 */}
                         <ErrorBoundary>
@@ -460,6 +590,11 @@ export function GameCanvas({playerNickname}) {
                                         setIsDead={setIsDeadInGameCanvas} // 사망 상태 설정 함수 전달
                                         setViewMode={setViewModeInGameCanvas} // 시점 변경 함수 전달
                                         currentPlayerId={currentPlayerId} // 현재 플레이어 ID 전달
+                                        onObjectProximityChange={onObjectProximityChange} // 새로 추가: 오브젝트 근접 감지 콜백
+                                        onInteract={handlePlayerInteract} // 새로 추가: 플레이어 상호작용 요청 콜백
+                                        onUseItem={handleUseSelectedItem} // 새로 추가: 아이템 사용 요청 콜백
+                                        selectedInventorySlot={selectedInventorySlot} // 새로 추가: 선택된 인벤토리 슬롯 전달
+                                        isItemSelected={isItemSelected} // 새로 추가: 선택된 슬롯에 아이템이 있는지 여부 전달
                                     />
                                 )}
                             </React.Suspense>

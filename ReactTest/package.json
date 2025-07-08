@@ -1,0 +1,14 @@
+{
+  "dependencies": {
+    "@dimforge/rapier3d-compat": "^0.17.3",
+    "@react-three/drei": "^10.3.0",
+    "@react-three/fiber": "^9.1.4",
+    "@react-three/rapier": "^2.1.0",
+    "@stomp/stompjs": "^7.1.1",
+    "drei": "^2.2.21",
+    "leva": "^0.10.0",
+    "sockjs-client": "^1.6.1",
+    "stats.js": "^0.17.0",
+    "uuid": "^11.1.0"
+  }
+}

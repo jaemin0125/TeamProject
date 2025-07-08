@@ -10,6 +10,7 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="addPlayer"/>
 			<item value="logger.debug(&quot;[PlayerService] Updated"/>
 			<item value="playermove"/>
 			<item value="playerlocation"/>
@@ -24,7 +25,6 @@
 			<item value="println"/>
 			<item value="print"/>
 			<item value="Attem"/>
-			<item value="log"/>
 		</list>
 		<list key="replacehistory">
 		</list>

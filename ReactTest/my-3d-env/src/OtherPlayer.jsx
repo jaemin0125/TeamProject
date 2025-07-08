@@ -18,7 +18,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname 
         let modelTypeName;
         modelTypeName = 'CharacterModel (character.glb)';
         //console.log(`[OtherPlayer] ID: ${id.substring(0, 5)} assigned model type: ${modelTypeName}`);
-    }, [id, position]);
+    }, []);
 
     // 매 프레임마다 RigidBody와 모델의 위치 및 회전을 업데이트합니다.
     useFrame(() => {

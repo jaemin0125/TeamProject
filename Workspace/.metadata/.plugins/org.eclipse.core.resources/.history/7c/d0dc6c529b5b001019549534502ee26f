@@ -1,0 +1,171 @@
+package com.example.demo.service;
+
+import java.util.Collection;
+import java.util.Collections; // Collections 임포트 추가
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import com.example.demo.dto.InventoryItem; // InventoryItem DTO 임포트 추가
+import com.example.demo.dto.PlayerState;
+
+@Service
+public class PlayerService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PlayerService.class);
+
+    private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionToPlayerIdMap = new ConcurrentHashMap<>();
+
+    /**
+     * 새로운 플레이어를 추가하거나, 기존 플레이어의 세션 ID 및 초기 상태를 업데이트합니다.
+     * 클라이언트의 `id`를 기준으로 플레이어를 식별합니다.
+     *
+     * @param playerState 등록할 플레이어의 상태 (ID, 초기 위치, 인벤토리 등)
+     * @param sessionId 현재 연결의 세션 ID
+     */
+    public void addPlayer(PlayerState playerState, String sessionId) {
+        if (playerState.getId() == null || playerState.getId().isEmpty()) {
+            logger.error("Attempted to add player with null or empty ID.");
+            return;
+        }
+
+        // 이미 존재하는 플레이어인지 확인 (클라이언트 ID 기준)
+        if (connectedPlayers.containsKey(playerState.getId())) {
+            // 기존 플레이어 상태 업데이트 (예: 새 세션 ID 할당, 최신 위치/애니메이션/인벤토리 반영)
+            PlayerState existingPlayer = connectedPlayers.get(playerState.getId());
+            // 기존 세션 매핑 제거 (이전 세션이 끊어졌을 경우)
+            sessionToPlayerIdMap.remove(existingPlayer.getSessionId());
+
+            existingPlayer.setSessionId(sessionId); // 새 세션 ID로 업데이트
+            existingPlayer.setNickname(playerState.getNickname()); // 닉네임 업데이트
+            existingPlayer.setPosition(playerState.getPosition()); // 위치 업데이트
+            existingPlayer.setRotationY(playerState.getRotationY()); // 회전 업데이트
+            existingPlayer.setAnimationState(playerState.getAnimationState()); // 애니메이션 상태 업데이트
+            // 인벤토리도 함께 업데이트
+            existingPlayer.setInventory(playerState.getInventory() != null ? playerState.getInventory() : Collections.emptyList());
+
+            logger.info("Updated existing player: {} with new session {}. Current players: {}", playerState.getId(), sessionId, connectedPlayers.size());
+        } else {
+            // 새 플레이어 추가
+            // 초기 인벤토리를 null이 아닌 빈 리스트로 보장
+            if (playerState.getInventory() == null) {
+                playerState.setInventory(Collections.emptyList());
+            }
+            playerState.setSessionId(sessionId); // 세션 ID 설정
+            connectedPlayers.put(playerState.getId(), playerState);
+            logger.info("New player added: {} with session {}. Current players: {}", playerState.getId(), sessionId, connectedPlayers.size());
+        }
+        sessionToPlayerIdMap.put(sessionId, playerState.getId()); // 세션 ID와 플레이어 ID 매핑
+    }
+
+    /**
+     * 특정 플레이어의 인벤토리를 업데이트합니다.
+     * @param playerId 인벤토리를 업데이트할 플레이어의 ID
+     * @param updatedInventory 새로운 인벤토리 목록
+     * @return 업데이트된 플레이어 상태, 또는 플레이어를 찾지 못하면 null
+     */
+    public PlayerState updatePlayerInventory(String playerId, List<InventoryItem> updatedInventory) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player != null) {
+            player.setInventory(updatedInventory);
+            logger.info("Player {} inventory updated. New items: {}", playerId, updatedInventory.size());
+            return player;
+        } else {
+            logger.warn("Attempted to update inventory for non-existent player: {}", playerId);
+            return null;
+        }
+    }
+
+    /**
+     * 특정 플레이어의 상태를 업데이트합니다. (위치, 애니메이션 등)
+     * 이 메서드는 주로 플레이어의 실시간 움직임/행동 업데이트에 사용됩니다.
+     * @param playerState 업데이트할 플레이어의 최신 상태
+     */
+    public void updatePlayerState(PlayerState playerState) {
+        // playerId가 null이거나 비어있으면 로깅하고 리턴
+        if (playerState.getId() == null || playerState.getId().isEmpty()) {
+            logger.error("Attempted to update player state with null or empty ID.");
+            return;
+        }
+
+        PlayerState existingPlayer = connectedPlayers.get(playerState.getId());
+        if (existingPlayer != null) {
+            existingPlayer.setPosition(playerState.getPosition());
+            existingPlayer.setRotationY(playerState.getRotationY());
+            existingPlayer.setAnimationState(playerState.getAnimationState());
+            // 닉네임도 업데이트 될 수 있도록 추가 (옵션)
+            existingPlayer.setNickname(playerState.getNickname());
+            // 인벤토리는 updatePlayerInventory 메서드를 통해 별도로 관리하는 것이 더 명확할 수 있습니다.
+            // 하지만 전체 PlayerState를 브로드캐스트하는 경우 여기 포함될 수도 있습니다.
+            // 여기서는 명시적으로 inventory 필드를 업데이트하지 않습니다.
+            // 인벤토리 변경은 별도의 메시지 매핑을 통해 updatePlayerInventory를 호출하도록 유도합니다.
+            logger.debug("Player state updated for {}: Pos({}), RotY({}), Anim({})",
+                    playerState.getId(), playerState.getPosition(),
+                    playerState.getRotationY(), playerState.getAnimationState().getIsIdle());
+        } else {
+            // 이 경우는 플레이어가 등록되지 않았는데 상태 업데이트를 시도하는 경우
+            logger.warn("Attempted to update state for non-existent player: {}. Adding as new player.", playerState.getId());
+            // 새로 추가하는 로직이 필요한 경우 여기에 구현
+            // addPlayer(playerState, playerState.getSessionId()); // 세션 ID가 없을 수 있으므로 주의
+        }
+    }
+
+
+    /**
+     * 특정 플레이어를 ID로 제거합니다.
+     * @param playerId 제거할 플레이어의 ID
+     */
+    public void removePlayer(String playerId) {
+        if (playerId != null) {
+            PlayerState removedPlayer = connectedPlayers.remove(playerId);
+            if (removedPlayer != null) {
+                // 세션 ID 맵에서도 제거 (세션 ID로 역으로 찾아서 제거)
+                sessionToPlayerIdMap.entrySet().removeIf(entry -> entry.getValue().equals(playerId));
+                logger.info("Player removed by ID: {}. Remaining: {}", playerId, connectedPlayers.size());
+            } else {
+                logger.warn("Attempted to remove non-existent player by ID: {}", playerId);
+            }
+        }
+    }
+
+    /**
+     * 연결이 끊긴 세션 ID를 통해 플레이어를 제거합니다.
+     * 이 메서드는 주로 WebSocketEventListener에서 세션 단절 시 호출됩니다.
+     *
+     * @param sessionId 제거할 세션의 ID
+     */
+    public void removePlayerBySessionId(String sessionId) {
+        if (sessionId != null) {
+            String playerId = sessionToPlayerIdMap.remove(sessionId); // 세션 ID로 플레이어 ID 찾아서 매핑 제거
+            if (playerId != null) {
+                connectedPlayers.remove(playerId); // 플레이어 ID로 플레이어 상태 제거
+                logger.info("Player removed by Session ID: {} (Player ID: {}). Remaining: {}", sessionId, playerId, connectedPlayers.size());
+            } else {
+                logger.warn("Attempted to remove player for non-existent session: {}", sessionId);
+            }
+        }
+    }
+
+    /**
+     * 현재 연결된 모든 플레이어의 상태를 반환합니다.
+     *
+     * @return 모든 플레이어 상태 객체의 컬렉션
+     */
+    public Collection<PlayerState> getAllPlayers() {
+        return connectedPlayers.values();
+    }
+
+    /**
+     * 주어진 ID에 해당하는 플레이어의 상태를 반환합니다.
+     * @param id 플레이어의 ID
+     * @return 해당 플레이어의 PlayerState 객체, 없으면 null
+     */
+    public PlayerState getPlayer(String id) {
+        return connectedPlayers.get(id);
+    }
+}

@@ -7,7 +7,7 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils';
 
 // CharacterModel 컴포넌트
 export const CharacterModel = React.forwardRef(
-    ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
+    ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isPunching, isHitted, isDead, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
         const glbPath = '/models/character.glb';
         const { scene, animations } = useGLTF(glbPath);
         // SkeletonUtils.clone을 사용하여 scene 객체를 복제합니다.
@@ -32,11 +32,14 @@ export const CharacterModel = React.forwardRef(
                 console.error(`CharacterModel (${glbPath}): No animation actions extracted. Check useAnimations hook or animation names.`);
                 return;
             }
-            //console.log(`CharacterModel (${glbPath}): Available animations:`, Object.keys(actions));
+            // console.log(`CharacterModel (${glbPath}): Available animations:`, Object.keys(actions));
 
             let nextActionName = null;
 
-            if (isHitted) {
+            // isDead 상태를 가장 먼저 체크하여 사망 애니메이션의 우선순위를 높입니다.
+            if (isDead) {
+                nextActionName = 'Dead';
+            } else if (isHitted) {
                 nextActionName = 'Hit';
             } else if (isPunching) {
                 nextActionName = 'Punching';
@@ -54,13 +57,10 @@ export const CharacterModel = React.forwardRef(
                 nextActionName = 'Crouch';
             } else if (isLyingDown) {
                 nextActionName = 'LieDown';
-            } else if (isLanding) {
-                nextActionName = 'Landing';
             } else if (isIdle) {
                 nextActionName = 'Idle';
-            }
-
-            //console.log(`CharacterModel (${glbPath}) - nextActionName:`, nextActionName, { isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted });
+            } 
+            // console.log(`CharacterModel (${glbPath}) - nextActionName:`, nextActionName, { isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted, isDead });
 
             if (nextActionName && actions[nextActionName]) {
                 const nextAction = actions[nextActionName];
@@ -70,7 +70,11 @@ export const CharacterModel = React.forwardRef(
                     nextAction.reset().fadeIn(0.2).play();
                     currentAction.current = nextAction;
 
-                    if (nextActionName === 'Hit') {
+                    // 'Dead' 애니메이션은 한 번만 재생되고 고정되어야 합니다.
+                    if (nextActionName === 'Dead') {
+                        nextAction.setLoop(THREE.LoopOnce);
+                        nextAction.clampWhenFinished = true; // 애니메이션이 끝난 프레임에 고정
+                    } else if (nextActionName === 'Hit') {
                         nextAction.setLoop(THREE.LoopOnce);
                         nextAction.clampWhenFinished = true;
 
@@ -89,7 +93,7 @@ export const CharacterModel = React.forwardRef(
             } else if (nextActionName) {
                 console.warn(`CharacterModel (${glbPath}): Animation clip '${nextActionName}' not found.`);
             }
-        }, [isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isLanding, isPunching, isHitted, actions, mixer, clonedScene, animations, glbPath]);
+        }, [isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isPunching, isHitted, isDead, actions, mixer, clonedScene, animations, glbPath]);
 
         useFrame((_, delta) => {
             mixer?.update(delta);
