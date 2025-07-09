@@ -105,7 +105,7 @@ import { clone as skeletonClone } from 'three/examples/jsm/utils/SkeletonUtils';
 //     }
 // );
 export const CharacterModel = React.forwardRef(
-    ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isHitted, isDead, isAiming, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
+    ({ isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isHitted, isDead, isAiming, isAimingAndWalk, position = [0, 0.9, 0], scale = [0.8, 0.8, 0.8] }, ref) => {
         const glbPath = '/models/ArmedCharacter.glb';
         const { scene, animations } = useGLTF(glbPath);
         // SkeletonUtils.clone을 사용하여 scene 객체를 복제합니다.
@@ -118,6 +118,8 @@ export const CharacterModel = React.forwardRef(
         const currentAction = useRef(null);
 
         useEffect(() => {
+            console.log(animations);
+
             if (!clonedScene) {
                 console.error(`CharacterModel (${glbPath}): Failed to load GLB scene. Check file path or integrity.`);
                 return;
@@ -139,8 +141,6 @@ export const CharacterModel = React.forwardRef(
                 nextActionName = 'Dead';
             } else if (isHitted) {
                 nextActionName = 'Hit';
-            } else if (isAiming){
-                nextActionName = 'Aiming';
             } else if (isJumping) {
                 nextActionName = 'Jump';
             } else if (isRunning) {
@@ -149,12 +149,16 @@ export const CharacterModel = React.forwardRef(
                 nextActionName = 'SittedAndWalk';
             } else if (isLyingDownAndWalk) {
                 nextActionName = 'LieDownAndWalk';
-            } else if (isWalking || isBackward || isLeft || isRight) {
-                nextActionName = 'Walk';
-            } else if (isSitted) {
+            }else if (isSitted) {
                 nextActionName = 'Sit';
             } else if (isLyingDown) {
                 nextActionName = 'LieDown';
+            } else if (isAimingAndWalk){
+                nextActionName = 'AimingAndWalk';
+            } else if (isAiming){
+                nextActionName = 'Aiming';
+            } else if (isWalking || isBackward || isLeft || isRight) {
+                nextActionName = 'Walk';
             } else if (isIdle) {
                 nextActionName = 'Idle';
             } 
@@ -191,7 +195,7 @@ export const CharacterModel = React.forwardRef(
             } else if (nextActionName) {
                 console.warn(`CharacterModel (${glbPath}): Animation clip '${nextActionName}' not found.`);
             }
-        }, [isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isHitted, isDead, isAiming, actions, mixer, clonedScene, animations, glbPath]);
+        }, [isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning, isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk, isHitted, isDead, isAiming, isAimingAndWalk, actions, mixer, clonedScene, animations, glbPath]);
 
         useFrame((_, delta) => {
             mixer?.update(delta);
