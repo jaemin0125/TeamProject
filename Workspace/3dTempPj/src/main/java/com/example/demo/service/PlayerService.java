@@ -1,21 +1,25 @@
 // src/main/java/com/example/demo/service/PlayerService.java
 package com.example.demo.service;
 
-import com.example.demo.dto.AnimationState;
-import com.example.demo.dto.Item; // ✨ Item DTO 임포트 추가
-import com.example.demo.dto.ObjectState; // ✨ ObjectState DTO 임포트 추가
-import com.example.demo.dto.PlayerState;
-import com.example.demo.dto.PlayerState.Position; // Position 클래스 임포트
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
-import java.util.UUID; // ✨ UUID 임포트 추가
-import java.util.Optional; // ✨ Optional 임포트 추가
+import com.example.demo.dto.AnimationState;
+import com.example.demo.dto.Item;
+import com.example.demo.dto.ObjectState;
+import com.example.demo.dto.PlayerState;
+import com.example.demo.dto.PlayerState.Position;
 
+// ✨ Import PostConstruct if you need it for initialization (from previous context)
+// import jakarta.annotation.PostConstruct; // If you are on Spring Boot 3.x+
+// import javax.annotation.PostConstruct; // If you are on Spring Boot 2.x
 
 @Service
 public class PlayerService {
@@ -24,52 +28,56 @@ public class PlayerService {
 
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToPlayerIdMap = new ConcurrentHashMap<>();
-    private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>(); // ✨ 새로 추가: 씬 오브젝트 관리 맵
+    private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>();
 
-    // ✨ 생성자 수정: 초기 사과 추가 로직 포함
+    // Constructor modified to include initial apple logic
     public PlayerService() {
-        // 서버 시작 시 초기 사과 추가
-        addInitialApple();
+        // Server startup initial apple addition
+        addInitialApples(); // Changed method name to plural
     }
 
+    // ✨ Method to add initial apples to the scene
+    private void addInitialApples() { // Changed method name to plural
+        // Initial apples matching client's original hardcoded positions
+        ObjectState[] initialApples = {
+
+            new ObjectState("apple1", new Position(0, -4.5, 0), "apple", "/models/apple.glb", "apple"),
+            new ObjectState("apple2", new Position(2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
+            new ObjectState("apple3", new Position(-2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
+            new ObjectState("apple4", new Position(0, -4.5, 2), "apple", "/models/apple.glb", "apple"),
+            new ObjectState("apple5", new Position(0, -4.5, -2), "apple", "/models/apple.glb", "apple")
+        };
+        
+
+        for (ObjectState apple : initialApples) {
+            if (!sceneObjects.containsKey(apple.getId())) {
+                sceneObjects.put(apple.getId(), apple);
+                logger.info("Initial apple object added to the scene: {}", apple.getId());
+            }
+        }
+    }
+
+
     /**
-     * 새로운 플레이어를 추가하거나, 기존 플레이어의 세션 ID 및 초기 상태를 업데이트합니다.
-     * 클라이언트의 `id`를 기준으로 플레이어를 식별합니다.
-     *
-     * @param playerState 등록할 플레이어의 상태 (ID, 초기 위치 등)
-     * @param sessionId 현재 연결의 세션 ID
+     * Registers a new player or updates an existing player's state.
+     * @param playerState The state of the player to register/update.
+     * @param sessionId The WebSocket session ID associated with the player.
      */
-    public void addPlayer(PlayerState playerState, String sessionId) {
-        if (playerState.getId() == null || playerState.getId().isEmpty()) {
-            logger.error("Attempted to add player with null or empty ID.");
-            return;
-        }
-
-        // 이미 존재하는 플레이어인지 확인 (클라이언트 ID 기준)
-        if (connectedPlayers.containsKey(playerState.getId())) {
-            // 기존 플레이어의 세션 ID만 업데이트 (재접속 시)
-            connectedPlayers.get(playerState.getId()).setSessionId(sessionId);
-            sessionToPlayerIdMap.put(sessionId, playerState.getId());
-            logger.info("Player reconnected: {}. Session ID updated to {}", playerState.getId(), sessionId);
-        } else {
-            // 새 플레이어 추가
-            playerState.setSessionId(sessionId);
-            // playerState.setHealth(100); // PlayerState DTO에 기본값 100이 이미 설정되어 있으므로 필요 없음
-            // playerState.setInventory(new ArrayList<>()); // PlayerState DTO에 기본값 빈 리스트가 이미 설정되어 있으므로 필요 없음
-            connectedPlayers.put(playerState.getId(), playerState);
-            sessionToPlayerIdMap.put(sessionId, playerState.getId());
-            logger.info("New player added: {} (Session ID: {}). Total players: {}",
-                    playerState.getId(), sessionId, connectedPlayers.size());
-        }
+    public void registerPlayer(PlayerState playerState, String sessionId) {
+        playerState.setSessionId(sessionId); // Set the session ID
+        connectedPlayers.put(playerState.getId(), playerState);
+        sessionToPlayerIdMap.put(sessionId, playerState.getId());
+        logger.info("Player registered/updated: ID={}, Nickname={}, SessionID={}",
+                playerState.getId(), playerState.getNickname(), sessionId);
+        logger.debug("Current connected players: {}", connectedPlayers.keySet());
     }
 
     /**
-     * 플레이어의 현재 상태를 업데이트합니다.
-     *
-     * @param playerId 업데이트할 플레이어의 ID
-     * @param newPosition 새로운 위치
-     * @param newRotationY 새로운 Y축 회전 값
-     * @param newAnimationState 새로운 애니메이션 상태
+     * Updates a player's position and rotation.
+     * @param playerId The ID of the player to update.
+     * @param newPosition The new position of the player.
+     * @param newRotationY The new Y-axis rotation of the player.
+     * @param newAnimationState The new animation state of the player.
      */
     public void updatePlayerState(String playerId, Position newPosition, double newRotationY, AnimationState newAnimationState) {
         PlayerState player = connectedPlayers.get(playerId);
@@ -77,174 +85,191 @@ public class PlayerService {
             player.setPosition(newPosition);
             player.setRotationY(newRotationY);
             player.setAnimationState(newAnimationState);
+            // logger.debug("Player {} updated position to ({}, {}, {})", playerId, newPosition.getX(), newPosition.getY(), newPosition.getZ());
         } else {
-            logger.warn("Attempted to update state for non-existent player: {}", playerId);
+            logger.warn("Player with ID {} not found for update.", playerId);
         }
     }
 
     /**
-     * 주어진 ID에 해당하는 플레이어를 제거합니다.
-     *
-     * @param playerId 제거할 플레이어의 ID
-     */
-    public void removePlayer(String playerId) {
-        if (playerId != null) {
-            PlayerState removedPlayer = connectedPlayers.remove(playerId);
-            if (removedPlayer != null) {
-                // sessionToPlayerIdMap에서도 해당 매핑 제거
-                sessionToPlayerIdMap.remove(removedPlayer.getSessionId());
-                //logger.info("Player removed by ID: {}. Remaining: {}", playerId, connectedPlayers.size());
-            } else {
-                //logger.warn("Attempted to remove non-existent player by ID: {}", playerId);
-            }
-        }
-    }
-
-    /**
-     * 연결이 끊긴 세션 ID를 통해 플레이어를 제거합니다.
-     * 이 메서드는 주로 WebSocketEventListener에서 세션 단절 시 호출됩니다.
-     *
-     * @param sessionId 제거할 세션의 ID
-     */
-    public void removePlayerBySessionId(String sessionId) {
-        if (sessionId != null) {
-            String playerId = sessionToPlayerIdMap.remove(sessionId); // 세션 ID로 플레이어 ID 찾아서 매핑 제거
-            if (playerId != null) {
-                connectedPlayers.remove(playerId); // 플레이어 ID로 플레이어 상태 제거
-                logger.info("Player removed by Session ID: {} (Player ID: {}). Remaining players: {}", sessionId, playerId, connectedPlayers.size());
-            } else {
-                //logger.warn("Attempted to remove player for non-existent session: {}", sessionId);
-            }
-        }
-    }
-
-    /**
-     * 현재 연결된 모든 플레이어의 상태를 반환합니다.
-     *
-     * @return 모든 플레이어 상태 객체의 컬렉션
-     */
-    public Collection<PlayerState> getAllPlayers() {
-        return connectedPlayers.values();
-    }
-
-    /**
-     * 주어진 ID에 해당하는 플레이어의 상태를 반환합니다.
-     *
-     * @param playerId 검색할 플레이어의 ID
-     * @return 플레이어 상태 객체, 없으면 null
+     * Retrieves a player's state by their ID.
+     * @param playerId The ID of the player to retrieve.
+     * @return The PlayerState object, or null if not found.
      */
     public PlayerState getPlayer(String playerId) {
         return connectedPlayers.get(playerId);
     }
 
-    // ✨ 새로 추가: 씬 오브젝트 관련 메서드들
-
     /**
-     * 초기 사과를 씬에 추가합니다. 서버 시작 시 한 번만 호출됩니다.
+     * Retrieves a player's state by their session ID.
+     * @param sessionId The session ID of the player to retrieve.
+     * @return The PlayerState object, or null if not found.
      */
-    private void addInitialApple() {
-        String appleId = "apple_" + UUID.randomUUID().toString().substring(0, 8); // 고유 ID 생성
-        ObjectState apple = new ObjectState(
-                appleId,
-                new Position(0, 0.5, -5), // 사과가 떨어질 초기 위치 (예시)
-                "model", // objectType
-                "/models/apple.glb", // 모델 경로
-                "APPLE" // itemType
-        );
-        sceneObjects.put(apple.getId(), apple);
-        logger.info("Initial apple added to scene: {}", apple.getId());
+    public PlayerState getPlayerBySessionId(String sessionId) {
+        String playerId = sessionToPlayerIdMap.get(sessionId);
+        if (playerId != null) {
+            return connectedPlayers.get(playerId);
+        }
+        return null;
     }
 
     /**
-     * 현재 씬에 존재하는 모든 오브젝트(아이템 포함)의 상태를 반환합니다.
-     * @return 모든 씬 오브젝트 상태 객체의 컬렉션
+     * Removes a player from the game based on their session ID.
+     * @param sessionId The session ID of the player to remove.
      */
-    public Collection<ObjectState> getSceneObjects() {
+    public void removePlayerBySessionId(String sessionId) {
+        String playerId = sessionToPlayerIdMap.remove(sessionId); // Remove from session-to-player map
+        if (playerId != null) {
+            connectedPlayers.remove(playerId); // Remove from connected players map
+            logger.info("Player disconnected: Session ID={}, Player ID={}", sessionId, playerId);
+        } else {
+            logger.warn("Attempted to remove player with unknown session ID: {}", sessionId);
+        }
+    }
+
+    /**
+     * Returns a collection of all currently connected players.
+     * @return A Collection of PlayerState objects.
+     */
+    public Collection<PlayerState> getAllPlayers() {
+        return connectedPlayers.values();
+    }
+
+
+    /**
+     * Retrieves all scene objects.
+     * @return A Collection of ObjectState objects.
+     */
+    public Collection<ObjectState> getAllSceneObjects() {
         return sceneObjects.values();
     }
 
     /**
-     * 씬에서 특정 오브젝트를 제거합니다. (예: 아이템을 주웠을 때)
-     * @param objectId 제거할 오브젝트의 ID
-     * @return 제거 성공 여부
+     * Removes a scene object by its ID.
+     * @param objectId The ID of the object to remove.
+     * @return true if the object was removed, false otherwise.
      */
     public boolean removeSceneObject(String objectId) {
-        if (sceneObjects.containsKey(objectId)) {
-            sceneObjects.remove(objectId);
-            logger.info("Object removed from scene: {}", objectId);
+        ObjectState removed = sceneObjects.remove(objectId);
+        if (removed != null) {
+            logger.info("Scene object removed: ID={}", objectId);
             return true;
         }
-        logger.warn("Attempted to remove non-existent object from scene: {}", objectId);
-        return false;
-    }
-
-    // ✨ 새로 추가: 인벤토리 및 체력 관련 메서드들
-
-    /**
-     * 플레이어 인벤토리에 아이템을 추가합니다.
-     * @param playerId 아이템을 추가할 플레이어의 ID
-     * @param itemToGive 추가할 아이템 객체
-     * @return 아이템 추가 성공 여부 (현재는 항상 true)
-     */
-    public boolean addItemToPlayerInventory(String playerId, Item itemToGive) {
-        PlayerState player = connectedPlayers.get(playerId);
-        if (player != null) {
-            // 이미 인벤토리에 같은 아이템이 있는지 확인 (ID 기준으로)
-            Optional<Item> existingItemOpt = player.getInventory().stream()
-                .filter(item -> item.getId().equals(itemToGive.getId())) // 여기서 ID는 Item 인스턴스의 고유 ID가 아닌 ItemType ID를 의미해야 함.
-                // 편의상 현재는 id를 'APPLE' 등으로 통일하고 count를 증가시키는 방식으로 가정.
-                // 만약 UUID가 부여된 개별 아이템이라면, 새로운 아이템으로 추가해야 함.
-                // 여기서는 Item.id가 "APPLE"과 같이 아이템 종류를 나타낸다고 가정합니다.
-                .findFirst();
-
-            if (existingItemOpt.isPresent()) {
-                // 이미 존재하면 개수만 증가
-                Item existingItem = existingItemOpt.get();
-                existingItem.setCount(existingItem.getCount() + itemToGive.getCount());
-                logger.info("Player {}'s inventory updated: {} count increased to {}", playerId, existingItem.getName(), existingItem.getCount());
-            } else {
-                // 없으면 새로 추가 (깊은 복사)
-                Item newItem = new Item(itemToGive.getId(), itemToGive.getName(), itemToGive.getType(), itemToGive.getCount(), itemToGive.getImagePath(), itemToGive.getHealthRestore());
-                player.getInventory().add(newItem);
-                logger.info("Player {}'s inventory updated: Added new item {}", playerId, newItem.getName());
-            }
-            return true;
-        }
-        logger.warn("Failed to add item to inventory: Player {} not found.", playerId);
+        logger.warn("Attempted to remove non-existent scene object: ID={}", objectId);
         return false;
     }
 
     /**
-     * 플레이어 인벤토리에서 아이템을 사용합니다.
-     * @param playerId 아이템을 사용할 플레이어의 ID
-     * @param itemIdToRemove 사용할 아이템의 ID (Item DTO의 id 필드)
-     * @param quantityToRemove 사용할 개수
-     * @return 아이템 사용 성공 여부
+     * ✨ NEW METHOD: 플레이어가 씬에서 아이템을 줍습니다.
+     * @param playerId 아이템을 주울 플레이어의 ID
+     * @param objectId 씬에서 주울 오브젝트의 ID
+     * @return 아이템 줍기 성공 여부
      */
-    public boolean useItemFromPlayerInventory(String playerId, String itemIdToRemove, int quantityToRemove) {
+    public boolean pickUpItemFromScene(String playerId, String objectId) {
         PlayerState player = connectedPlayers.get(playerId);
         if (player == null) {
-            logger.warn("Failed to use item: Player {} not found.", playerId);
+            logger.warn("Player {} not found. Cannot pick up item {}.", playerId, objectId);
+            return false;
+        }
+
+        ObjectState sceneObject = sceneObjects.get(objectId);
+        if (sceneObject == null) {
+            logger.warn("Scene object {} not found. Cannot pick up item.", objectId);
+            return false;
+        }
+
+        // 아이템 타입이 "APPLE"인 경우에만 줍도록 처리
+        if ("APPLE".equalsIgnoreCase(sceneObject.getItemType())) {
+            // 씬에서 오브젝트 제거
+            sceneObjects.remove(objectId);
+            logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, sceneObject.getItemType(), playerId);
+
+            // 주운 아이템 정보를 기반으로 InventoryItem 생성
+            Item pickedItem = new Item(
+                "item_" + UUID.randomUUID().toString().substring(0, 8), // 새 아이템 고유 ID
+                "사과", // 아이템 이름
+                "food", // 아이템 타입 (음식)
+                1, // 개수 1개
+                "/assets/apple.png", // 이미지 경로
+                10 // 체력 회복량
+            );
+
+            // 플레이어 인벤토리에 아이템 추가
+            boolean success = addItemToPlayerInventory(playerId, pickedItem);
+            if (success) {
+                logger.info("Player {} picked up item {} (type: {}).", playerId, pickedItem.getName(), pickedItem.getType());
+            } else {
+                logger.error("Failed to add item {} to player {}'s inventory.", pickedItem.getName(), playerId);
+            }
+            return success;
+        } else {
+            logger.warn("Scene object {} is not a pickable item (type: {}).", objectId, sceneObject.getItemType());
+            return false;
+        }
+    }
+
+
+    /**
+     * 플레이어에게 아이템을 추가합니다. 이미 가진 아이템이라면 개수를 늘리고, 새로운 아이템이라면 추가합니다.
+     * @param playerId 아이템을 받을 플레이어의 ID
+     * @param itemToAdd 추가할 아이템 DTO (Item)
+     * @return 아이템 추가 성공 여부
+     */
+    public boolean addItemToPlayerInventory(String playerId, Item itemToAdd) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("Player {} not found. Cannot add item {}.", playerId, itemToAdd.getName());
+            return false;
+        }
+
+        Optional<Item> existingItemOpt = player.getInventory().stream()
+            .filter(i -> i.getId().equals(itemToAdd.getId()))
+            .findFirst();
+
+        if (existingItemOpt.isPresent()) {
+            Item existingItem = existingItemOpt.get();
+            existingItem.setCount(existingItem.getCount() + itemToAdd.getCount());
+            logger.info("Player {} already has item {}. Increased count to {}.", playerId, existingItem.getName(), existingItem.getCount());
+        } else {
+            // 새로운 Item 객체를 인벤토리에 추가 (count가 설정된 상태로)
+            player.getInventory().add(itemToAdd);
+            logger.info("Player {} added new item {} (count: {}).", playerId, itemToAdd.getName(), itemToAdd.getCount());
+        }
+        return true;
+    }
+
+    /**
+     * 플레이어 인벤토리에서 아이템을 사용하고, 개수를 줄입니다.
+     * @param playerId 아이템을 사용할 플레이어의 ID
+     * @param itemId 사용할 아이템의 ID (인벤토리 아이템 ID)
+     * @param quantityToUse 사용할 개수
+     * @return 아이템 사용 성공 여부
+     */
+    public boolean useItemFromPlayerInventory(String playerId, String itemId, int quantityToUse) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("Player {} not found. Cannot use item {}.", playerId, itemId);
             return false;
         }
 
         Optional<Item> itemToUseOpt = player.getInventory().stream()
-            .filter(item -> item.getId().equals(itemIdToRemove))
+            .filter(i -> i.getId().equals(itemId))
             .findFirst();
-
+        
+        
         if (itemToUseOpt.isEmpty()) {
-            logger.warn("Player {} does not have item {} in inventory.", playerId, itemIdToRemove);
+            logger.warn("Player {} does not have item {} in inventory.", playerId, itemId);
             return false;
         }
 
         Item itemToUse = itemToUseOpt.get();
-        if (itemToUse.getCount() < quantityToRemove) {
-            logger.warn("Player {} has insufficient quantity of item {}.", playerId, itemIdToRemove);
+        if (itemToUse.getCount() < quantityToUse) {
+            logger.warn("Player {} only has {} of item {} but tried to use {}.", playerId, itemToUse.getCount(), itemId, quantityToUse);
             return false;
         }
 
-        // 아이템 개수 감소
-        itemToUse.setCount(itemToUse.getCount() - quantityToRemove);
+        itemToUse.setCount(itemToUse.getCount() - quantityToUse);
+        logger.info("Player {} used {} of item {}. Remaining count: {}.", playerId, quantityToUse, itemToUse.getName(), itemToUse.getCount());
 
         // 아이템이 소모성이고 체력 회복량이 있다면 체력 회복
         if ("consumable".equalsIgnoreCase(itemToUse.getType()) || "food".equalsIgnoreCase(itemToUse.getType())) {
@@ -273,11 +298,40 @@ public class PlayerService {
     public boolean setPlayerHealth(String playerId, int newHealth) {
         PlayerState player = connectedPlayers.get(playerId);
         if (player != null) {
-            player.setHealth(Math.max(0, Math.min(100, newHealth))); // 체력은 0~100 사이로 제한
-            logger.info("Player {}'s health set to {}.", playerId, player.getHealth());
+            player.setHealth(Math.max(0, Math.min(100, newHealth)));
+            logger.info("Player {} health set to {}.", playerId, player.getHealth());
             return true;
         }
-        logger.warn("Failed to set health: Player {} not found.", playerId);
+        logger.warn("Player {} not found. Cannot set health.", playerId);
         return false;
+    }
+
+    /**
+     * 플레이어를 사망 상태로 설정하고 리스폰 타이머를 시작합니다.
+     * @param playerId 사망 처리할 플레이어의 ID
+     */
+    public void setPlayerDead(String playerId) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player != null) {
+            player.setHealth(0); // 체력을 0으로 설정
+            player.getAnimationState().setIsDead(true); // 사망 애니메이션 상태 활성화
+            logger.info("Player {} is now dead.", playerId);
+            // 리스폰 로직 (예: 별도의 스케줄러에서 N초 후 리스폰)은 GameController 또는 다른 매니저에서 처리
+        }
+    }
+
+    /**
+     * 플레이어를 리스폰 시킵니다.
+     * @param playerId 리스폰 시킬 플레이어의 ID
+     */
+    public void respawnPlayer(String playerId) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player != null) {
+            player.setHealth(100); // 체력 회복
+            player.setPosition(new Position(0, 5, 0)); // 기본 리스폰 위치로 이동
+            player.getAnimationState().setIsDead(false); // 사망 애니메이션 상태 비활성화
+            player.getAnimationState().setIsIdle(true); // Idle 상태로 전환
+            logger.info("Player {} has respawned.", playerId);
+        }
     }
 }

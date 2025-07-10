@@ -118,7 +118,6 @@ export const CharacterModel = React.forwardRef(
         const currentAction = useRef(null);
 
         useEffect(() => {
-            console.log(animations);
 
             if (!clonedScene) {
                 console.error(`CharacterModel (${glbPath}): Failed to load GLB scene. Check file path or integrity.`);

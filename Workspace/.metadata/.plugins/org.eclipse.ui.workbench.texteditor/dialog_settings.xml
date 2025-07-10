@@ -10,15 +10,21 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="playerlocation"/>
-			<item value="playerstate"/>
-			<item value="WebSocketEventListener"/>
-			<item value="total"/>
-			<item value="sockjs-client"/>
-			<item value="spring-boot-starter-websocket"/>
-			<item value="spring-boot-starter-security"/>
-			<item value="org.springframework.boot"/>
-			<item value="0.8739314079284668"/>
+			<item value="sceneobject"/>
+			<item value="collectObject"/>
+			<item value="collectobject"/>
+			<item value="updatePlayerState"/>
+			<item value="playerid"/>
+			<item value="dead"/>
+			<item value="public boolean"/>
+			<item value="decrease"/>
+			<item value="addInitial"/>
+			<item value="apple"/>
+			<item value="collect"/>
+			<item value="sceneobjects"/>
+			<item value="addInitialApple"/>
+			<item value="addinitiala-"/>
+			<item value="objectState"/>
 		</list>
 		<list key="replacehistory">
 		</list>

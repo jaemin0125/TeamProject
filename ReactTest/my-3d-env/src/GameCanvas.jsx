@@ -115,17 +115,7 @@ export function GameCanvas({playerNickname}) {
     const isItemSelected = inventory[selectedInventorySlot] !== null;
 
     // 씬에 배치될 오브젝트들의 초기 상태
-    const [sceneObjects, setSceneObjects] = useState([
-        // 사과 오브젝트 추가 (dynamic으로 설정하여 중력 영향 받음)
-        // mass를 높여 거의 움직이지 않게 하고, linearDamping으로 움직임을 빠르게 멈추게 합니다.
-        // restitution을 낮춰 튀는 정도를 줄입니다.
-        { id: 'apple1', type: 'apple', position: { x: 0, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple2', type: 'apple', position: { x: 2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple3', type: 'apple', position: { x: -2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple4', type: 'apple', position: { x: 0, y: 2, z: 2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple5', type: 'apple', position: { x: 0, y: 2, z: -2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 }
-        // 다른 오브젝트들은 필요에 따라 추가하거나 제거하세요.
-    ]);
+    const [sceneObjects, setSceneObjects] = useState([]);
     // 씬 오브젝트들의 RigidBody 참조를 저장하는 useRef
     const objectRefs = useRef({});
 
@@ -276,7 +266,7 @@ export function GameCanvas({playerNickname}) {
             client.subscribe('/topic/playerHit', (message) => {
                 try {
                     const data = JSON.parse(message.body);
-                        console.log('[STOMP] playerHit 메시지 수신:', data);
+                    console.log('[STOMP] playerHit 메시지 수신:', data);
 
                     if (data.targetId === currentPlayerId) {
                         console.log('💢 GameCanvas: 내가 맞았습니다! isHit 상태 true로 설정.');
@@ -347,7 +337,7 @@ export function GameCanvas({playerNickname}) {
             client.subscribe('/topic/collectObject', (message) => {
                 try {
                     const { objectId, collectorId } = JSON.parse(message.body);
-                    //console.log(`[STOMP] Object ${objectId} collected by ${collectorId}`);
+                    console.log(`[STOMP] Object ${objectId} collected by ${collectorId}`);
 
                     // 씬에서 오브젝트 제거 (모든 클라이언트에서)
                     setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== objectId));
@@ -407,17 +397,13 @@ export function GameCanvas({playerNickname}) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(prevObjects => {
-            const newObjectsMap = new Map(prevObjects.map(obj => [obj.id, obj]));
-            updatedObjects.forEach(updatedObj => {
-                const currentObj = newObjectsMap.get(updatedObj.id);
-                if (currentObj) {
-                    // 기존 오브젝트는 위치만 업데이트
-                    newObjectsMap.set(updatedObj.id, { ...currentObj, position: updatedObj.position });
-                }
-            });
-            return Array.from(newObjectsMap.values()); // Map을 다시 배열로 변환하여 상태 업데이트
-        });
+        setSceneObjects(updatedObjects.map(updatedObj => ({
+            ...updatedObj,
+            type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+            radius: updatedObj.radius || 1,
+            color: updatedObj.color || 'gray',
+            collider: updatedObj.collider || 'ball',
+        })));
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트
@@ -431,48 +417,52 @@ export function GameCanvas({playerNickname}) {
 
     // Player로부터 상호작용 요청을 받아 처리하는 함수
     const handlePlayerInteract = useCallback((interactedObjectId) => {
-        //console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
+        console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
         const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
-        //console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
+        console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
 
         if (interactedObject && interactedObject.type === 'apple') {
-            //console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
+            console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
             setInventory(prevInventory => {
-                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'Apple');
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'apple');
                 if (existingItemIndex !== -1) {
                     const newInventory = [...prevInventory];
                     newInventory[existingItemIndex].count += 1;
-                    //console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
+                    console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
                     return newInventory;
                 } else {
                     const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'Apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
-                        //console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
-                    //console.log(`[GameCanvas] Inventory full, could not add apple.`); // 추가된 로그
+                    console.log(`[GameCanvas] Inventory full, could not add apple.`); // 추가된 로그
                     return prevInventory;
                 }
             });
             setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
-            //console.log("Apple collected! Prompt removed."); // 추가된 로그
+            console.log("Apple collected! Prompt removed."); // 추가된 로그
 
             // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
-            //console.log(`[GameCanvas] Removing apple with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            console.log(`[GameCanvas] Removing apple with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
             setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
 
             if (stompClient && stompClient.connected) {
-                //console.log(`[GameCanvas] Publishing collectObject event for ${interactedObject.id}`); // 추가된 로그
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
                 stompClient.publish({
-                    destination: '/app/collectObject',
-                    body: JSON.stringify({ objectId: interactedObject.id, collectorId: currentPlayerId }),
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP'
+                    }),
                 });
             }
         } else {
-            //console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
+            console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
         }
     }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
 
@@ -485,31 +475,31 @@ export function GameCanvas({playerNickname}) {
 
                 if (itemToUse) {
                     console.log(`[GameCanvas] Using item: ${itemToUse.name} from slot ${selectedInventorySlot}. Current count: ${itemToUse.count}`); // 상세 로그
-                    if (itemToUse.name === 'Apple') {
+                    if (itemToUse.name === 'apple') {
                         // 사과 사용 로직: 체력 회복
                         setHudState(prevHud => {
                             const currentHealth = prevHud.health ?? 100;
                             const newHealth = Math.min(currentHealth + 20, 100); // 체력 20 회복, 최대 100
-                            //console.log(`[GameCanvas] Player health: ${currentHealth} -> ${newHealth}`); // 상세 로그
+                            console.log(`[GameCanvas] Player health: ${currentHealth} -> ${newHealth}`); // 상세 로그
                             return { ...prevHud, health: newHealth };
                         });
 
                         // 아이템 개수 감소 또는 슬롯 비우기
                         if (itemToUse.count > 1) {
                             newInventory[selectedInventorySlot] = { ...itemToUse, count: itemToUse.count - 1 };
-                            //console.log(`[GameCanvas] Item count decreased. New count: ${newInventory[selectedInventorySlot].count}`); // 상세 로그
+                            console.log(`[GameCanvas] Item count decreased. New count: ${newInventory[selectedInventorySlot].count}`); // 상세 로그
                         } else {
                             newInventory[selectedInventorySlot] = null; // 아이템 소진 시 슬롯 비움
-                            //console.log(`[GameCanvas] Item consumed. Slot ${selectedInventorySlot} is now empty.`); // 상세 로그
+                            console.log(`[GameCanvas] Item consumed. Slot ${selectedInventorySlot} is now empty.`); // 상세 로그
                         }
 
                         // 서버에 아이템 사용 이벤트 발행
                         if (stompClient && stompClient.connected) {
-                            //console.log(`[GameCanvas] Publishing useItem event for ${itemToUse.name} (ID: ${itemToUse.id})`); // 상세 로그
+                            console.log(`[GameCanvas] Publishing useItem event for ${itemToUse.name} (ID: ${itemToUse.id})`); // 상세 로그
                             stompClient.publish({
                                 destination: '/app/useItem',
                                 body: JSON.stringify({
-                                    userId: currentPlayerId,
+                                    playerId: currentPlayerId,
                                     itemId: itemToUse.id, // 원래 오브젝트 ID 또는 아이템 타입
                                     itemType: itemToUse.name, // 아이템 이름
                                     slotIndex: selectedInventorySlot,
@@ -517,15 +507,15 @@ export function GameCanvas({playerNickname}) {
                             });
                         }
                     } else {
-                        //console.log(`[GameCanvas] Item ${itemToUse.name} is not consumable.`);
+                        console.log(`[GameCanvas] Item ${itemToUse.name} is not consumable.`);
                     }
                 } else {
-                    //console.log(`[GameCanvas] No item found in selected slot ${selectedInventorySlot}.`); // 아이템이 없는 경우 로그
+                    console.log(`[GameCanvas] No item found in selected slot ${selectedInventorySlot}.`); // 아이템이 없는 경우 로그
                 }
                 return newInventory;
             });
         } else {
-            //console.log(`[GameCanvas] No slot selected for item use.`); // 슬롯이 선택되지 않은 경우 로그
+            console.log(`[GameCanvas] No slot selected for item use.`); // 슬롯이 선택되지 않은 경우 로그
         }
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
 
