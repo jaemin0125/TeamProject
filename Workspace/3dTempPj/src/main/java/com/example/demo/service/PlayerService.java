@@ -4,7 +4,6 @@ package com.example.demo.service;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
@@ -45,7 +44,10 @@ public class PlayerService {
             new ObjectState("apple2", new Position(2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
             new ObjectState("apple3", new Position(-2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
             new ObjectState("apple4", new Position(0, -4.5, 2), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple5", new Position(0, -4.5, -2), "apple", "/models/apple.glb", "apple")
+            new ObjectState("apple5", new Position(0, -4.5, -2), "apple", "/models/apple.glb", "apple"),
+            new ObjectState("ak-47(1)", new Position(0, -4.4, -4), "ak-47", "/models/ak-47.glb", "ak-47"),
+            new ObjectState("ak-47(2)", new Position(1, -4.4, -6), "ak-47", "/models/ak-47.glb", "ak-47"),
+            new ObjectState("ak-47(3)", new Position(2, -4.4, -8), "ak-47", "/models/ak-47.glb", "ak-47"),
         };
         
 
@@ -179,14 +181,14 @@ public class PlayerService {
         }
 
         // 아이템 타입이 "APPLE"인 경우에만 줍도록 처리
-        if ("APPLE".equalsIgnoreCase(sceneObject.getItemType())) {
+        if (sceneObject.getItemType() != null) {
             // 씬에서 오브젝트 제거
             sceneObjects.remove(objectId);
             logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, sceneObject.getItemType(), playerId);
 
             // 주운 아이템 정보를 기반으로 InventoryItem 생성
             Item pickedItem = new Item(
-                "item_" + UUID.randomUUID().toString().substring(0, 8), // 새 아이템 고유 ID
+                objectId, // 새 아이템 고유 ID
                 "사과", // 아이템 이름
                 "food", // 아이템 타입 (음식)
                 1, // 개수 1개

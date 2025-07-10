@@ -40,6 +40,12 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname 
         return CharacterModel;
     }, [id]); // id가 변경될 때만 다시 계산
 
+    const isArmed = safeAnimationState.isArmed === true;
+    const characterModelPath = isArmed
+        ? '/models/ArmedCharacter.glb'
+        : '/models/UnarmedCharacter.glb';
+
+
     return (
         <RigidBody
             ref={rigidBodyRef}
@@ -54,9 +60,10 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname 
             {/* 모델 그룹: 모델과 닉네임 텍스트를 함께 묶음 */}
             <group ref={modelGroupRef} position-y={-1.65}> {/* 모델의 중심을 조정 */}
                 {/* 결정된 CharacterToRender 컴포넌트를 렌더링하고 애니메이션 상태 전달 */}
-                {CharacterToRender && (
-                    <CharacterToRender {...safeAnimationState} />
-                )}
+                <CharacterModel
+                    {...safeAnimationState}
+                     glbPath={characterModelPath}
+                />
 
                 {/* 플레이어 닉네임 표시 */}
                 <Text

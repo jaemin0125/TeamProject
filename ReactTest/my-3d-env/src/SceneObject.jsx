@@ -12,9 +12,11 @@ export function SceneObject({ obj, objectRefs }) {
     // obj.type이 'apple'일 때만 로드하도록 조건부로 호출합니다.
     
     const appleModel = obj.type === 'apple' ? useGLTF(obj.modelPath || '/models/apple.glb') : null; // Use obj.modelPath
-    
+    const ak_47Model = obj.type === 'ak-47' ? useGLTF(obj.modelPath || '/models/ak-47.glb') : null; // Use obj.modelPath
     if (obj.type === 'apple' && !appleModel) {
         console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/models/apple.glb'}`);
+    } else if (obj.type === 'ak-47' && !ak_47Model) {
+        console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/models/47.glb'}`);
     }
 
     // 컴포넌트 마운트 시 objectRefs에 RigidBody 참조를 추가하고, 언마운트 시 제거합니다.
@@ -51,6 +53,9 @@ export function SceneObject({ obj, objectRefs }) {
 
                 {obj.type === 'apple' && appleModel && ( // 사과 타입일 경우 GLB 모델 렌더링
                     <primitive object={appleModel.scene.clone()} scale={obj.scale || [0.01, 0.01, 0.01]} /> // 사과 모델 스케일 조정 가능
+                )}
+                {obj.type === 'ak-47' && ak_47Model && ( // 사과 타입일 경우 GLB 모델 렌더링
+                    <primitive object={ak_47Model.scene.clone()} scale={obj.scale || [0.5, 0.5, 0.5]} /> // 사과 모델 스케일 조정 가능
                 )}
                 {/* 박스 타입 */}
                 {obj.type === 'box' && (

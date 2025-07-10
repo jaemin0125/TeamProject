@@ -11,7 +11,7 @@ import { controlsMap } from './utils/constants'; // controlsMap 임포트
 import { checkHit } from './utils/gameUtils'; // checkHit 임포트
 
 // Player 컴포넌트 (현재 플레이어의 로직)
-export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode, currentPlayerId, onObjectProximityChange, onInteract, onUseItem, selectedInventorySlot, isItemSelected }) {
+export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode, currentPlayerId, onObjectProximityChange, onInteract, onUseItem, selectedInventorySlot, isItemSelected, selectedItem }) {
     const { camera, gl } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
     const [sitToggle, setSitToggle] = useState(false); // 앉기 토글 상태
@@ -99,7 +99,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 animationState: {
                     isWalking: false, isBackward: false, isLeft: false, isRight: false,
                     isJumping: false, isRunning: false, isSitted: false, isSittedAndWalk: false,
-                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isIdle: true,
+                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isArmed: false, isIdle: true,
                     isDead: false // 죽음 상태 추가
                 }
             };
@@ -139,7 +139,9 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         const canvas = gl.domElement; // 캔버스 요소 가져오기
         const handleMouseDown = (e) => {
             if (isDead) return;
+            
 
+            
             if (e.button === 0) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
                     // 이제 selectedInventorySlot은 아이템 ID가 아니라 '인덱스'로 간주합니다.
@@ -147,10 +149,19 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
 
                     // onUseItem 함수에 선택된 슬롯의 인덱스를 전달합니다.
                     // GameCanvas (부모 컴포넌트)에서 이 인덱스를 사용하여 실제 아이템 ID를 찾을 것입니다.
-                    if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0) { // 숫자인지, 유효한 인덱스인지 확인
+                    if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
                         console.log(`[Player] Calling onUseItem with selected slot index: ${selectedInventorySlot}.`);
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
-                    } else {
+                    } 
+                    
+                    else if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'ak-47'){
+                        console.log('무기 습득 후 좌클릭 누름');
+                    }
+                    
+                    
+                    
+                    
+                    else {
                         console.warn("[Player] Invalid selectedInventorySlot index. Performing punch instead.");
                         if (canPunch) {
                             setIsPunching(true);
@@ -164,13 +175,13 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 }
             }
 
-            if (e.button === 2) {
+            if (e.button === 2 && selectedItem.name == 'ak-47') {
                 // 우클릭 눌렀을 때 → 조준 시작
                 setAimingToggle(true);
             }
         };
         const handleMouseUp = (e) => {
-            if (e.button === 2) {
+            if (e.button === 2 && selectedItem.name == 'ak-47') {
                 // 우클릭 떼었을 때 → 조준 해제
                 setAimingToggle(false);
             }
@@ -294,7 +305,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         const { jump } = keys; // 점프 키 상태 별도로 추출
         const vel = playerRef.current?.linvel() || { x: 0, y: 0, z: 0 }; // 플레이어 선형 속도
         const pos = playerRef.current?.translation() || { x: 0, y: 0, z: 0 }; // 플레이어 위치
-
+        const isArmed = selectedItem?.name === 'ak-47'
         // 애니메이션 상태 계산 (useFrame 내에서 직접 계산)
     const isWalkingAnim = keys.forward && !isDead;
     const isBackwardAnim = keys.backward && !isDead;
@@ -308,7 +319,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     const isPunchingAnim = isPunching && !isDead;
     const isHittedAnim = isPlayerHitted && !isDead;
     const isJumpingAnim = isJumping && !AimingToggle && !isDead;
-    const isAimingAnim = AimingToggle && !isDead;
+    const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim;
     const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
     const isDeadAnim = isDead;
     const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
@@ -335,7 +346,8 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                     isAiming: isAimingAnim,
                     isAimingAndWalk: isAimingAndWalkAnim,
                     isIdle: isIdleAnim,
-                    isDead: isDeadAnim
+                    isDead: isDeadAnim,
+                    isArmed: isArmed
                 }
             };
             stompClientInstance.publish({
@@ -515,7 +527,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     const isPunchingAnim = isPunching && !isDead;
     const isHittedAnim = isPlayerHitted && !isDead;
     const isJumpingAnim = isJumping && !isDead && !AimingToggle;
-    const isAimingAnim = AimingToggle && !isDead;
+    const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim;
     const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
     const isDeadAnim = isDead;
     const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
@@ -526,6 +538,17 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         setIsGrounded(true); // 바닥 접지 여부 업데이트
         // 충돌한 오브젝트가 SceneObject에서 설정한 userData를 가지고 있는지 확인
         if (payload.other.rigidBodyObject?.userData?.type === 'apple') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
+                clearTimeout(exitTimeoutRef.current);
+                exitTimeoutRef.current = null;
+            }
+            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
+                interactableObjectIdRef.current = objectId;
+                onObjectProximityChange(objectId, true);
+                console.log("Player entered apple proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+            }
+        } else if (payload.other.rigidBodyObject?.userData?.type === 'ak-47') {
             const objectId = payload.other.rigidBodyObject.userData.id;
             if (exitTimeoutRef.current) { // If there was an pending exit, clear it
                 clearTimeout(exitTimeoutRef.current);
@@ -553,8 +576,27 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 }
                 exitTimeoutRef.current = null;
             }, 200); // 200ms debounce로 변경
+        } else if (payload.other.rigidBodyObject?.userData?.type === 'ak-47') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            // Set a timeout to clear the ID, allowing for brief re-entries
+            exitTimeoutRef.current = setTimeout(() => {
+                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
+                    interactableObjectIdRef.current = null;
+                    onObjectProximityChange(objectId, false);
+                    console.log("Player exited apple proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                }
+                exitTimeoutRef.current = null;
+            }, 200); // 200ms debounce로 변경
         }
     }, [onObjectProximityChange]);
+
+
+    let characterModelPath = '/models/UnarmedCharacter.glb';
+    let isArmed = false;
+    if (selectedItem && selectedItem.name === 'ak-47') {
+    characterModelPath = '/models/ArmedCharacter.glb';
+    isArmed = true;
+    }
 
     return (
         <>
@@ -577,6 +619,8 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             {/* 플레이어 3D 모델 */}
             <CharacterModel
                 ref={modelRef}
+                glbPath={characterModelPath}
+                isArmed={isArmed}
                 isWalking={isWalkingAnim}
                 isBackward={isBackwardAnim}
                 isLeft={isLeftAnim}
