@@ -18,5 +18,5 @@ export function checkHit(attackerPos, attackerQuat, targetPos) {
     const angle = forward.angleTo(directionToTarget);
 
     // 거리가 1.2 미만이고 각도가 Math.PI / 6 (30도) 미만일 때 히트로 판정
-    return distance < 20 && angle < Math.PI / 180;
+    return distance < 1.2 && angle < Math.PI / 6;
 }

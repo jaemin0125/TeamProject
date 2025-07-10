@@ -1,4 +1,4 @@
-INDEX VERSION 1.134+D:\yyynn\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.jdt.core
+INDEX VERSION 1.134+D:\yyynn\tj\TeamProject\WorkSpace\.metadata\.plugins\org.eclipse.jdt.core
 555448745.index
 1217580034.index
 1097627976.index

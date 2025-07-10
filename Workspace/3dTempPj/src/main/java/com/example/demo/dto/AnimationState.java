@@ -20,8 +20,10 @@ public class AnimationState {
     private boolean isPunching;
     private boolean isHitted;
     private boolean isDead;
-    private boolean isAiming;	
+    private boolean isAiming;
+    private boolean isAimingAndWalk;
     private boolean isIdle;
+    private boolean isArmed;
 
     // 모든 getter를 수동으로 정의합니다 (getIsXxx 형태)
     public boolean getIsWalking() { return isWalking; }
@@ -66,8 +68,14 @@ public class AnimationState {
     public boolean getIsAiming() { return isAiming; }
     public void setIsAiming(boolean isAiming) { this.isAiming = isAiming; }
     
+    public boolean getIsAimingAndWalk() { return isAimingAndWalk; }
+    public void setIsAimingAndWalk(boolean isAimingAndWalk) { this.isAimingAndWalk = isAimingAndWalk; }
+    
     public boolean getIsIdle() { return isIdle; }
     public void setIsIdle(boolean isIdle) { this.isIdle = isIdle; }
+    
+    public boolean getIsArmed() { return isArmed; }
+    public void setIsArmed(boolean isArmed) { this.isArmed = isArmed; }
     // toString() 메서드를 수동으로 오버라이드하여 로그에서 보기 좋게 만듭니다.
     @Override
     public String toString() {
@@ -86,7 +94,9 @@ public class AnimationState {
                ", isHitted=" + isHitted +
                ", isDead=" + isDead +
                ", isAiming=" + isAiming +
+               ", isAimingAndWalk=" + isAimingAndWalk +
                ", isIdle=" + isIdle +
+               ", isArmed=" + isArmed +
                '}';
     }
 }

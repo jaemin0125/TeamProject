@@ -1,26 +1,24 @@
 // src/main/java/com/example/demo/service/PlayerService.java
 package com.example.demo.service;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
 import com.example.demo.dto.AnimationState;
 import com.example.demo.dto.Item;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
-
-import java.util.Collection;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
-import java.util.UUID;
-import java.util.Optional;
-import java.util.List;
-import java.util.ArrayList;
-
-// ✨ Import PostConstruct if you need it for initialization (from previous context)
-// import jakarta.annotation.PostConstruct; // If you are on Spring Boot 3.x+
-// import javax.annotation.PostConstruct; // If you are on Spring Boot 2.x
 
 @Service
 public class PlayerService {
@@ -30,33 +28,61 @@ public class PlayerService {
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToPlayerIdMap = new ConcurrentHashMap<>();
     private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>();
+    private final SimpMessagingTemplate messagingTemplate;
+    private final Random random = new Random();
 
-    // Constructor modified to include initial apple logic
-    public PlayerService() {
-        // Server startup initial apple addition
-        addInitialApples(); // Changed method name to plural
+    public PlayerService(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
     }
 
-    // ✨ Method to add initial apples to the scene
-    private void addInitialApples() { // Changed method name to plural
-        // Initial apples matching client's original hardcoded positions
-        ObjectState[] initialApples = {
+    @Scheduled(fixedRate = 30000)
+    public void spawnApplePeriodically() {
+    	
+    	
+    	
+        // 맵의 특정 영역 내에서 랜덤 위치 생성
+        double x = -10 + (20 * random.nextDouble()); // -10 to 10
+        double y = -4.5; // 고정된 y 위치
+        double z = -10 + (20 * random.nextDouble()); // -10 to 10
+        Position randomPosition = new Position(x, y, z);
 
-            new ObjectState("apple1", new Position(0, 1, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple2", new Position(2, 1, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple3", new Position(-2, 1, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple4", new Position(0, 1, 2), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple5", new Position(0, 1, -2), "apple", "/models/apple.glb", "apple")
-        };
+        // 새로운 사과 객체 생성
+        String appleId = "apple-" + UUID.randomUUID().toString();
+        ObjectState newApple = new ObjectState(appleId, randomPosition, "apple", "/models/apple.glb", "apple");
+
+//        String funmId = "apple-" + UUID.randomUUID().toString();
         
+        // 씬에 사과 추가
+        sceneObjects.put(newApple.getId(), newApple);
+        logger.info("Spawning new apple at: {}", randomPosition);
 
-        for (ObjectState apple : initialApples) {
-            if (!sceneObjects.containsKey(apple.getId())) {
-                sceneObjects.put(apple.getId(), apple);
-                logger.info("Initial apple object added to the scene: {}", apple.getId());
-            }
-        }
+        // 모든 클라이언트에게 업데이트된 씬 오브젝트 목록 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
     }
+    
+    @Scheduled(fixedRate = 60000)
+    public void spawnAk47Periodically() {
+    	
+    	// 맵의 특정 영역 내에서 랜덤 위치 생성
+    	double x = -10 + (20 * random.nextDouble()); // -10 to 10
+    	double y = -4.5; // 고정된 y 위치
+    	double z = -10 + (20 * random.nextDouble()); // -10 to 10
+    	Position randomPosition = new Position(x, y, z);
+    	
+    	// 새로운 사과 객체 생성
+    	String rifleId = "ak47-" + UUID.randomUUID().toString();
+    	ObjectState newRifle = new ObjectState(rifleId, randomPosition, "ak-47", "/models/ak-47.glb", "ak-47");
+    	
+//    	String funmId = "apple-" + UUID.randomUUID().toString();
+    	
+    	// 씬에 사과 추가
+    	sceneObjects.put(newRifle.getId(), newRifle);
+    	logger.info("Spawning new Rifle at: {}", randomPosition);
+    	
+    	// 모든 클라이언트에게 업데이트된 씬 오브젝트 목록 브로드캐스트
+    	messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+    }
+    
 
 
     /**
@@ -180,14 +206,14 @@ public class PlayerService {
         }
 
         // 아이템 타입이 "APPLE"인 경우에만 줍도록 처리
-        if ("APPLE".equalsIgnoreCase(sceneObject.getItemType())) {
+        if (sceneObject.getItemType() != null) {
             // 씬에서 오브젝트 제거
             sceneObjects.remove(objectId);
             logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, sceneObject.getItemType(), playerId);
 
             // 주운 아이템 정보를 기반으로 InventoryItem 생성
             Item pickedItem = new Item(
-                "item_" + UUID.randomUUID().toString().substring(0, 8), // 새 아이템 고유 ID
+                objectId, // 새 아이템 고유 ID
                 "사과", // 아이템 이름
                 "food", // 아이템 타입 (음식)
                 1, // 개수 1개
@@ -256,7 +282,8 @@ public class PlayerService {
         Optional<Item> itemToUseOpt = player.getInventory().stream()
             .filter(i -> i.getId().equals(itemId))
             .findFirst();
-
+        
+        
         if (itemToUseOpt.isEmpty()) {
             logger.warn("Player {} does not have item {} in inventory.", playerId, itemId);
             return false;

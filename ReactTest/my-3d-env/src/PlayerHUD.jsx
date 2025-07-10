@@ -5,7 +5,7 @@ import React from 'react';
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
 export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot }) {
     // state 객체에서 필요한 정보들을 구조 분해 할당
-    const { health = 100, isHit, isDead, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
+    const { health = 100, isHit, isDead, isAiming, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
 
     // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
     const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
@@ -210,8 +210,72 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
+                {!isDead && !isAiming && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            width: '40px',
+                            height: '40px',
+                            pointerEvents: 'none',
+                            zIndex: 9999,
+                        }}
+                    >
+                        {/* 위쪽 라인 */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '1px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '2px',
+                            height: '8px',
+                            backgroundColor: 'white',
+                            boxShadow: '0 0 4px black',
+                        }}></div>
+
+                        {/* 아래쪽 라인 */}
+                        <div style={{
+                            position: 'absolute',
+                            bottom: '1px',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: '2px',
+                            height: '8px',
+                            backgroundColor: 'white',
+                            boxShadow: '0 0 4px black',
+                        }}></div>
+
+                        {/* 왼쪽 라인 */}
+                        <div style={{
+                            position: 'absolute',
+                            left: '1px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '8px',
+                            height: '2px',
+                            backgroundColor: 'white',
+                            boxShadow: '0 0 4px black',
+                        }}></div>
+
+                        {/* 오른쪽 라인 */}
+                        <div style={{
+                            position: 'absolute',
+                            right: '1px',
+                            top: '50%',
+                            transform: 'translateY(-50%)',
+                            width: '8px',
+                            height: '2px',
+                            backgroundColor: 'white',
+                            boxShadow: '0 0 4px black',
+                        }}></div>
+                    </div>
+                )}
+
+
                 {/* 크로스헤어 (사망 중이 아닐 때만) */}
-                {!isDead && (
+                {!isDead && isAiming && (
                     <div
                         style={{
                             position: 'absolute',

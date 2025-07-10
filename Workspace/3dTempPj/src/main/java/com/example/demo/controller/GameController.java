@@ -8,9 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
-import com.example.demo.dto.Item;
 import com.example.demo.dto.ItemActionRequest;
-import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.service.PlayerService;
@@ -83,7 +81,7 @@ public class GameController {
             }
 
             // 모든 클라이언트에게 업데이트된 플레이어 상태 브로드캐스트
-            messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+            messagingTemplate.convertAndSend("/topic/playerHit", message);
         }
     }
 
@@ -107,9 +105,10 @@ public class GameController {
     // ✨ 새로 추가: 아이템 사용 요청 처리
     @MessageMapping("/useItem")
     public void useItem(ItemActionRequest request) {
-        logger.info("Use item request received: PlayerId={}, ItemId={}, ActionType={}", 
+        logger.info("Use item request received: playerId={}, ItemId={}, ActionType={}",
+        		
             request.getPlayerId(), request.getItemId(), request.getActionType());
-
+        	
         // PlayerService를 통해 인벤토리에서 아이템 사용
         if (playerService.useItemFromPlayerInventory(request.getPlayerId(), request.getItemId(), 1)) { // 1개 사용
             logger.info("Player {} used item {}.", request.getPlayerId(), request.getItemId());
@@ -132,4 +131,6 @@ public class GameController {
 		// 모든 클라이언트에게 업데이트된 플레이어 목록을 브로드캐스트합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
+	
+	
 }

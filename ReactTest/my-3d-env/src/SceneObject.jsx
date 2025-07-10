@@ -10,11 +10,13 @@ export function SceneObject({ obj, objectRefs }) {
 
     // GLB 모델 로드 (사과를 위한 모델)
     // obj.type이 'apple'일 때만 로드하도록 조건부로 호출합니다.
-    console.log(`[SceneObject] obj.id: ${obj.id}, obj.type: ${obj.type}, obj.modelPath: ${obj.modelPath}`);
+    
     const appleModel = obj.type === 'apple' ? useGLTF(obj.modelPath || '/models/apple.glb') : null; // Use obj.modelPath
-    console.log(`[SceneObject] appleModel loaded: ${!!appleModel}`);
+    const ak_47Model = obj.type === 'ak-47' ? useGLTF(obj.modelPath || '/models/ak-47.glb') : null; // Use obj.modelPath
     if (obj.type === 'apple' && !appleModel) {
         console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/models/apple.glb'}`);
+    } else if (obj.type === 'ak-47' && !ak_47Model) {
+        console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/models/47.glb'}`);
     }
 
     // 컴포넌트 마운트 시 objectRefs에 RigidBody 참조를 추가하고, 언마운트 시 제거합니다.
@@ -39,10 +41,10 @@ export function SceneObject({ obj, objectRefs }) {
 
     return (
         <RigidBody
-            type={obj.rigidBodyType || 'fixed'} // 기본은 'fixed', 필요에 따라 변경 가능 (예: 'dynamic')
+            type={'fixed'} // 기본은 'fixed', 필요에 따라 변경 가능 (예: 'dynamic')
             ref={rigidBodyRef}
             position={[obj.position.x, obj.position.y, obj.position.z]} // 초기 위치 설정
-            colliders={obj.collider} // 콜라이더 타입 설정
+            colliders={'ball'} // 콜라이더 타입 설정
             userData={obj} // **추가: 오브젝트 데이터를 RigidBody의 userData로 전달**
         >
             {/* 오브젝트의 3D 메쉬 */}
@@ -51,6 +53,9 @@ export function SceneObject({ obj, objectRefs }) {
 
                 {obj.type === 'apple' && appleModel && ( // 사과 타입일 경우 GLB 모델 렌더링
                     <primitive object={appleModel.scene.clone()} scale={obj.scale || [0.01, 0.01, 0.01]} /> // 사과 모델 스케일 조정 가능
+                )}
+                {obj.type === 'ak-47' && ak_47Model && ( // 사과 타입일 경우 GLB 모델 렌더링
+                    <primitive object={ak_47Model.scene.clone()} scale={obj.scale || [0.5, 0.5, 0.5]} /> // 사과 모델 스케일 조정 가능
                 )}
                 {/* 박스 타입 */}
                 {obj.type === 'box' && (

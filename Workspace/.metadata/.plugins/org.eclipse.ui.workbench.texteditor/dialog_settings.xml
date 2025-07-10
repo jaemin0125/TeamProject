@@ -10,21 +10,21 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="collect"/>
-			<item value="&apos;"/>
-			<item value="&apos;&apos;"/>
-			<item value="apple"/>
-			<item value="convertAndSend"/>
-			<item value="addInitialApple"/>
-			<item value="uuid"/>
+			<item value="playermove"/>
+			<item value="P"/>
+			<item value="pick"/>
+			<item value="useItem"/>
+			<item value="sceneobject"/>
 			<item value="collectObject"/>
-			<item value="remove"/>
-			<item value="playerRespawn"/>
-			<item value="Use item failed"/>
-			<item value="useItemFromPlayerInventory"/>
-			<item value="sceneObjects"/>
-			<item value="scene"/>
-			<item value="ItemActionRequest "/>
+			<item value="collectobject"/>
+			<item value="updatePlayerState"/>
+			<item value="playerid"/>
+			<item value="dead"/>
+			<item value="public boolean"/>
+			<item value="decrease"/>
+			<item value="addInitial"/>
+			<item value="apple"/>
+			<item value="collect"/>
 		</list>
 		<list key="replacehistory">
 		</list>
