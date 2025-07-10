@@ -10,21 +10,21 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="addPlayer"/>
-			<item value="logger.debug(&quot;[PlayerService] Updated"/>
-			<item value="playermove"/>
-			<item value="playerlocation"/>
-			<item value="playerlo"/>
-			<item value="lo"/>
-			<item value="registerPlayer"/>
-			<item value="localhost"/>
-			<item value="local"/>
-			<item value="Received AnimationState"/>
-			<item value="Systye"/>
-			<item value="System"/>
-			<item value="println"/>
-			<item value="print"/>
-			<item value="Attem"/>
+			<item value="collect"/>
+			<item value="&apos;"/>
+			<item value="&apos;&apos;"/>
+			<item value="apple"/>
+			<item value="convertAndSend"/>
+			<item value="addInitialApple"/>
+			<item value="uuid"/>
+			<item value="collectObject"/>
+			<item value="remove"/>
+			<item value="playerRespawn"/>
+			<item value="Use item failed"/>
+			<item value="useItemFromPlayerInventory"/>
+			<item value="sceneObjects"/>
+			<item value="scene"/>
+			<item value="ItemActionRequest "/>
 		</list>
 		<list key="replacehistory">
 		</list>

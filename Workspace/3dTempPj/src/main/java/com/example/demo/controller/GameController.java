@@ -9,7 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.demo.dto.Item;
-import com.example.demo.dto.ItemActionRequest; // ✨ ItemActionRequest 임포트 추가
+import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
@@ -36,79 +36,71 @@ public class GameController {
 	@MessageMapping("/registerPlayer")
 	public void registerPlayer(PlayerState playerState, SimpMessageHeaderAccessor headerAccessor) {
 		String sessionId = headerAccessor.getSessionId();
-		playerService.addPlayer(playerState, sessionId);
-		logger.info("Player registered: {} (Session ID: {})", playerState.getNickname(), sessionId);
+		logger.info("Register player request received: Player ID={}, Nickname={}, Session ID={}",
+				playerState.getId(), playerState.getNickname(), sessionId);
 
-		// 모든 클라이언트에게 업데이트된 플레이어 목록을 브로드캐스팅합니다.
+		// ✨ 변경: addPlayer 대신 registerPlayer 사용
+		playerService.registerPlayer(playerState, sessionId);
+
+		// 모든 클라이언트에게 업데이트된 플레이어 목록 브로드캐스트
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
-		// ✨ 새로 추가: 클라이언트에게 현재 씬에 있는 모든 오브젝트를 전송 (사과 포함)
-		messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getSceneObjects());
+		// 모든 클라이언트에게 현재 씬 오브젝트 목록 브로드캐스트 (새로운 플레이어가 접속했으므로)
+        messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getAllSceneObjects());
 	}
 
-	@MessageMapping("/playerMove")
-	public void playerMove(PlayerState playerState) {
+	@MessageMapping("/updatePlayerState")
+	public void updatePlayerState(PlayerState playerState) {
+		// logger.debug("Player state update received for ID: {}", playerState.getId());
+        
+        // ✨ 변경: updatePlayerState 메소드의 모든 인자 전달
 		playerService.updatePlayerState(
 				playerState.getId(),
 				playerState.getPosition(),
 				playerState.getRotationY(),
 				playerState.getAnimationState()
 		);
-		// 업데이트된 전체 플레이어 목록을 다시 모든 클라이언트에게 브로드캐스팅합니다.
+
+		// 모든 클라이언트에게 업데이트된 플레이어 목록 브로드캐스트 (실시간 동기화)
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
-	
-	// 기존 /sceneObjects @MessageMapping은 더 이상 클라이언트에서 직접 업데이트하지 않으므로 삭제하거나 로직 변경 필요.
-	// 서버에서 직접 씬 오브젝트를 관리하고 브로드캐스트하는 방식으로 변경되었으므로, 클라이언트가 씬 오브젝트를
-	// 직접 보낼 필요는 없습니다. 아이템 줍기/사용 로직이 이를 대체합니다.
-	/*
-	@MessageMapping("/sceneObjects")
-	public void updateObjectState(List<ObjectState> objectStates) {
-	    // 모든 클라이언트에게 브로드캐스트
-	    messagingTemplate.convertAndSend("/topic/sceneObjects", objectStates);
-	}
-	*/
-	
-	@MessageMapping("/playerHit")
-	public void handlePlayerHit(PlayerHitMessage message) {
-	    // 브로드캐스트: 모든 클라이언트가 피격 알 수 있도록
-	    messagingTemplate.convertAndSend("/topic/playerHit", message);
-	}
+
+    @MessageMapping("/playerHit")
+    public void handlePlayerHit(PlayerHitMessage message) {
+        logger.info("Player hit message received: From={}, Target={}", message.getFromId(), message.getTargetId());
+
+        PlayerState targetPlayer = playerService.getPlayer(message.getTargetId());
+        if (targetPlayer != null) {
+            // 체력을 10 감소시킵니다.
+            int newHealth = targetPlayer.getHealth() - 10;
+            playerService.setPlayerHealth(targetPlayer.getId(), newHealth);
+            logger.info("Player {} hit. Health reduced to {}.", targetPlayer.getNickname(), newHealth);
+
+            // 체력이 0 이하가 되면 사망 처리
+            if (newHealth <= 0) {
+                playerService.setPlayerDead(targetPlayer.getId());
+                logger.info("Player {} is dead.", targetPlayer.getNickname());
+                // 사망 시 추가적인 로직 (예: 리스폰 타이머 시작, 애니메이션 변경 등)
+            }
+
+            // 모든 클라이언트에게 업데이트된 플레이어 상태 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
+        }
+    }
 
     // ✨ 새로 추가: 아이템 줍기 요청 처리
-    @MessageMapping("/pickupItem")
-    public void pickupItem(ItemActionRequest request) {
-        logger.info("Pickup request received: PlayerId={}, ItemId={}, ActionType={}", 
+    @MessageMapping("/pickUpItem")
+    public void pickUpItem(ItemActionRequest request) {
+        logger.info("Pick up item request received: PlayerId={}, ItemId={}, ActionType={}", 
             request.getPlayerId(), request.getItemId(), request.getActionType());
 
-        PlayerState player = playerService.getPlayer(request.getPlayerId());
-        ObjectState pickedUpObject = null;
-
-        // 씬 오브젝트 목록에서 해당 아이템을 찾음 (현재는 사과만 있으므로 간단화)
-        // 실제 게임에서는 플레이어 근처의 아이템만 줍도록 유효성 검사 추가 필요
-        for (ObjectState obj : playerService.getSceneObjects()) {
-            if (obj.getId().equals(request.getItemId()) && "APPLE".equalsIgnoreCase(obj.getItemType())) {
-                pickedUpObject = obj;
-                break;
-            }
-        }
-
-        if (player != null && pickedUpObject != null) {
-            // PlayerService를 통해 아이템을 인벤토리에 추가
-            // 여기서 "apple_item_type_id"는 Item DTO의 id 필드와 매칭되어야 합니다.
-            // ItemType DTO를 만들거나, Item DTO의 id를 아이템 종류를 나타내는 문자열로 사용
-            Item appleItem = new Item("APPLE", "사과", "food", 1, "/assets/apple.png", 20.0); // Item DTO에 healthRestore 필드 추가 필요
-            if (playerService.addItemToPlayerInventory(request.getPlayerId(), appleItem)) {
-                // 씬에서 오브젝트 제거
-                playerService.removeSceneObject(request.getItemId());
-                logger.info("Player {} picked up item {}.", request.getPlayerId(), request.getItemId());
-
-                // 업데이트된 플레이어 상태(인벤토리 포함) 브로드캐스트
-                messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
-                // 업데이트된 씬 오브젝트 상태 브로드캐스트 (사라진 아이템 반영)
-                messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getSceneObjects());
-            }
+        // PlayerService를 통해 씬에서 아이템 제거 및 인벤토리에 추가
+        if (playerService.pickUpItemFromScene(request.getPlayerId(), request.getItemId())) {
+            logger.info("Player {} picked up item {}.", request.getPlayerId(), request.getItemId());
+            // 씬 오브젝트 및 플레이어 인벤토리 업데이트 브로드캐스트
+            messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getAllSceneObjects());
+            messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
         } else {
-            logger.warn("Pickup failed: Player {} or Item {} not found.", request.getPlayerId(), request.getItemId());
+            logger.warn("Pick up item failed: PlayerId={} or ItemId={} not found.", request.getPlayerId(), request.getItemId());
         }
     }
 
@@ -139,7 +131,5 @@ public class GameController {
 		playerService.removePlayerBySessionId(sessionId);
 		// 모든 클라이언트에게 업데이트된 플레이어 목록을 브로드캐스트합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
-        // ✨ 새로 추가: 플레이어 퇴장 시 씬 오브젝트 목록도 업데이트 (혹시 모를 아이템 관련 문제 방지)
-        messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getSceneObjects());
 	}
 }

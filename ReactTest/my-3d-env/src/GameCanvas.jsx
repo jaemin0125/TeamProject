@@ -115,17 +115,7 @@ export function GameCanvas({playerNickname}) {
     const isItemSelected = inventory[selectedInventorySlot] !== null;
 
     // 씬에 배치될 오브젝트들의 초기 상태
-    const [sceneObjects, setSceneObjects] = useState([
-        // 사과 오브젝트 추가 (dynamic으로 설정하여 중력 영향 받음)
-        // mass를 높여 거의 움직이지 않게 하고, linearDamping으로 움직임을 빠르게 멈추게 합니다.
-        // restitution을 낮춰 튀는 정도를 줄입니다.
-        { id: 'apple1', type: 'apple', position: { x: 0, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple2', type: 'apple', position: { x: 2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple3', type: 'apple', position: { x: -2, y: 2, z: 0 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple4', type: 'apple', position: { x: 0, y: 2, z: 2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 },
-        { id: 'apple5', type: 'apple', position: { x: 0, y: 2, z: -2 }, collider: 'cuboid', rigidBodyType: 'dynamic', scale: [0.01, 0.01, 0.01], color: 'red', mass: 100000, linearDamping: 100, restitution: 0.1 }
-        // 다른 오브젝트들은 필요에 따라 추가하거나 제거하세요.
-    ]);
+    const [sceneObjects, setSceneObjects] = useState([]);
     // 씬 오브젝트들의 RigidBody 참조를 저장하는 useRef
     const objectRefs = useRef({});
 
@@ -142,7 +132,7 @@ export function GameCanvas({playerNickname}) {
         setHudState(prev => ({ ...prev, viewMode: mode }));
     }, []);
 
-
+    
     // 플레이어 죽음 및 리스폰 로직 (GameCanvas에서 관리)
     useEffect(() => {
         let respawnTimer;
@@ -407,26 +397,13 @@ export function GameCanvas({playerNickname}) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(prevObjects => {
-            const newObjectsMap = new Map(prevObjects.map(obj => [obj.id, obj]));
-            updatedObjects.forEach(updatedObj => {
-                const currentObj = newObjectsMap.get(updatedObj.id);
-                if (currentObj) {
-                    // 기존 오브젝트는 위치만 업데이트
-                    newObjectsMap.set(updatedObj.id, { ...currentObj, position: updatedObj.position });
-                } else {
-                    // 새로운 오브젝트는 추가 (기본값 설정 포함)
-                    newObjectsMap.set(updatedObj.id, {
-                        ...updatedObj,
-                        type: updatedObj.type || 'sphere',
-                        radius: updatedObj.radius || 1,
-                        color: updatedObj.color || 'gray',
-                        collider: updatedObj.collider || 'ball',
-                    });
-                }
-            });
-            return Array.from(newObjectsMap.values()); // Map을 다시 배열로 변환하여 상태 업데이트
-        });
+        setSceneObjects(updatedObjects.map(updatedObj => ({
+            ...updatedObj,
+            type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+            radius: updatedObj.radius || 1,
+            color: updatedObj.color || 'gray',
+            collider: updatedObj.collider || 'ball',
+        })));
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트
@@ -447,7 +424,7 @@ export function GameCanvas({playerNickname}) {
         if (interactedObject && interactedObject.type === 'apple') {
             console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
             setInventory(prevInventory => {
-                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'Apple');
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'apple');
                 if (existingItemIndex !== -1) {
                     const newInventory = [...prevInventory];
                     newInventory[existingItemIndex].count += 1;
@@ -458,7 +435,7 @@ export function GameCanvas({playerNickname}) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'Apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -474,10 +451,14 @@ export function GameCanvas({playerNickname}) {
             setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
 
             if (stompClient && stompClient.connected) {
-                console.log(`[GameCanvas] Publishing collectObject event for ${interactedObject.id}`); // 추가된 로그
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
                 stompClient.publish({
-                    destination: '/app/collectObject',
-                    body: JSON.stringify({ objectId: interactedObject.id, collectorId: currentPlayerId }),
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP'
+                    }),
                 });
             }
         } else {
