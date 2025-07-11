@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics, RigidBody } from '@react-three/rapier';
+import { Physics} from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
@@ -15,6 +15,7 @@ import { OtherPlayer } from './OtherPlayer';
 import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
+import ChatBox from './ChatBox';
 
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
@@ -86,6 +87,11 @@ class ErrorBoundary extends React.Component {
 // GameCanvas 컴포넌트: 게임의 주요 렌더링 및 로직을 담당합니다.
 export function GameCanvas({ playerNickname }) {
     // HUD 상태 관리 (체력, 피격 여부, 다른 플레이어 정보, 사망 여부, 시점, 리스폰 진행도)
+
+    const [chatMessages, setChatMessages] = useState([]);
+    const [chatInput, setChatInput] = useState('');
+    const [isChatting, setIsChatting] = useState(false);
+
     const [hudState, setHudState] = useState({
         health: 100,
         isHit: false,
@@ -163,16 +169,16 @@ export function GameCanvas({ playerNickname }) {
                 setHudState(prev => ({ ...prev, health: 100, isDead: false, respawnProgress: 0 }));
                 console.log("플레이어가 리스폰되었습니다.");
 
-                if (stompClient && stompClient.connected) {
-                    stompClient.publish({
-                        destination: '/app/playerRespawn',
-                        body: JSON.stringify({
-                            id: currentPlayerId,
-                            position: { x: 0, y: 1.1, z: 0 }, // 서버에 리스폰 위치 전달
-                            health: 100
-                        })
-                    });
-                }
+                // if (stompClient && stompClient.connected) {
+                //     stompClient.publish({
+                //         destination: '/app/playerRespawn',
+                //         body: JSON.stringify({
+                //             id: currentPlayerId,
+                //             position: { x: 0, y: 1.1, z: 0 }, // 서버에 리스폰 위치 전달
+                //             health: 100
+                //         })
+                //     });
+                // }
             }, 5000); // 5초 후 리스폰
 
         }
@@ -221,27 +227,27 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [inventory.length]); // inventory.length가 변경될 때만 이펙트 재실행
 
-    useEffect(() => {
-        if (!stompClient || !stompClient.connected) return;
+    // useEffect(() => {
+    //     if (!stompClient || !stompClient.connected) return;
 
-        const selectedItem = inventory[selectedInventorySlot];
-        const isArmed = selectedItem?.name === 'ak-47';
+    //     const selectedItem = inventory[selectedInventorySlot];
+    //     const isArmed = selectedItem?.name === 'ak-47';
 
-        stompClient.publish({
-            destination: '/app/playerMove',
-            body: JSON.stringify({
-                id: currentPlayerId,
-                nickname: playerNickname,
-                position: { x: 0, y: 1.1, z: 0 }, // 기존 위치나 서버에서 받아오는 위치로
-                rotationY: 0,
-                animationState: {
-                    isIdle: true, // 기본 상태지만 너가 설정한 값으로 바꿔도 됨
-                    isArmed: isArmed, // ✅ 이게 중요
-                }
-            })
-        });
+    //     stompClient.publish({
+    //         destination: '/app/playerMove',
+    //         body: JSON.stringify({
+    //             id: currentPlayerId,
+    //             nickname: playerNickname,
+    //             position: { x: 0, y: 1.1, z: 0 }, // 기존 위치나 서버에서 받아오는 위치로
+    //             rotationY: 0,
+    //             animationState: {
+    //                 isIdle: true, // 기본 상태지만 너가 설정한 값으로 바꿔도 됨
+    //                 isArmed: isArmed, // ✅ 이게 중요
+    //             }
+    //         })
+    //     });
 
-    }, [selectedInventorySlot, inventory, stompClient]);
+    // }, [selectedInventorySlot, inventory, stompClient]);
 
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
@@ -409,7 +415,6 @@ export function GameCanvas({ playerNickname }) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        
         setSceneObjects(updatedObjects.map(updatedObj => ({
             ...updatedObj,
             type: updatedObj.itemType || updatedObj.objectType || 'sphere',
@@ -429,9 +434,8 @@ export function GameCanvas({ playerNickname }) {
     }, []);
 
     const selectedItem = inventory[selectedInventorySlot];
-    const isArmed = selectedItem?.name == 'ak-47';
+    const isArmed = selectedItem?.name === 'ak-47';
 
-    
 
     // Player로부터 상호작용 요청을 받아 처리하는 함수
     const handlePlayerInteract = useCallback((interactedObjectId) => {
@@ -480,6 +484,7 @@ export function GameCanvas({ playerNickname }) {
                 });
             }
         } else if (interactedObject && interactedObject.type === 'ak-47' && !isArmed) {
+            console.log('실행됨');
             console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`); // 추가된 로그
             setInventory(prevInventory => {
                 const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'ak-47');
@@ -638,6 +643,7 @@ export function GameCanvas({ playerNickname }) {
                                         selectedInventorySlot={selectedInventorySlot} // 새로 추가: 선택된 인벤토리 슬롯 전달
                                         isItemSelected={isItemSelected} // 새로 추가: 선택된 슬롯에 아이템이 있는지 여부 전달
                                         selectedItem={inventory[selectedInventorySlot]}
+                                        isChatting={isChatting}
                                     />
                                 )}
                             </React.Suspense>
@@ -658,6 +664,7 @@ export function GameCanvas({ playerNickname }) {
                                             position={player.position}
                                             rotationY={player.rotationY}
                                             animationState={player.animationState}
+                                            chatMessages={chatMessages}
                                         />
                                     </React.Suspense>
                                 </ErrorBoundary>
@@ -675,6 +682,18 @@ export function GameCanvas({ playerNickname }) {
 
                     </Physics>
                 </Canvas>
+                {stompClient && (
+                    <ChatBox
+                        stompClient={stompClient}
+                        currentPlayerId={currentPlayerId}
+                        roomId="room1"
+                        chatMessages={chatMessages}
+                        setChatMessages={setChatMessages}
+                        chatInput={chatInput}
+                        setChatInput={setChatInput}
+                        setIsChatting={setIsChatting}
+                    />
+                )}
             </KeyboardControls>
         </>
     );

@@ -1,5 +1,5 @@
 // Player.jsx
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
@@ -7,12 +7,25 @@ import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
-import { controlsMap } from './utils/constants'; // controlsMap 임포트
 import { checkHit } from './utils/gameUtils'; // checkHit 임포트
 
 // Player 컴포넌트 (현재 플레이어의 로직)
-export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerHitted, playerNickname, isDead, setIsDead, setViewMode, currentPlayerId, onObjectProximityChange, onInteract, onUseItem, selectedInventorySlot, isItemSelected, selectedItem }) {
-    const { camera, gl } = useThree(); // Three.js 카메라와 WebGL 렌더러
+export function Player({
+    onHudUpdate,
+    stompClientInstance,
+    isPlayerHitted,
+    playerNickname,
+    isDead,
+    setViewMode,
+    currentPlayerId,
+    onObjectProximityChange,
+    onInteract, onUseItem,
+    selectedInventorySlot,
+    isItemSelected,
+    selectedItem,
+    isChatting
+}) {
+    const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
     const [sitToggle, setSitToggle] = useState(false); // 앉기 토글 상태
     const [lieToggle, setLieToggle] = useState(false); // 눕기 토글 상태
@@ -23,9 +36,11 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     const [isPunching, setIsPunching] = useState(false); // 펀치 동작 여부
     const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
-    const [AimingToggle, setAimingToggle] = useState(false); 
+    const [AimingToggle, setAimingToggle] = useState(false);
     const interactableObjectIdRef = useRef(null); // 플레이어가 근접한 상호작용 가능 오브젝트 ID
     const exitTimeoutRef = useRef(null); // 충돌 종료 지연을 위한 타이머 참조
+    const [isFiring, setIsFiring] = useState(false);
+    const firingIntervalRef = useRef(null);
 
     // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
     const lastJumpKeyStatus = useRef(false);
@@ -47,6 +62,59 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     });
 
     const toggleViewPressed = useRef(false); // 시점 전환 키 눌림 상태
+
+    const fireBullet = () => {
+  // 📌 1. 정확한 시작 위치 (카메라 위치에서 살짝 아래)
+  const origin = camera.position.clone().add(new THREE.Vector3(0, -0.1, 0));
+
+  // 📌 2. 카메라의 정면 방향 얻기
+  const direction = new THREE.Vector3();
+  camera.getWorldDirection(direction);
+
+  // 📌 3. 정확도 오차 적용 (조준 상태 아닐 때)
+  if (!AimingToggle) {
+    direction.x += (Math.random() - 0.5) * 0.1;
+    direction.y += (Math.random() - 0.5) * 0.05;
+    direction.z += (Math.random() - 0.5) * 0.1;
+    direction.normalize();
+  }
+
+    if (AimingToggle) {
+    direction.x += (Math.random() - 0.1) * 0.02;
+    direction.y += (Math.random() - 0.1) * 0.03;
+    direction.z += (Math.random() - 0.1) * 0.02;
+    direction.normalize();
+  }
+  
+  // 📌 4. 레이저 시각화
+  const endVec = origin.clone().add(direction.clone().multiplyScalar(100));
+  const laserGeo = new THREE.BufferGeometry().setFromPoints([origin, endVec]);
+  const laserMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+  const laserLine = new THREE.Line(laserGeo, laserMat);
+  scene.add(laserLine);
+  setTimeout(() => {
+    scene.remove(laserLine);
+    laserGeo.dispose();
+    laserMat.dispose();
+  }, 200);
+
+  // 📌 5. 피격 판정
+  window.onlinePlayers?.forEach((target, id) => {
+    if (id === currentPlayerId) return;
+    const targetPos = new THREE.Vector3(target.position.x, target.position.y + 0.5, target.position.z);
+    const ray = new THREE.Ray(origin, direction);
+    const distToRay = ray.distanceToPoint(targetPos);
+    if (distToRay < 1.0) {
+      console.log(`🎯 HIT: ${id}`);
+      stompClientInstance.publish({
+        destination: '/app/playerHit',
+        body: JSON.stringify({ fromId: currentPlayerId, targetId: id }),
+      });
+    }
+  });
+};
+
+
 
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
@@ -87,6 +155,17 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         }
     }, [isPunching, canPunch, stompClientInstance, isDead, currentPlayerId]); // 의존성 배열
 
+    useEffect(() => {
+  if (!isFiring || isDead || selectedItem?.name !== 'ak-47') return;
+
+  // 일정 간격으로 fireBullet 호출
+  firingIntervalRef.current = setInterval(() => {
+    fireBullet();
+  }, 150); // 150ms 간격으로 발사
+
+  return () => clearInterval(firingIntervalRef.current);
+}, [isFiring, isDead, selectedItem]);
+
     // 컴포넌트 마운트 시 초기 플레이어 등록
     useEffect(() => {
         if (stompClientInstance && stompClientInstance.connected) {
@@ -114,7 +193,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     // 'C' (앉기) 및 'Z' (눕기) 토글 로직
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (isDead) return; // 죽음 상태일 때 움직임 비활성화
+            if (isDead || isChatting) return; // 죽음 상태일 때 움직임 비활성화
             if (e.code === 'KeyC') {
                 setSitToggle(prev => {
                     const next = !prev;
@@ -132,55 +211,48 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isDead]); // isDead 의존성 추가
+    }, [isDead, isChatting]); // isDead 의존성 추가
 
     // 마우스 클릭 (펀치 또는 아이템 사용) 로직
     useEffect(() => {
         const canvas = gl.domElement; // 캔버스 요소 가져오기
         const handleMouseDown = (e) => {
             if (isDead) return;
-            
 
             
+
             if (e.button === 0) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
-                    // 이제 selectedInventorySlot은 아이템 ID가 아니라 '인덱스'로 간주합니다.
-                    // console.log("[Player] Debugging selectedInventorySlot (index):", selectedInventorySlot);
-
-                    // onUseItem 함수에 선택된 슬롯의 인덱스를 전달합니다.
-                    // GameCanvas (부모 컴포넌트)에서 이 인덱스를 사용하여 실제 아이템 ID를 찾을 것입니다.
                     if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
                         console.log(`[Player] Calling onUseItem with selected slot index: ${selectedInventorySlot}.`);
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
-                    } 
-                    
-                    else if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'ak-47'){
-                        console.log('무기 습득 후 좌클릭 누름');
-                    }
-                    
-                    
-                    
-                    
-                    else {
-                        console.warn("[Player] Invalid selectedInventorySlot index. Performing punch instead.");
+                    } else {
                         if (canPunch) {
                             setIsPunching(true);
                             setTimeout(() => setIsPunching(false), 500);
                         }
                     }
-                } else if (canPunch) {
+                } else if (canPunch && !isArmed) {
                     console.log(`[Player] Condition not met for item use. Performing punch.`);
                     setIsPunching(true);
                     setTimeout(() => setIsPunching(false), 500);
                 }
             }
 
+            if (e.button === 0 && selectedItem?.name === 'ak-47') {
+                setIsFiring(true);
+            }
             if (e.button === 2 && selectedItem.name == 'ak-47') {
                 // 우클릭 눌렀을 때 → 조준 시작
                 setAimingToggle(true);
+                
             }
         };
         const handleMouseUp = (e) => {
+            if (e.button === 0 && selectedItem?.name === 'ak-47') {
+                fireBullet();
+                setIsFiring(false);
+            }
             if (e.button === 2 && selectedItem.name == 'ak-47') {
                 // 우클릭 떼었을 때 → 조준 해제
                 setAimingToggle(false);
@@ -194,14 +266,14 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             canvas.removeEventListener('mousedown', handleMouseDown);
             canvas.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [canPunch, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot]); // gl을 의존성 배열에 추가
+    }, [canPunch, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
     useEffect(() => {
         const unsubscribe = subscribeKeys(
             (s) => s.toggleView,
             (pressed) => {
-                if (isDead) return; // 죽음 상태일 때 뷰 모드 전환 비활성화
+                if (isDead || isChatting) return; // 죽음 상태일 때 뷰 모드 전환 비활성화
                 if (pressed && !toggleViewPressed.current) {
                     setCurrentViewMode((prev) => {
                         const newMode = (prev === 'firstPerson' ? 'thirdPerson' : 'firstPerson');
@@ -217,7 +289,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
             }
         );
         return () => unsubscribe();
-    }, [subscribeKeys, isDead, setViewMode]); // 의존성 배열
+    }, [subscribeKeys, isDead, setViewMode, isChatting]); // 의존성 배열
 
     // 마우스 움직임으로 카메라 회전 로직
     const onMouseMove = useCallback((e) => {
@@ -306,23 +378,22 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         const vel = playerRef.current?.linvel() || { x: 0, y: 0, z: 0 }; // 플레이어 선형 속도
         const pos = playerRef.current?.translation() || { x: 0, y: 0, z: 0 }; // 플레이어 위치
         const isArmed = selectedItem?.name === 'ak-47'
-        // 애니메이션 상태 계산 (useFrame 내에서 직접 계산)
-    const isWalkingAnim = keys.forward && !isDead;
-    const isBackwardAnim = keys.backward && !isDead;
-    const isLeftAnim = keys.left && !isDead;
-    const isRightAnim = keys.right && !isDead;
-    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && (keys.forward || keys.backward || keys.left || keys.right);
-    const isSittedAnim = sitToggle && !isDead;
-    const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isLyingDownAnim = lieToggle && !isDead;
-    const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isPunchingAnim = isPunching && !isDead;
-    const isHittedAnim = isPlayerHitted && !isDead;
-    const isJumpingAnim = isJumping && !AimingToggle && !isDead;
-    const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim;
-    const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isDeadAnim = isDead;
-    const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
+        const isWalkingAnim = keys.forward && !isDead && !isChatting;
+        const isBackwardAnim = keys.backward && !isDead && !isChatting;
+        const isLeftAnim = keys.left && !isDead && !isChatting;
+        const isRightAnim = keys.right && !isDead && !isChatting;
+        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && (keys.forward || keys.backward || keys.left || keys.right) && !isChatting;
+        const isSittedAnim = sitToggle && !isDead && !isChatting;
+        const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isLyingDownAnim = lieToggle && !isDead && !isChatting;
+        const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isPunchingAnim = isPunching && !isDead && !isChatting;
+        const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
+        const isJumpingAnim = isJumping && !AimingToggle && !isDead && !isChatting;
+        const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting;
+        const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isDeadAnim = isDead;
+        const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
         if (stompClientInstance && stompClientInstance.connected) {
             const playerState = {
@@ -347,7 +418,8 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                     isAimingAndWalk: isAimingAndWalkAnim,
                     isIdle: isIdleAnim,
                     isDead: isDeadAnim,
-                    isArmed: isArmed
+                    isArmed: isArmed,
+                    isChatting: isChatting
                 }
             };
             stompClientInstance.publish({
@@ -363,7 +435,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
         let actualSpeed = speed;
 
         // 플레이어 움직임 로직 (사망 시 비활성화)
-       if (!isDead) {
+        if (!isDead && !isChatting) {
             // 앉거나 누웠을 때, 또는 달릴 때 속도 조절
             if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = Math.max(speed * 0.5, 1.7);
@@ -515,23 +587,22 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
 
     // CharacterModel로 전달할 props는 useFrame에서 계산된 애니메이션 상태 변수들을 사용합니다.
     const keys = getKeys(); // Get keys for initial render of CharacterModel (before first useFrame)
-    const isWalkingAnim = keys.forward && !isDead;
-    const isBackwardAnim = keys.backward && !isDead;
-    const isLeftAnim = keys.left && !isDead;
-    const isRightAnim = keys.right && !isDead;
-    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && (keys.forward || keys.backward || keys.left || keys.right);
-    const isSittedAnim = sitToggle && !isDead;
-    const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isLyingDownAnim = lieToggle && !isDead;
-    const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isPunchingAnim = isPunching && !isDead;
-    const isHittedAnim = isPlayerHitted && !isDead;
-    const isJumpingAnim = isJumping && !isDead && !AimingToggle;
-    const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim;
-    const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead;
-    const isDeadAnim = isDead;
-    const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead;
-
+            const isWalkingAnim = keys.forward && !isDead && !isChatting;
+        const isBackwardAnim = keys.backward && !isDead && !isChatting;
+        const isLeftAnim = keys.left && !isDead && !isChatting;
+        const isRightAnim = keys.right && !isDead && !isChatting;
+        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && (keys.forward || keys.backward || keys.left || keys.right) && !isChatting;
+        const isSittedAnim = sitToggle && !isDead && !isChatting;
+        const isSittedAndWalkAnim = sitToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isLyingDownAnim = lieToggle && !isDead && !isChatting;
+        const isLyingDownAndWalkAnim = lieToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isPunchingAnim = isPunching && !isDead && !isChatting;
+        const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
+        const isJumpingAnim = isJumping && !AimingToggle && !isDead && !isChatting;
+        const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting;
+        const isAimingAndWalkAnim = AimingToggle && (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
+        const isDeadAnim = isDead;
+        const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
 
     // 충돌 감지 (사과 상호작용)
     const handleCollisionEnter = useCallback((payload) => {
@@ -594,8 +665,8 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
     let characterModelPath = '/models/UnarmedCharacter.glb';
     let isArmed = false;
     if (selectedItem && selectedItem.name === 'ak-47') {
-    characterModelPath = '/models/ArmedCharacter.glb';
-    isArmed = true;
+        characterModelPath = '/models/ArmedCharacter.glb';
+        isArmed = true;
     }
 
     return (
@@ -637,6 +708,7 @@ export function Player({ onHudUpdate, objectRefs, stompClientInstance, isPlayerH
                 isAimingAndWalk={isAimingAndWalkAnim}
                 isDead={isDeadAnim}
                 isIdle={isIdleAnim}
+                isChatting={isChatting}
             />
         </>
     );
