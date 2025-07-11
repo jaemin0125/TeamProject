@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import com.example.demo.dto.ChatMessage;
 import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
@@ -118,6 +119,11 @@ public class GameController {
             logger.warn("Use item failed: PlayerId={} or ItemId={}.", request.getPlayerId(), request.getItemId());
         }
     }
+    
+    @MessageMapping("/chat.send")
+    public void sendChatMessage(ChatMessage chatMessage) {
+        messagingTemplate.convertAndSend("/topic/chat/" + chatMessage.getRoomId(), chatMessage);
+    }
 
 
 	/**
@@ -131,4 +137,6 @@ public class GameController {
 		// 모든 클라이언트에게 업데이트된 플레이어 목록을 브로드캐스트합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
+	
+	
 }

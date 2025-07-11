@@ -4,10 +4,14 @@ package com.example.demo.service;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Random;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.AnimationState;
@@ -16,49 +20,84 @@ import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
 
-// ✨ Import PostConstruct if you need it for initialization (from previous context)
-// import jakarta.annotation.PostConstruct; // If you are on Spring Boot 3.x+
-// import javax.annotation.PostConstruct; // If you are on Spring Boot 2.x
-
 @Service
 public class PlayerService {
 
     private static final Logger logger = LoggerFactory.getLogger(PlayerService.class);
 
+    // --- 아이템 생성 제한 설정 ---
+    private static final int MAX_APPLES = 15; // 맵에 존재할 수 있는 사과의 최대 개수
+    private static final int MAX_GUNS = 3;   // 맵에 존재할 수 있는 총의 최대 개수
+    // --------------------------
+
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToPlayerIdMap = new ConcurrentHashMap<>();
     private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>();
+    private final SimpMessagingTemplate messagingTemplate;
+    private final Random random = new Random();
 
-    // Constructor modified to include initial apple logic
-    public PlayerService() {
-        // Server startup initial apple addition
-        addInitialApples(); // Changed method name to plural
+    public PlayerService(SimpMessagingTemplate messagingTemplate) {
+        this.messagingTemplate = messagingTemplate;
     }
 
-    // ✨ Method to add initial apples to the scene
-    private void addInitialApples() { // Changed method name to plural
-        // Initial apples matching client's original hardcoded positions
-        ObjectState[] initialApples = {
+    /**
+     * 30초마다 사과 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     */
+    @Scheduled(fixedRate = 30000) // 30초마다 실행
+    public void spawnApplePeriodically() {
+        long currentAppleCount = sceneObjects.values().stream()
+                .filter(obj -> "apple".equals(obj.getItemType()))
+                .count();
 
-            new ObjectState("apple1", new Position(0, -4.5, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple2", new Position(2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple3", new Position(-2, -4.5, 0), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple4", new Position(0, -4.5, 2), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("apple5", new Position(0, -4.5, -2), "apple", "/models/apple.glb", "apple"),
-            new ObjectState("ak-47(1)", new Position(0, -4.4, -4), "ak-47", "/models/ak-47.glb", "ak-47"),
-            new ObjectState("ak-47(2)", new Position(1, -4.4, -6), "ak-47", "/models/ak-47.glb", "ak-47"),
-            new ObjectState("ak-47(3)", new Position(2, -4.4, -8), "ak-47", "/models/ak-47.glb", "ak-47"),
-        };
-        
-
-        for (ObjectState apple : initialApples) {
-            if (!sceneObjects.containsKey(apple.getId())) {
-                sceneObjects.put(apple.getId(), apple);
-                logger.info("Initial apple object added to the scene: {}", apple.getId());
-            }
+        if (currentAppleCount < MAX_APPLES) {
+            spawnNewItem("apple", "/models/apple.glb", "apple", -4.5); // y좌표 -4.5
+            logger.info("Spawning new apple. Current apples: {}/{}", currentAppleCount + 1, MAX_APPLES);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
     }
 
+    /**
+     * 60초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     */
+    @Scheduled(fixedRate = 60000) // 60초마다 실행
+    public void spawnGunPeriodically() {
+        long currentGunCount = sceneObjects.values().stream()
+                .filter(obj -> "ak-47".equals(obj.getItemType()))
+                .count();
+
+        if (currentGunCount < MAX_GUNS) {
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
+            logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        }
+    }
+
+    /**
+     * 지정된 타입의 아이템을 랜덤 위치에 생성하고 씬에 추가합니다.
+     * @param itemType 아이템 타입 (예: "apple", "ak-47")
+     * @param modelPath 모델 파일 경로
+     * @param objectType 오브젝트 타입
+     * @param yPos 생성될 높이 (y 좌표)
+     */
+    private void spawnNewItem(String itemType, String modelPath, String objectType, double yPos) {
+        // 맵의 특정 영역 내에서 랜덤 위치 생성
+        double x = -15 + (30 * random.nextDouble()); // -15 to 15
+        double z = -15 + (30 * random.nextDouble()); // -15 to 15
+        Position randomPosition = new Position(x, yPos, z);
+
+        // 새로운 아이템 객체 생성
+        String itemId = itemType + "-" + UUID.randomUUID().toString();
+        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType);
+
+        // 씬에 아이템 추가
+        sceneObjects.put(newItem.getId(), newItem);
+        logger.debug("Spawning new {} at: {}", itemType, randomPosition);
+    }
+
+
+    // =================================================================
+    // 아래는 기존 PlayerService의 다른 메서드들 (변경 없음)
+    // =================================================================
 
     /**
      * Registers a new player or updates an existing player's state.

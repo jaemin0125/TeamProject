@@ -10,6 +10,8 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="move"/>
+			<item value="app"/>
 			<item value="pick"/>
 			<item value="useItem"/>
 			<item value="sceneobject"/>
@@ -23,8 +25,6 @@
 			<item value="addInitial"/>
 			<item value="apple"/>
 			<item value="collect"/>
-			<item value="sceneobjects"/>
-			<item value="addInitialApple"/>
 		</list>
 		<list key="replacehistory">
 		</list>

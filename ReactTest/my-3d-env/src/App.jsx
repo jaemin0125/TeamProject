@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { GameCanvas } from './GameCanvas'; // GameCanvas 임포트
 import { getOrCreatePlayerInfo } from './utils/constants'; // getOrCreatePlayerInfo 임포트
 

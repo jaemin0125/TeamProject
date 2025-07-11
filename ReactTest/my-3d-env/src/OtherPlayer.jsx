@@ -1,5 +1,5 @@
 // OtherPlayer.jsx
-import React, { useRef, useEffect, useMemo } from 'react';
+import { useRef, useEffect, useMemo, useState} from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
@@ -7,10 +7,16 @@ import * as THREE from 'three';
 
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
 
+import { Plane, useTexture } from '@react-three/drei';
+
 // OtherPlayer 컴포넌트: 다른 플레이어의 모델, 위치, 애니메이션 상태를 렌더링합니다.
-export function OtherPlayer({ id, position, rotationY, animationState, nickname }) {
+export function OtherPlayer({ id, position, rotationY, animationState, nickname, chatMessages}) {
     const rigidBodyRef = useRef(); // RigidBody에 대한 ref
     const modelGroupRef = useRef(); // 모델 그룹에 대한 ref
+
+    const [balloonMsg, setBalloonMsg] = useState(''); // 상대방 말풍선 추가
+    const balloonTimer = useRef(null);  // 상대방 말풍선 표시 쿨타임
+    const balloonTexture = useTexture('/chat/ballon.png'); // 말풍선 불러오기
 
     // OtherPlayer가 마운트될 때 로그를 추가하여 어떤 모델이 선택되는지 확인
     useEffect(() => {
@@ -33,12 +39,23 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname 
         }
     });
 
+    useEffect(() => {
+        if (!chatMessages || !chatMessages.length) return;
+
+        const last = chatMessages[chatMessages.length - 1];
+        if (last.senderId === id) {
+            setBalloonMsg(last.content);
+
+            clearTimeout(balloonTimer.current);
+            balloonTimer.current = setTimeout(() => {
+                setBalloonMsg('');
+            }, 5000); // 2초 후 말풍선 제거
+        }
+    }, [chatMessages]);
+
     const safeAnimationState = animationState || {}; // animationState가 없을 경우 빈 객체 사용
 
     // 플레이어 ID에 따라 렌더링할 캐릭터 모델을 결정 (현재는 CharacterModel 고정)
-    const CharacterToRender = useMemo(() => {
-        return CharacterModel;
-    }, [id]); // id가 변경될 때만 다시 계산
 
     const isArmed = safeAnimationState.isArmed === true;
     const characterModelPath = isArmed
@@ -75,6 +92,34 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname 
                 >
                     {nickname || id.substring(0, 5)} {/* 닉네임이 없으면 ID 앞 5자리 표시 */}
                 </Text>
+                
+                {/* 채팅 말풍선 표시 및 위치 */}
+                {balloonMsg && (
+                    <group position={[0, 3.2, 0]}>
+                        <Plane args={[2.8, 1]} position={[0, 0, 0]}>
+                            <meshBasicMaterial
+                                map={balloonTexture}
+                                transparent
+                                opacity={0.9}
+                                depthWrite={false}
+                                color={!balloonTexture ? 'white' : undefined} // fallback 색상
+                            />
+                        </Plane>
+                        <Text
+                            position={[0, 0, 0.01]}
+                            fontSize={0.22}
+                            color="#000"
+                            anchorX="center"
+                            anchorY="middle"
+                            outlineColor="white"
+                            outlineWidth={0.015}
+                            maxWidth={2.4}
+                            lineHeight={1.3}
+                        >
+                            {balloonMsg}
+                        </Text>
+                    </group>
+                )}
             </group>
         </RigidBody>
     );

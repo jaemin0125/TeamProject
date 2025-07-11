@@ -1,5 +1,5 @@
 // SceneObject.jsx
-import React, { useRef, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { useGLTF } from '@react-three/drei'; // useGLTF 임포트

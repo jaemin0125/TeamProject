@@ -1,6 +1,4 @@
 // PlayerHUD.jsx
-import React from 'react';
-
 // PlayerHUD 컴포넌트: 플레이어의 현재 상태를 표시하는 UI (Head-Up Display)
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
 export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot }) {
@@ -15,7 +13,6 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
         .join('\n');
 
     // 리스폰 프로그레스 바 너비 계산 (5초 기준)
-    const progressBarWidth = (respawnProgress / 5) * 100;
 
     // 체력 바 색상 결정
     const healthBarColor = health > 50 ? 'limegreen' : health > 20 ? 'orange' : 'red';
@@ -177,7 +174,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                             height: '100%',
                             backgroundColor: 'rgba(255, 0, 0, 0.3)',
                             pointerEvents: 'none',
-                            animation: 'hitFlash 0.1s forwards', // 짧은 애니메이션으로 플래시 효과
+                            animation: 'hitFlash 0.5s forwards', // 짧은 애니메이션으로 플래시 효과
                         }}
                     ></div>
                 )}
@@ -320,7 +317,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                 )}
 
                 {/* F 키 상호작용 프롬프트 (크로스헤어 위에 보이도록 zIndex 높임) */}
-                {showInteractionPrompt && (
+                {showInteractionPrompt && !isDead && (
                     <div style={{
                         position: 'absolute',
                         top: 'calc(50% + 40px)', // 크로스헤어 아래에 위치 (크로스헤어 높이의 절반 + 여백)

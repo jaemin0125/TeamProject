@@ -35,14 +35,12 @@ export const CharacterModel = React.forwardRef(
         const currentAction = useRef(null);
 
         useEffect(() => {
-            console.log(animations);
             if (!clonedScene || !animations || animations.length === 0 || !actions || Object.keys(actions).length === 0) {
                 console.error(`[CharacterModel] Failed to load or parse model/animations from ${glbPath}`);
                 return;
             }
 
             let nextActionName = null;
-            console.log(isArmed);
             // 상태에 따라 애니메이션 우선순위 지정
             if (isDead) nextActionName = isArmed ? 'ArmedDead' : 'Dead';
             else if (isHitted) nextActionName = isArmed ? 'ArmedHit' : 'Hit';
