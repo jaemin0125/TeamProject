@@ -10,6 +10,10 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
+			<item value="remove"/>
+			<item value="createObject"/>
+			<item value="fixedRate"/>
+			<item value="Item"/>
 			<item value="playermove"/>
 			<item value="P"/>
 			<item value="pick"/>
@@ -21,10 +25,6 @@
 			<item value="playerid"/>
 			<item value="dead"/>
 			<item value="public boolean"/>
-			<item value="decrease"/>
-			<item value="addInitial"/>
-			<item value="apple"/>
-			<item value="collect"/>
 		</list>
 		<list key="replacehistory">
 		</list>

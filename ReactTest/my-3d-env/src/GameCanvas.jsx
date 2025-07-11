@@ -246,7 +246,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://localhost:8080/ws';
+        const WS_URL = 'http://3.106.193.56:8080/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정

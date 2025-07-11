@@ -25,6 +25,11 @@ public class PlayerService {
 
     private static final Logger logger = LoggerFactory.getLogger(PlayerService.class);
 
+    // --- 아이템 생성 제한 설정 ---
+    private static final int MAX_APPLES = 15; // 맵에 존재할 수 있는 사과의 최대 개수
+    private static final int MAX_GUNS = 3;   // 맵에 존재할 수 있는 총의 최대 개수
+    // --------------------------
+
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
     private final Map<String, String> sessionToPlayerIdMap = new ConcurrentHashMap<>();
     private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>();
@@ -35,55 +40,64 @@ public class PlayerService {
         this.messagingTemplate = messagingTemplate;
     }
 
-    @Scheduled(fixedRate = 30000)
+    /**
+     * 30초마다 사과 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     */
+    @Scheduled(fixedRate = 30000) // 30초마다 실행
     public void spawnApplePeriodically() {
-    	
-    	
-    	
+        long currentAppleCount = sceneObjects.values().stream()
+                .filter(obj -> "apple".equals(obj.getItemType()))
+                .count();
+
+        if (currentAppleCount < MAX_APPLES) {
+            spawnNewItem("apple", "/models/apple.glb", "apple", -4.5); // y좌표 -4.5
+            logger.info("Spawning new apple. Current apples: {}/{}", currentAppleCount + 1, MAX_APPLES);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        }
+    }
+
+    /**
+     * 60초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     */
+    @Scheduled(fixedRate = 60000) // 60초마다 실행
+    public void spawnGunPeriodically() {
+        long currentGunCount = sceneObjects.values().stream()
+                .filter(obj -> "ak-47".equals(obj.getItemType()))
+                .count();
+
+        if (currentGunCount < MAX_GUNS) {
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
+            logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        }
+    }
+
+    /**
+     * 지정된 타입의 아이템을 랜덤 위치에 생성하고 씬에 추가합니다.
+     * @param itemType 아이템 타입 (예: "apple", "ak-47")
+     * @param modelPath 모델 파일 경로
+     * @param objectType 오브젝트 타입
+     * @param yPos 생성될 높이 (y 좌표)
+     */
+    private void spawnNewItem(String itemType, String modelPath, String objectType, double yPos) {
         // 맵의 특정 영역 내에서 랜덤 위치 생성
-        double x = -10 + (20 * random.nextDouble()); // -10 to 10
-        double y = -4.5; // 고정된 y 위치
-        double z = -10 + (20 * random.nextDouble()); // -10 to 10
-        Position randomPosition = new Position(x, y, z);
+        double x = -15 + (30 * random.nextDouble()); // -15 to 15
+        double z = -15 + (30 * random.nextDouble()); // -15 to 15
+        Position randomPosition = new Position(x, yPos, z);
 
-        // 새로운 사과 객체 생성
-        String appleId = "apple-" + UUID.randomUUID().toString();
-        ObjectState newApple = new ObjectState(appleId, randomPosition, "apple", "/models/apple.glb", "apple");
+        // 새로운 아이템 객체 생성
+        String itemId = itemType + "-" + UUID.randomUUID().toString();
+        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType);
 
-//        String funmId = "apple-" + UUID.randomUUID().toString();
-        
-        // 씬에 사과 추가
-        sceneObjects.put(newApple.getId(), newApple);
-        logger.info("Spawning new apple at: {}", randomPosition);
-
-        // 모든 클라이언트에게 업데이트된 씬 오브젝트 목록 브로드캐스트
-        messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        // 씬에 아이템 추가
+        sceneObjects.put(newItem.getId(), newItem);
+        logger.debug("Spawning new {} at: {}", itemType, randomPosition);
     }
-    
-    @Scheduled(fixedRate = 60000)
-    public void spawnAk47Periodically() {
-    	
-    	// 맵의 특정 영역 내에서 랜덤 위치 생성
-    	double x = -10 + (20 * random.nextDouble()); // -10 to 10
-    	double y = -4.5; // 고정된 y 위치
-    	double z = -10 + (20 * random.nextDouble()); // -10 to 10
-    	Position randomPosition = new Position(x, y, z);
-    	
-    	// 새로운 사과 객체 생성
-    	String rifleId = "ak47-" + UUID.randomUUID().toString();
-    	ObjectState newRifle = new ObjectState(rifleId, randomPosition, "ak-47", "/models/ak-47.glb", "ak-47");
-    	
-//    	String funmId = "apple-" + UUID.randomUUID().toString();
-    	
-    	// 씬에 사과 추가
-    	sceneObjects.put(newRifle.getId(), newRifle);
-    	logger.info("Spawning new Rifle at: {}", randomPosition);
-    	
-    	// 모든 클라이언트에게 업데이트된 씬 오브젝트 목록 브로드캐스트
-    	messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
-    }
-    
 
+
+    // =================================================================
+    // 아래는 기존 PlayerService의 다른 메서드들 (변경 없음)
+    // =================================================================
 
     /**
      * Registers a new player or updates an existing player's state.

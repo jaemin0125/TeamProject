@@ -131,6 +131,4 @@ public class GameController {
 		// 모든 클라이언트에게 업데이트된 플레이어 목록을 브로드캐스트합니다.
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
-	
-	
 }
