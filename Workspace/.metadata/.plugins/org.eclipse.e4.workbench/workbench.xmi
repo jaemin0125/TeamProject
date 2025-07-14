@@ -234,11 +234,11 @@
       <tags>categoryTag:Help</tags>
     </sharedElements>
     <sharedElements xsi:type="advanced:Area" xmi:id="_HzqLe2B3EfCU7a6EYpnyWg" elementId="org.eclipse.ui.editorss" selectedElement="_HzqLfGB3EfCU7a6EYpnyWg">
-      <children xsi:type="basic:PartStack" xmi:id="_HzqLfGB3EfCU7a6EYpnyWg" elementId="org.eclipse.e4.primaryDataStack" selectedElement="_7HN4gGCGEfCf8Z7HN9G2Jw">
+      <children xsi:type="basic:PartStack" xmi:id="_HzqLfGB3EfCU7a6EYpnyWg" elementId="org.eclipse.e4.primaryDataStack" selectedElement="_BEEDsGCCEfCf8Z7HN9G2Jw">
         <tags>EditorStack</tags>
         <tags>org.eclipse.e4.primaryDataStack</tags>
         <children xsi:type="basic:Part" xmi:id="_BEEDsGCCEfCf8Z7HN9G2Jw" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="GameController.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
-          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;GameController.java&quot; partName=&quot;GameController.java&quot; title=&quot;GameController.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;3900&quot; selectionTopPixel=&quot;1110&quot;/>&#xD;&#xA;&lt;/editor>"/>
+          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;GameController.java&quot; partName=&quot;GameController.java&quot; title=&quot;GameController.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;3770&quot; selectionTopPixel=&quot;960&quot;/>&#xD;&#xA;&lt;/editor>"/>
           <tags>Editor</tags>
           <tags>removeOnHide</tags>
           <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
@@ -250,7 +250,7 @@
           <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
         </children>
         <children xsi:type="basic:Part" xmi:id="_7HN4gGCGEfCf8Z7HN9G2Jw" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="PlayerService.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
-          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerService.java&quot; partName=&quot;PlayerService.java&quot; title=&quot;PlayerService.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;49&quot; selectionOffset=&quot;14730&quot; selectionTopPixel=&quot;5160&quot;/>&#xD;&#xA;&lt;/editor>"/>
+          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerService.java&quot; partName=&quot;PlayerService.java&quot; title=&quot;PlayerService.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;49&quot; selectionOffset=&quot;14730&quot; selectionTopPixel=&quot;4904&quot;/>&#xD;&#xA;&lt;/editor>"/>
           <tags>Editor</tags>
           <tags>removeOnHide</tags>
           <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
@@ -458,7 +458,7 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_HzqwdGB3EfCU7a6EYpnyWg" elementId="org.eclipse.ui.workbench.file">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_95pWIGCBEfCf8Z7HN9G2Jw" elementId="print" visible="false" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/print_edit.png" tooltip="Print" command="_Hzrcj2B3EfCU7a6EYpnyWg"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_yge9IGCPEfCNANhsG_V90Q" elementId="print" visible="false" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/print_edit.png" tooltip="Print" command="_Hzrcj2B3EfCU7a6EYpnyWg"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_HzqwgWB3EfCU7a6EYpnyWg" elementId="group.edit" toBeRendered="false">
         <tags>toolbarSeparator</tags>
@@ -466,8 +466,8 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_Hzqwg2B3EfCU7a6EYpnyWg" elementId="org.eclipse.ui.workbench.edit">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_95qkQGCBEfCf8Z7HN9G2Jw" elementId="undo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/undo_edit.png" tooltip="Undo" enabled="false" command="_Hzrat2B3EfCU7a6EYpnyWg"/>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_95qkQWCBEfCf8Z7HN9G2Jw" elementId="redo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/redo_edit.png" tooltip="Redo" enabled="false" command="_HzrbN2B3EfCU7a6EYpnyWg"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_ygfkM2CPEfCNANhsG_V90Q" elementId="undo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/undo_edit.png" tooltip="Undo" enabled="false" command="_Hzrat2B3EfCU7a6EYpnyWg"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_ygfkNGCPEfCNANhsG_V90Q" elementId="redo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/redo_edit.png" tooltip="Redo" enabled="false" command="_HzrbN2B3EfCU7a6EYpnyWg"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_Hzqwh2B3EfCU7a6EYpnyWg" elementId="additions" toBeRendered="false">
         <tags>toolbarSeparator</tags>
@@ -491,12 +491,9 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_HzqwtmB3EfCU7a6EYpnyWg" elementId="org.eclipse.ui.workbench.navigate">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_95rLUmCBEfCf8Z7HN9G2Jw" elementId="org.eclipse.ui.window.pinEditor" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/pin_editor.png" tooltip="Pin Editor" type="Check" command="_HzrcRmB3EfCU7a6EYpnyWg"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_ygfkOmCPEfCNANhsG_V90Q" elementId="org.eclipse.ui.window.pinEditor" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/pin_editor.png" tooltip="Pin Editor" type="Check" command="_HzrcRmB3EfCU7a6EYpnyWg"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_HzqwwWB3EfCU7a6EYpnyWg" elementId="SpringBootYMLPropertyEditor" visible="false">
-        <tags>Draggable</tags>
-      </children>
-      <children xsi:type="menu:ToolBar" xmi:id="_HzqwwmB3EfCU7a6EYpnyWg" elementId="org.eclipse.jdt.ui.CompilationUnitEditor" visible="false">
         <tags>Draggable</tags>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_Hzqww2B3EfCU7a6EYpnyWg" elementId="group.editor" toBeRendered="false">

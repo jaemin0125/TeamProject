@@ -300,7 +300,7 @@ export function GameCanvas({ playerNickname }) {
                     if (data.targetId === currentPlayerId) {
                         console.log('💢 GameCanvas: 내가 맞았습니다! isHit 상태 true로 설정.');
                         setHudState(prev => {
-                            const newHealth = Math.max((prev.health ?? 100) - 10, 0); // 체력 감소
+                            const newHealth = Math.max((prev.health ?? 100) - data.damage, 0); // 백엔드에서 받은 데미지 값으로 체력 감소
                             return {
                                 ...prev,
                                 isHit: true,
