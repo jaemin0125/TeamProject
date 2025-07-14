@@ -25,6 +25,9 @@ export const CharacterModel = React.forwardRef(
         isDead,
         isAiming,
         isAimingAndWalk,
+        isIdleFiring,
+        isWalkingFiring,
+        isRunningFiring,
         position = [0, 0.9, 0],
         scale = [0.8, 0.8, 0.8]
     }, ref) => {
@@ -40,9 +43,14 @@ export const CharacterModel = React.forwardRef(
                 return;
             }
 
+
+            console.log(animations);
             let nextActionName = null;
             // 상태에 따라 애니메이션 우선순위 지정
             if (isDead) nextActionName = isArmed ? 'ArmedDead' : 'Dead';
+            else if (isRunningFiring) nextActionName = 'ArmedRunningFiring';
+            else if (isWalkingFiring) nextActionName = 'ArmedWalkingFiring';
+            else if (isIdleFiring) nextActionName = 'ArmedIdleFiring';
             else if (isHitted) nextActionName = isArmed ? 'ArmedHit' : 'Hit';
             else if (isJumping) nextActionName = isArmed ? 'ArmedJump' : 'Jump';
             else if (isRunning) nextActionName = isArmed ? 'ArmedRun' : 'Run';
@@ -82,13 +90,11 @@ export const CharacterModel = React.forwardRef(
                         nextAction.setLoop(THREE.LoopRepeat);
                     }
                 }
-            } else if (nextActionName) {
-                console.warn(`[CharacterModel] Animation '${nextActionName}' not found in ${glbPath}`);
-            }
+            } 
         }, [
             isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning,
             isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk,
-            isPunching, isHitted, isDead, isAiming, isAimingAndWalk,
+            isPunching, isHitted, isDead, isAiming, isAimingAndWalk, isIdleFiring, isWalkingFiring, isRunningFiring,
             actions, mixer, clonedScene, animations, glbPath
         ]);
 

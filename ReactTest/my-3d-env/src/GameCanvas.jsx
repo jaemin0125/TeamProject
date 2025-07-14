@@ -252,7 +252,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://3.106.193.56:8080/ws';
+        const WS_URL = 'http://localhost:8080/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -619,7 +619,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}> {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]} > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 

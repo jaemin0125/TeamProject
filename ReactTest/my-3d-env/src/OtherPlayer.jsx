@@ -70,6 +70,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
             colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
             type="kinematicPosition" // 물리 엔진에 의해 움직이지 않고, 직접 위치 설정
             enabledRotations={[false, false, false]} // 회전 비활성화
+            userData = {{id}}
         >
             {/* 플레이어의 캡슐 콜라이더 */}
             <CapsuleCollider args={[0.35, 0.4]} />
