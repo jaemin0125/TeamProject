@@ -23,7 +23,8 @@ export function Player({
     selectedInventorySlot,
     isItemSelected,
     selectedItem,
-    isChatting
+    isChatting,
+    playerPosition
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
@@ -116,7 +117,12 @@ export function Player({
 
                     stompClientInstance.publish({
                         destination: '/app/playerHit',
-                        body: JSON.stringify({ fromId: currentPlayerId, targetId }),
+                        body: JSON.stringify({
+                            fromId: currentPlayerId,
+                            fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
+                            targetId: targetId,
+                            targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null
+                        }),
                     });
                 }
             }
@@ -161,7 +167,9 @@ export function Player({
                     destination: '/app/playerHit',
                     body: JSON.stringify({
                         fromId: currentPlayerId,
+                        fromPosition: { x: attackerPos.x, y: attackerPos.y, z: attackerPos.z },
                         targetId: id,
+                        targetPosition: targetPos ? { x: targetPos.x, y: targetPos.y, z: targetPos.z } : null
                     }),
                 });
                 hitOccurred = true; // 타격이 발생했음을 표시

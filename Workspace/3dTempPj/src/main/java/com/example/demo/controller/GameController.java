@@ -62,10 +62,11 @@ public class GameController {
 		// 모든 클라이언트에게 업데이트된 플레이어 목록 브로드캐스트 (실시간 동기화)
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
-
+	
     @MessageMapping("/playerHit")
     public void handlePlayerHit(PlayerHitMessage message) {
         logger.info("Player hit message received: From={}, Target={}", message.getFromId(), message.getTargetId());
+        logger.info("Player hit message received: From={}, Target={}", message.getFromPosition(), message.getTargetPosition());
 
         PlayerState targetPlayer = playerService.getPlayer(message.getTargetId());
         if (targetPlayer != null) {
