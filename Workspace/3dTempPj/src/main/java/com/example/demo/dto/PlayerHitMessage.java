@@ -5,6 +5,7 @@ public class PlayerHitMessage {
     private String targetId;
     private PlayerState.Position fromPosition;
     private PlayerState.Position targetPosition;
+    private String weaponName;
 
     // 기본 생성자
     public PlayerHitMessage() {}
@@ -40,5 +41,13 @@ public class PlayerHitMessage {
     
     public void setTargetPosition(PlayerState.Position targetPosition) {
     	this.targetPosition = targetPosition;
+    }
+
+    public String getWeaponName() {
+    	return weaponName;
+    }
+    
+    public void setWeaponName(String weaponName) {
+    	this.weaponName = weaponName;
     }
 }

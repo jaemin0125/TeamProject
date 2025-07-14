@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics} from '@react-three/rapier';
+import { Physics } from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';

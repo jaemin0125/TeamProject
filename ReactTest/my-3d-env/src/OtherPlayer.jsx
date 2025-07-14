@@ -1,5 +1,5 @@
 // OtherPlayer.jsx
-import { useRef, useEffect, useMemo, useState} from 'react';
+import { useRef, useEffect, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
@@ -10,7 +10,7 @@ import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
 import { Plane, useTexture } from '@react-three/drei';
 
 // OtherPlayer 컴포넌트: 다른 플레이어의 모델, 위치, 애니메이션 상태를 렌더링합니다.
-export function OtherPlayer({ id, position, rotationY, animationState, nickname, chatMessages}) {
+export function OtherPlayer({ id, position, rotationY, animationState, nickname, chatMessages }) {
     const rigidBodyRef = useRef(); // RigidBody에 대한 ref
     const modelGroupRef = useRef(); // 모델 그룹에 대한 ref
 
@@ -70,7 +70,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
             colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
             type="kinematicPosition" // 물리 엔진에 의해 움직이지 않고, 직접 위치 설정
             enabledRotations={[false, false, false]} // 회전 비활성화
-            userData = {{id}}
+            userData={{ id }}
         >
             {/* 플레이어의 캡슐 콜라이더 */}
             <CapsuleCollider args={[0.35, 0.4]} />
@@ -80,7 +80,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
                 {/* 결정된 CharacterToRender 컴포넌트를 렌더링하고 애니메이션 상태 전달 */}
                 <CharacterModel
                     {...safeAnimationState}
-                     glbPath={characterModelPath}
+                    glbPath={characterModelPath}
                 />
 
                 {/* 플레이어 닉네임 표시 */}
@@ -93,7 +93,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
                 >
                     {nickname || id.substring(0, 5)} {/* 닉네임이 없으면 ID 앞 5자리 표시 */}
                 </Text>
-                
+
                 {/* 채팅 말풍선 표시 및 위치 */}
                 {balloonMsg && (
                     <group position={[0, 3.2, 0]}>

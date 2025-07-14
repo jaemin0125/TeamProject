@@ -121,7 +121,8 @@ export function Player({
                             fromId: currentPlayerId,
                             fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
                             targetId: targetId,
-                            targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null
+                            targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null,
+                            weaponName: selectedItem?.name // 무기 정보 추가
                         }),
                     });
                 }
@@ -148,28 +149,29 @@ export function Player({
         // 펀치 동작 중이 아니고, 펀치 가능하며, STOMP 클라이언트가 연결되어 있고, 플레이어가 죽지 않았을 때만 실행
         if (!isPunching || !canPunch || !stompClientInstance || !stompClientInstance.connected || isDead) return;
 
-        const attackerPos = playerRef.current?.translation(); // 공격자 위치
+        const playerPosition = playerRef.current?.translation(); // 공격자 위치
         const attackerQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw.current, 0)); // 공격자 회전
 
         let hitOccurred = false; // 타격 발생 여부 플래그
 
         // 모든 온라인 플레이어를 순회하며 타격 감지
-        (window.onlinePlayers || new Map()).forEach((targetPlayer, id) => {
-            if (id === currentPlayerId) return; // 자기 자신은 제외
+        (window.onlinePlayers || new Map()).forEach((targetPlayer, targetId) => {
+            if (targetId === currentPlayerId) return; // 자기 자신은 제외
 
-            const targetPos = targetPlayer.position; // 타겟 플레이어 위치
-            const isHit = checkHit(attackerPos, attackerQuat, targetPos); // 히트 여부 확인
+            const targetPosition = targetPlayer.position; // 타겟 플레이어 위치
+            const isHit = checkHit(playerPosition, attackerQuat, targetPosition); // 히트 여부 확인
 
             if (isHit) {
-                console.log(`[🥊 Player] 타격 성공 -> 대상: ${id}`);
+                console.log(`[🥊 Player] 타격 성공 -> 대상: ${targetId}`);
                 // 서버에 플레이어 피격 메시지 전송
                 stompClientInstance.publish({
                     destination: '/app/playerHit',
                     body: JSON.stringify({
                         fromId: currentPlayerId,
-                        fromPosition: { x: attackerPos.x, y: attackerPos.y, z: attackerPos.z },
-                        targetId: id,
-                        targetPosition: targetPos ? { x: targetPos.x, y: targetPos.y, z: targetPos.z } : null
+                        fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
+                        targetId: targetId,
+                        targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null,
+                        weaponName: "punch" // 펀치 공격 시 무기 정보 추가
                     }),
                 });
                 hitOccurred = true; // 타격이 발생했음을 표시
