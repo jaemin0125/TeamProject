@@ -66,7 +66,7 @@ public class PlayerService {
                 .count();
 
         if (currentGunCount < MAX_GUNS) {
-            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.5); // y좌표 -4.4
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }

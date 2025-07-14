@@ -23,6 +23,9 @@ public class AnimationState {
     private boolean isAiming;
     private boolean isAimingAndWalk;
     private boolean isIdle;
+    private boolean isIdleFiring;
+    private boolean isWalkingFiring;
+    private boolean isRunningFiring;
     private boolean isArmed;
 
     // 모든 getter를 수동으로 정의합니다 (getIsXxx 형태)
@@ -74,6 +77,15 @@ public class AnimationState {
     public boolean getIsIdle() { return isIdle; }
     public void setIsIdle(boolean isIdle) { this.isIdle = isIdle; }
     
+    public boolean getIsIdleFiring() { return isIdleFiring; }
+    public void setIsIdleFiring(boolean isIdleFiring) { this.isIdleFiring = isIdleFiring; }
+    
+    public boolean getIsWalkingFiring() { return isWalkingFiring; }
+    public void setIsWalkingFiring(boolean isWalkingFiring) { this.isWalkingFiring = isWalkingFiring; }
+    
+    public boolean getIsRunningFiring() { return isRunningFiring; }
+    public void setIsRunningFiring(boolean isRunningFiring) { this.isRunningFiring = isRunningFiring; }
+    
     public boolean getIsArmed() { return isArmed; }
     public void setIsArmed(boolean isArmed) { this.isArmed = isArmed; }
     // toString() 메서드를 수동으로 오버라이드하여 로그에서 보기 좋게 만듭니다.
@@ -96,6 +108,9 @@ public class AnimationState {
                ", isAiming=" + isAiming +
                ", isAimingAndWalk=" + isAimingAndWalk +
                ", isIdle=" + isIdle +
+               ", isIdleFiring=" + isIdleFiring +
+               ", isWalkingFiring=" + isWalkingFiring +
+               ", isRunningFiring=" + isRunningFiring +
                ", isArmed=" + isArmed +
                '}';
     }
