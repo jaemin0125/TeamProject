@@ -88,13 +88,13 @@ public class GameController {
 
         switch (weaponName) {
             case "ak-47":
-                damage = 25;
+                damage = 20;
                 maxRange = 100.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
             default:
                 damage = 10;
-                maxRange = 2.5; // 주먹의 유효 사거리 2.5
+                maxRange = 2.5; // gameUtils.js에서 관리
                 break;
         }
 
@@ -119,6 +119,9 @@ public class GameController {
         int newHealth = targetPlayer.getHealth() - damage;
         playerService.setPlayerHealth(targetPlayer.getId(), newHealth);
         logger.info("Player {} hit. Health reduced to {}.", targetPlayer.getNickname(), newHealth);
+
+        // 계산된 데미지 값을 메시지에 설정
+        message.setDamage(damage);
 
         // 체력이 0 이하가 되면 사망 처리
         if (newHealth <= 0) {

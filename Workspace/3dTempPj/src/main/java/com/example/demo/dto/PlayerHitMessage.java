@@ -6,6 +6,7 @@ public class PlayerHitMessage {
     private PlayerState.Position fromPosition;
     private PlayerState.Position targetPosition;
     private String weaponName;
+    private int damage;
 
     // 기본 생성자
     public PlayerHitMessage() {}
@@ -49,5 +50,13 @@ public class PlayerHitMessage {
     
     public void setWeaponName(String weaponName) {
     	this.weaponName = weaponName;
+    }
+
+    public int getDamage() {
+        return damage;
+    }
+
+    public void setDamage(int damage) {
+        this.damage = damage;
     }
 }
