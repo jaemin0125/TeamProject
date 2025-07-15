@@ -345,6 +345,8 @@ public class PlayerService {
         if (player != null) {
             player.setHealth(Math.max(0, Math.min(100, newHealth)));
             logger.info("Player {} health set to {}.", playerId, player.getHealth());
+            // ✨ 추가: 플레이어 체력 변경 시 모든 클라이언트에게 브로드캐스팅
+            messagingTemplate.convertAndSend("/topic/playerLocations", getAllPlayers());
             return true;
         }
         logger.warn("Player {} not found. Cannot set health.", playerId);

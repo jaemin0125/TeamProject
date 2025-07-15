@@ -270,11 +270,29 @@ export function GameCanvas({ playerNickname }) {
             client.subscribe('/topic/playerLocations', (message) => {
                 try {
                     const allPlayerPositions = JSON.parse(message.body);
-                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p]));
-                    setHudState(prev => ({
-                        ...prev,
-                        otherPlayers: window.onlinePlayers
-                    }));
+                    window.onlinePlayers = new Map();
+                    let currentPlayersHealth = null; // 현재 플레이어의 체력을 저장할 변수
+
+                    allPlayerPositions.forEach(p => {
+                        if (p.id === currentPlayerId) {
+                            currentPlayersHealth = p.health; // 현재 플레이어의 체력 저장
+                        }
+                        window.onlinePlayers.set(p.id, p);
+                    });
+
+                    setHudState(prev => {
+                        const newState = {
+                            ...prev,
+                            otherPlayers: window.onlinePlayers
+                        };
+                        // 현재 플레이어의 체력이 업데이트된 경우에만 반영
+                        if (currentPlayersHealth !== null && newState.health !== currentPlayersHealth) {
+                            newState.health = currentPlayersHealth;
+                            // 체력이 0 이하면 isDead 상태도 업데이트
+                            newState.isDead = currentPlayersHealth <= 0;
+                        }
+                        return newState;
+                    });
                 } catch (e) {
                     console.error("[STOMP Subscribe] Failed to parse player locations message:", e, message.body);
                 }
@@ -541,14 +559,6 @@ export function GameCanvas({ playerNickname }) {
                 if (itemToUse) {
                     console.log(`[GameCanvas] Using item: ${itemToUse.name} from slot ${selectedInventorySlot}. Current count: ${itemToUse.count}`); // 상세 로그
                     if (itemToUse.name === 'apple') {
-                        // 사과 사용 로직: 체력 회복
-                        setHudState(prevHud => {
-                            const currentHealth = prevHud.health ?? 100;
-                            const newHealth = Math.min(currentHealth + 20, 100); // 체력 20 회복, 최대 100
-                            console.log(`[GameCanvas] Player health: ${currentHealth} -> ${newHealth}`); // 상세 로그
-                            return { ...prevHud, health: newHealth };
-                        });
-
                         // 아이템 개수 감소 또는 슬롯 비우기
                         if (itemToUse.count > 1) {
                             newInventory[selectedInventorySlot] = { ...itemToUse, count: itemToUse.count - 1 };

@@ -10,9 +10,8 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="objectId"/>
-			<item value="handlePlayerHit"/>
-			<item value="topic"/>
+			<item value="player"/>
+			<item value="playerHit"/>
 			<item value="move"/>
 			<item value="app"/>
 			<item value="pick"/>
@@ -25,6 +24,7 @@
 			<item value="dead"/>
 			<item value="public boolean"/>
 			<item value="decrease"/>
+			<item value="addInitial"/>
 		</list>
 		<list key="replacehistory">
 		</list>

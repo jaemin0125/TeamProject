@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@dimforge/rapier3d": "^0.17.3",
     "@react-three/drei": "^10.3.0",
     "@react-three/fiber": "^9.1.4",
     "@react-three/rapier": "^2.1.0",
@@ -23,8 +22,7 @@
     "sockjs-client": "^1.6.1",
     "stats.js": "^0.17.0",
     "three": "^0.177.0",
-    "uuid": "^11.1.0",
-    "vite-plugin-wasm": "^3.5.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.29.0",

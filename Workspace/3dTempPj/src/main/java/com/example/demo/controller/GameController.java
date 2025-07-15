@@ -37,7 +37,7 @@ public class GameController {
 		String sessionId = headerAccessor.getSessionId();
 		logger.info("Register player request received: Player ID={}, Nickname={}, Session ID={}",
 				playerState.getId(), playerState.getNickname(), sessionId);
-
+		
 		// ✨ 변경: addPlayer 대신 registerPlayer 사용
 		playerService.registerPlayer(playerState, sessionId);
 
@@ -66,6 +66,7 @@ public class GameController {
     @MessageMapping("/playerHit")
     public void handlePlayerHit(PlayerHitMessage message) {
         logger.info("Player hit message received: From={}, Target={}, WeaponName={}", message.getFromId(), message.getTargetId(), message.getWeaponName());
+        logger.info("Player hit message received: From={}, Target={}", message.getFromPosition(), message.getTargetPosition());
 
         PlayerState attacker = playerService.getPlayer(message.getFromId());
         PlayerState targetPlayer = playerService.getPlayer(message.getTargetId());
@@ -79,7 +80,31 @@ public class GameController {
         // 2. 서버에 저장된 실제 플레이어 위치를 가져옴 (클라이언트가 보낸 위치를 신뢰하지 않음)
         PlayerState.Position attackerPos = attacker.getPosition();
         PlayerState.Position targetPos = targetPlayer.getPosition();
+        
+        
+        double tolerance = 0.2;
 
+        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
+    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
+            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
+            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
+        );
+        
+        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
+    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
+    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
+    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
+		);
+        
+        if (tolerance < checkAttackerPosition) {
+        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        } else if (tolerance < checkTargetPosition) {
+        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        }
+        
+        
         // 3. 무기 정보 설정 (데미지, 사거리)
         int damage = 0;
         double maxRange = 0.0;
@@ -88,8 +113,8 @@ public class GameController {
 
         switch (weaponName) {
             case "ak-47":
-                damage = 20;
-                maxRange = 100.0; // AK-47의 유효 사거리 100
+                damage = 10;
+                maxRange = 1000.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
             default:
