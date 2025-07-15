@@ -37,7 +37,7 @@ public class GameController {
 		String sessionId = headerAccessor.getSessionId();
 		logger.info("Register player request received: Player ID={}, Nickname={}, Session ID={}",
 				playerState.getId(), playerState.getNickname(), sessionId);
-
+		
 		// ✨ 변경: addPlayer 대신 registerPlayer 사용
 		playerService.registerPlayer(playerState, sessionId);
 
@@ -62,28 +62,100 @@ public class GameController {
 		// 모든 클라이언트에게 업데이트된 플레이어 목록 브로드캐스트 (실시간 동기화)
 		messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
 	}
-
+	
     @MessageMapping("/playerHit")
     public void handlePlayerHit(PlayerHitMessage message) {
-        logger.info("Player hit message received: From={}, Target={}", message.getFromId(), message.getTargetId());
+        logger.info("Player hit message received: From={}, Target={}, WeaponName={}", message.getFromId(), message.getTargetId(), message.getWeaponName());
+        logger.info("Player hit message received: From={}, Target={}", message.getFromPosition(), message.getTargetPosition());
 
+        PlayerState attacker = playerService.getPlayer(message.getFromId());
         PlayerState targetPlayer = playerService.getPlayer(message.getTargetId());
-        if (targetPlayer != null) {
-            // 체력을 10 감소시킵니다.
-            int newHealth = targetPlayer.getHealth() - 10;
-            playerService.setPlayerHealth(targetPlayer.getId(), newHealth);
-            logger.info("Player {} hit. Health reduced to {}.", targetPlayer.getNickname(), newHealth);
 
-            // 체력이 0 이하가 되면 사망 처리
-            if (newHealth <= 0) {
-                playerService.setPlayerDead(targetPlayer.getId());
-                logger.info("Player {} is dead.", targetPlayer.getNickname());
-                // 사망 시 추가적인 로직 (예: 리스폰 타이머 시작, 애니메이션 변경 등)
-            }
-
-            // 모든 클라이언트에게 업데이트된 플레이어 상태 브로드캐스트
-            messagingTemplate.convertAndSend("/topic/playerHit", message);
+        // 1. 공격자와 피격자 정보가 서버에 모두 존재하는지, 스스로를 공격한건 아닌지 확인
+        if (attacker == null || targetPlayer == null || message.getFromId().equals(message.getTargetId())) {
+            logger.warn("Hit validation failed: Attacker or Target not found, or self-hit.");
+            return;
         }
+
+        // 2. 서버에 저장된 실제 플레이어 위치를 가져옴 (클라이언트가 보낸 위치를 신뢰하지 않음)
+        PlayerState.Position attackerPos = attacker.getPosition();
+        PlayerState.Position targetPos = targetPlayer.getPosition();
+        
+        
+        double tolerance = 0.2;
+
+        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
+    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
+            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
+            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
+        );
+        
+        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
+    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
+    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
+    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
+		);
+        
+        if (tolerance < checkAttackerPosition) {
+        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        } else if (tolerance < checkTargetPosition) {
+        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        }
+        
+        
+        // 3. 무기 정보 설정 (데미지, 사거리)
+        int damage = 0;
+        double maxRange = 0.0;
+        // 프론트에서 무기 이름이 null로 오는 경우를 대비해 기본값을 "punch"로 설정
+        String weaponName = message.getWeaponName() != null ? message.getWeaponName() : "punch";
+
+        switch (weaponName) {
+            case "ak-47":
+                damage = 20;
+                maxRange = 100.0; // AK-47의 유효 사거리 100
+                break;
+            case "punch":
+            default:
+                damage = 10;
+                maxRange = 2.5; // gameUtils.js에서 관리
+                break;
+        }
+
+        // 4. 서버에서 직접 거리 계산
+        double distance = Math.sqrt(
+            Math.pow(attackerPos.getX() - targetPos.getX(), 2) +
+            Math.pow(attackerPos.getY() - targetPos.getY(), 2) +
+            Math.pow(attackerPos.getZ() - targetPos.getZ(), 2)
+        );
+
+        // 5. 유효 사거리 검증
+        if (distance > maxRange) {
+            logger.warn("Hit validation failed: Attack from {} to {} with {} is out of range. Distance: {}, Max Range: {}",
+                attacker.getNickname(), targetPlayer.getNickname(), weaponName, String.format("%.2f", distance), maxRange);
+            return; // 거리가 너무 멀면 공격 무효 처리
+        }
+
+        // 6. 검증 통과 시, 데미지 처리
+        logger.info("Hit validated! Attacker: {}, Target: {}, Weapon: {}, Distance: {}",
+            attacker.getNickname(), targetPlayer.getNickname(), weaponName, String.format("%.2f", distance));
+
+        int newHealth = targetPlayer.getHealth() - damage;
+        playerService.setPlayerHealth(targetPlayer.getId(), newHealth);
+        logger.info("Player {} hit. Health reduced to {}.", targetPlayer.getNickname(), newHealth);
+
+        // 계산된 데미지 값을 메시지에 설정
+        message.setDamage(damage);
+
+        // 체력이 0 이하가 되면 사망 처리
+        if (newHealth <= 0) {
+            playerService.setPlayerDead(targetPlayer.getId());
+            logger.info("Player {} is dead.", targetPlayer.getNickname());
+        }
+
+        // 모든 클라이언트에게 유효한 공격이었음을 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/playerHit", message);
     }
 
     // ✨ 새로 추가: 아이템 줍기 요청 처리

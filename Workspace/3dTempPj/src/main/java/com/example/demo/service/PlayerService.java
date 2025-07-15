@@ -66,7 +66,7 @@ public class PlayerService {
                 .count();
 
         if (currentGunCount < MAX_GUNS) {
-            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.5); // y좌표 -4.4
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -208,43 +208,47 @@ public class PlayerService {
      */
     public boolean pickUpItemFromScene(String playerId, String objectId) {
         PlayerState player = connectedPlayers.get(playerId);
-        if (player == null) {
-            logger.warn("Player {} not found. Cannot pick up item {}.", playerId, objectId);
-            return false;
-        }
-
         ObjectState sceneObject = sceneObjects.get(objectId);
-        if (sceneObject == null) {
-            logger.warn("Scene object {} not found. Cannot pick up item.", objectId);
+
+        if (player == null || sceneObject == null) {
+            logger.warn("Pickup failed: Player or SceneObject not found.");
             return false;
         }
 
-        // 아이템 타입이 "APPLE"인 경우에만 줍도록 처리
-        if (sceneObject.getItemType() != null) {
-            // 씬에서 오브젝트 제거
-            sceneObjects.remove(objectId);
-            logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, sceneObject.getItemType(), playerId);
+        String itemType = sceneObject.getItemType();
+        if (itemType == null) {
+            logger.warn("Pickup failed: SceneObject {} has no itemType.", objectId);
+            return false;
+        }
 
-            // 주운 아이템 정보를 기반으로 InventoryItem 생성
-            Item pickedItem = new Item(
-                objectId, // 새 아이템 고유 ID
-                "사과", // 아이템 이름
-                "food", // 아이템 타입 (음식)
-                1, // 개수 1개
-                "/assets/apple.png", // 이미지 경로
-                10 // 체력 회복량
-            );
+        // 씬에서 오브젝트 제거
+        sceneObjects.remove(objectId);
+        logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, itemType, playerId);
 
-            // 플레이어 인벤토리에 아이템 추가
-            boolean success = addItemToPlayerInventory(playerId, pickedItem);
-            if (success) {
-                logger.info("Player {} picked up item {} (type: {}).", playerId, pickedItem.getName(), pickedItem.getType());
-            } else {
-                logger.error("Failed to add item {} to player {}'s inventory.", pickedItem.getName(), playerId);
-            }
-            return success;
+        Item pickedItem;
+        // 아이템 타입에 따라 다른 아이템 정보를 생성
+        switch (itemType) {
+            case "apple":
+                pickedItem = new Item(objectId, "apple", "food", 1, "/models/apple.png", 10);
+                break;
+            case "ak-47":
+                pickedItem = new Item(objectId, "ak-47", "weapon", 1, "/models/ak-47.png", 0);
+                break;
+            default:
+                logger.warn("Attempted to pick up unknown item type: {}", itemType);
+                // 알 수 없는 아이템을 주웠을 경우, 다시 씬에 돌려놓거나 다른 처리를 할 수 있음 (여기서는 그냥 무시)
+                sceneObjects.put(objectId, sceneObject); // 예시: 다시 씬에 돌려놓기
+                return false;
+        }
+
+        // 플레이어 인벤토리에 아이템 추가
+        if (addItemToPlayerInventory(playerId, pickedItem)) {
+            logger.info("Player {} picked up item {} (type: {}).", playerId, pickedItem.getName(), pickedItem.getType());
+            return true;
         } else {
-            logger.warn("Scene object {} is not a pickable item (type: {}).", objectId, sceneObject.getItemType());
+            logger.error("Failed to add item {} to player {}'s inventory.", pickedItem.getName(), playerId);
+            // 아이템 추가 실패 시, 씬에 다시 돌려놓는 로직 추가 가능
+            sceneObjects.put(objectId, sceneObject);
             return false;
         }
     }
