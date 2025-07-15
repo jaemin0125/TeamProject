@@ -97,7 +97,6 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         fontWeight: 'bold',
                         textShadow: '1px 1px 2px black',
                     }}>
-                        HP: {health} / 100 {isHit && <span style={{ color: 'yellow', marginLeft: '10px' }}>HIT!</span>}
                     </span>
                 </div>
 
@@ -315,64 +314,64 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         }}></div>
                     </div>
                 )}
-                
 
-{isScoped && !isDead && (
-  <div style={{
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    pointerEvents: 'none',
-    zIndex: 9999,
-  }}>
-    {/* 배경: 전체 검정, 중앙만 구멍 뚫기 */}
-    <div style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      width: '100%',
-      height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.9)', // 외곽 어두움
-      WebkitMaskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
-      maskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
-    }} />
 
-    {/* 중앙 조준점 (작은 빨간 점) */}
-    <div style={{
-      position: 'absolute',
-      top: '50%',
-      left: '50%',
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      backgroundColor: 'red',
-      transform: 'translate(-50%, -50%)',
-      boxShadow: '0 0 6px red'
-    }} />
+                {isScoped && !isDead && (
+                    <div style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        pointerEvents: 'none',
+                        zIndex: 9999,
+                    }}>
+                        {/* 배경: 전체 검정, 중앙만 구멍 뚫기 */}
+                        <div style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundColor: 'rgba(0, 0, 0, 0.9)', // 외곽 어두움
+                            WebkitMaskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
+                            maskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
+                        }} />
 
-    {/* 십자선 (선택) */}
-    <div style={{
-      position: 'absolute',
-      top: '50%',
-      left: 0,
-      width: '100%',
-      height: '1px',
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      transform: 'translateY(-50%)',
-    }} />
-    <div style={{
-      position: 'absolute',
-      left: '50%',
-      top: 0,
-      width: '1px',
-      height: '100%',
-      backgroundColor: 'rgba(255,255,255,0.1)',
-      transform: 'translateX(-50%)',
-    }} />
-  </div>
-)}
+                        {/* 중앙 조준점 (작은 빨간 점) */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            width: '8px',
+                            height: '8px',
+                            borderRadius: '50%',
+                            backgroundColor: 'red',
+                            transform: 'translate(-50%, -50%)',
+                            boxShadow: '0 0 6px red'
+                        }} />
+
+                        {/* 십자선 (선택) */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: 0,
+                            width: '100%',
+                            height: '1px',
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            transform: 'translateY(-50%)',
+                        }} />
+                        <div style={{
+                            position: 'absolute',
+                            left: '50%',
+                            top: 0,
+                            width: '1px',
+                            height: '100%',
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            transform: 'translateX(-50%)',
+                        }} />
+                    </div>
+                )}
 
 
 
@@ -380,7 +379,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
 
                 {/* F 키 상호작용 프롬프트 (크로스헤어 위에 보이도록 zIndex 높임) */}
-                {showInteractionPrompt && !isDead && (
+                {showInteractionPrompt && !isDead && !isScoped && (
                     <div style={{
                         position: 'absolute',
                         top: 'calc(50% + 40px)', // 크로스헤어 아래에 위치 (크로스헤어 높이의 절반 + 여백)

@@ -1,7 +1,9 @@
 // App.jsx
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { GameCanvas } from './GameCanvas'; // GameCanvas 임포트
 import { getOrCreatePlayerInfo } from './utils/constants'; // getOrCreatePlayerInfo 임포트
+import './App.css';
+
 
 export default function App() {
     // sessionStorage에서 'enteredGame' 상태를 로드합니다.
@@ -39,15 +41,13 @@ export default function App() {
     // 닉네임 입력 UI
     return (
         <div
-            className="w-screen h-screen bg-cover bg-center flex items-center justify-center"
-            style={{ backgroundImage: "url('/background-image.jpg')" }} // 배경 이미지 경로 설정
+            className="main_page"
+            style={{ backgroundImage: "url('/Thumbnail/Thumbnail.jpg')" }} // 배경 이미지 경로 설정
         >
-            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-10 max-w-lg w-full text-center shadow-2xl border border-white/20">
-                <h1 className="text-5xl font-extrabold text-white mb-6 drop-shadow-lg">
-                    🕹️ 멀티플레이어 3D 게임
-                </h1>
-                <p className="text-lg text-gray-100 mb-8">
-                    게임에 입장할 닉네임을 입력하세요.
+            <div className="display-column">
+                <h1>VENICE</h1>
+                <p>
+                    닉네임을 입력하세요.
                 </p>
                 <input
                     type="text"
@@ -55,7 +55,7 @@ export default function App() {
                     onChange={(e) => setNickname(e.target.value)}
                     placeholder="닉네임을 입력하세요"
                     maxLength={10} // 닉네임 최대 길이 제한
-                    className="w-full p-3 mb-4 text-center text-lg rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="nickname-input"
                     onKeyPress={(e) => {
                         if (e.key === 'Enter') {
                             handleNicknameSubmit();
@@ -64,9 +64,9 @@ export default function App() {
                 />
                 <button
                     onClick={handleNicknameSubmit}
-                    className="px-8 py-3 bg-green-500 hover:bg-green-600 text-white text-lg font-semibold rounded-xl shadow-lg transition-transform transform hover:scale-105 active:scale-95"
+                    className="start-button"
                 >
-                    🚪 게임 입장하기
+                    게임 입장
                 </button>
             </div>
         </div>

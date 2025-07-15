@@ -33,7 +33,7 @@ export function Player({
     const playerRef = useRef(); // 플레이어 RigidBody 참조
     const modelRef = useRef(); // 플레이어 3D 모델 참조
     const [isGrounded, setIsGrounded] = useState(false); // 바닥에 닿았는지 여부
-    const [currentViewMode, setCurrentViewMode] = useState('firstPerson'); // 플레이어 내부의 시점 모드
+    const [currentViewMode, setCurrentViewMode] = useState('thirdPerson'); // 플레이어 내부의 시점 모드
     const [isPunching, setIsPunching] = useState(false); // 펀치 동작 여부
     const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
@@ -318,39 +318,19 @@ export function Player({
     }, [canPunch, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
-    useEffect(() => {
-        const unsubscribe = subscribeKeys(
-            (s) => s.toggleView,
-            (pressed) => {
-                if (isDead || isChatting) return; // 죽음 상태일 때 뷰 모드 전환 비활성화
-                if (pressed && !toggleViewPressed.current) {
-                    setCurrentViewMode((prev) => {
-                        const newMode = (prev === 'firstPerson' ? 'thirdPerson' : 'firstPerson');
-                        // 3인칭에서 1인칭으로 전환 시 pitch 보정
-                        if (newMode === 'firstPerson' && prev === 'thirdPerson') {
-                            
-                        }
-                        setViewMode(newMode); // GameCanvas의 viewMode도 업데이트
-                        return newMode;
-                    });
-                }
-                toggleViewPressed.current = pressed;
-            }
-        );
-        return () => unsubscribe();
-    }, [subscribeKeys, isDead, setViewMode, isChatting]); // 의존성 배열
+
 
         useEffect(() => {
         camera.fov = isScoped ? 10 : 60;
         camera.updateProjectionMatrix();
-        if (isScoped && currentViewMode !== 'firstPerson') {
-            setCurrentViewMode('firstPerson'); // 내부 시점 전환
-            setViewMode('firstPerson');        // 외부(GameCanvas)에도 반영
+        // if (isScoped && currentViewMode !== 'firstPerson') {
+        //     setCurrentViewMode('firstPerson'); // 내부 시점 전환
+        //     setViewMode('firstPerson');        // 외부(GameCanvas)에도 반영
             
-        } else if(!isScoped && currentViewMode == 'firstPerson'){
-            setCurrentViewMode('thirdPerson');
-            setViewMode('thirdPerson');
-        }
+        // } else if(!isScoped && currentViewMode == 'firstPerson'){
+        //     setCurrentViewMode('thirdPerson');
+        //     setViewMode('thirdPerson');
+        // }
         
     }, [isScoped, currentViewMode, setViewMode]);
 
