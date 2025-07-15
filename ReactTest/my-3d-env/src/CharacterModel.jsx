@@ -44,7 +44,7 @@ export const CharacterModel = React.forwardRef(
             }
 
 
-            
+
             let nextActionName = null;
             // 상태에 따라 애니메이션 우선순위 지정
             if (isDead) nextActionName = isArmed ? 'ArmedDead' : 'Dead';
@@ -90,7 +90,7 @@ export const CharacterModel = React.forwardRef(
                         nextAction.setLoop(THREE.LoopRepeat);
                     }
                 }
-            } 
+            }
         }, [
             isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning,
             isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk,

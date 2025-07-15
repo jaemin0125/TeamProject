@@ -38,8 +38,8 @@ export function Player({
     const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
     // const [AimingToggle, setAimingToggle] = useState(false);
-    const [isAiming, setIsAiming] = useState(false);  
-    const [isScoped, setIsScoped] = useState(false); 
+    const [isAiming, setIsAiming] = useState(false);
+    const [isScoped, setIsScoped] = useState(false);
     const interactableObjectIdRef = useRef(null); // 플레이어가 근접한 상호작용 가능 오브젝트 ID
     const exitTimeoutRef = useRef(null); // 충돌 종료 지연을 위한 타이머 참조
     const [isFiring, setIsFiring] = useState(false);
@@ -110,7 +110,7 @@ export function Player({
 
         // ✅ 레이캐스트 수행 (Rapier 방식)
         const ray = new rapier.Ray(origin, direction);
-        const hit = world.castRay(ray, 100, true); // maxDist 100, solidOnly true
+        const hit = world.castRayAndGetNormal(ray, 100, true);
 
         if (hit && hit.collider) {
             const colliderHandle = hit.collider.handle;
@@ -134,20 +134,78 @@ export function Player({
                     });
                 }
             }
-        }
 
-        //🔴 시각화 (레이저 라인)
-        const endVec = origin.clone().add(direction.clone().multiplyScalar(100));
-        const laserGeo = new THREE.BufferGeometry().setFromPoints([origin, endVec]);
-        const laserMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        const laserLine = new THREE.Line(laserGeo, laserMat);
-        scene.add(laserLine);
-        setTimeout(() => {
-            scene.remove(laserLine);
-            laserGeo.dispose();
-            laserMat.dispose();
-        }, 200);
-    };
+            const toi = hit.toi ?? hit.timeOfImpact; // 둘 중 있는 걸 사용
+            if (toi === undefined) {
+                console.warn('❌ TOI 정보 없음:', hit);
+                return;
+            }
+
+            try {
+                const hitPoint = origin.clone().add(direction.clone().multiplyScalar(toi));
+                const hitNormal = new THREE.Vector3().copy(hit.normal);
+
+                stompClientInstance.publish({
+                    destination: '/app/bulletImpact',
+                    body: JSON.stringify({
+                        fromId: currentPlayerId,
+                        hitPosition: {
+                            x: hitPoint.x,
+                            y: hitPoint.y,
+                            z: hitPoint.z
+                        },
+                        hitNormal: {
+                            x: hitNormal.x,
+                            y: hitNormal.y,
+                            z: hitNormal.z
+                        }
+                    })
+                });
+
+
+                const decalSize = 0.2;
+                const decalGeometry = new THREE.PlaneGeometry(decalSize, decalSize);
+                const decalTexture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
+                const decalMaterial = new THREE.MeshBasicMaterial({
+                    map: decalTexture,
+                    transparent: true,
+                    depthWrite: false
+                });
+
+                const decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
+                decalMesh.position.copy(hitPoint);
+                decalMesh.position.addScaledVector(hitNormal, 0.001); // 표면에 살짝 띄움
+
+                const quat = new THREE.Quaternion();
+                quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hitNormal);
+                decalMesh.quaternion.copy(quat);
+
+                scene.add(decalMesh);
+
+                setTimeout(() => {
+                    scene.remove(decalMesh);
+                    decalMesh.geometry.dispose();
+                    decalMesh.material.dispose();
+                }, 15000);
+            } catch (e) {
+                console.warn('피탄 자국 생성 실패:', e);
+            }
+
+            //🔴 시각화 (레이저 라인)
+            // const endVec = origin.clone().add(direction.clone().multiplyScalar(100));
+            // const laserGeo = new THREE.BufferGeometry().setFromPoints([origin, endVec]);
+            // const laserMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            // const laserLine = new THREE.Line(laserGeo, laserMat);
+            // scene.add(laserLine);
+            // setTimeout(() => {
+            //     scene.remove(laserLine);
+            //     laserGeo.dispose();
+            //     laserMat.dispose();
+            // }, 200);
+        };
+
+
+    }
 
 
 
@@ -193,16 +251,13 @@ export function Player({
         }
     }, [isPunching, canPunch, stompClientInstance, isDead, currentPlayerId]); // 의존성 배열
 
-
-
-
     useEffect(() => {
         if (!isFiring || isDead || selectedItem?.name !== 'ak-47') return;
 
         // 일정 간격으로 fireBullet 호출
         firingIntervalRef.current = setInterval(() => {
             fireBullet();
-        }, 150); // 150ms 간격으로 발사
+        }, 1); // 150ms 간격으로 발사
 
         return () => clearInterval(firingIntervalRef.current);
     }, [isFiring, isDead, selectedItem]);
@@ -284,28 +339,28 @@ export function Player({
             if (e.button === 0 && selectedItem?.name === 'ak-47') {
                 setIsFiring(true);
                 fireBullet();
-                
+
             }
             if (e.button === 2 && selectedItem.name == 'ak-47') {
-               setIsAiming(true); // 무조건 조준 상태 시작
-            mouseDownTimeRef.current = performance.now(); // 시간 기록
+                setIsAiming(true); // 무조건 조준 상태 시작
+                mouseDownTimeRef.current = performance.now(); // 시간 기록
 
             }
         };
         const handleMouseUp = (e) => {
             if (e.button === 0 && selectedItem?.name === 'ak-47') {
-                
+
                 setIsFiring(false);
             }
             if (e.button === 2 && selectedItem?.name === 'ak-47') {
-            const heldTime = performance.now() - mouseDownTimeRef.current;
-            setIsAiming(false); // 꾹 누르기 해제
+                const heldTime = performance.now() - mouseDownTimeRef.current;
+                setIsAiming(false); // 꾹 누르기 해제
 
-            if (heldTime < 200) { // 200ms 미만이면 '클릭'으로 간주
-                setIsScoped(prev => !prev); // 스코프 토글
-                
+                if (heldTime < 200) { // 200ms 미만이면 '클릭'으로 간주
+                    setIsScoped(prev => !prev); // 스코프 토글
+
+                }
             }
-        }
         };
 
         // 마우스 이벤트 리스너를 window 대신 캔버스에 직접 연결
@@ -320,18 +375,18 @@ export function Player({
     // 뷰 모드 전환 (1인칭/3인칭) 로직
 
 
-        useEffect(() => {
+    useEffect(() => {
         camera.fov = isScoped ? 10 : 60;
         camera.updateProjectionMatrix();
         // if (isScoped && currentViewMode !== 'firstPerson') {
         //     setCurrentViewMode('firstPerson'); // 내부 시점 전환
         //     setViewMode('firstPerson');        // 외부(GameCanvas)에도 반영
-            
+
         // } else if(!isScoped && currentViewMode == 'firstPerson'){
         //     setCurrentViewMode('thirdPerson');
         //     setViewMode('thirdPerson');
         // }
-        
+
     }, [isScoped, currentViewMode, setViewMode]);
 
     // 마우스 움직임으로 카메라 회전 로직
@@ -583,7 +638,7 @@ export function Player({
             }
         }
 
-        
+
         // if (modelRef.current) { ======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직).
         //     modelRef.current.position.copy(playerBodyPos);
         //     modelRef.current.position.y += -0.725; // 모델 중심 정렬

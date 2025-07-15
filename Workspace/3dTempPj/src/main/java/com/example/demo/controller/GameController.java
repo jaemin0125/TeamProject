@@ -8,6 +8,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 
+import com.example.demo.dto.BulletImpactMessage;
 import com.example.demo.dto.ChatMessage;
 import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.PlayerHitMessage;
@@ -156,6 +157,11 @@ public class GameController {
 
         // 모든 클라이언트에게 유효한 공격이었음을 브로드캐스트
         messagingTemplate.convertAndSend("/topic/playerHit", message);
+    }
+    
+    @MessageMapping("/bulletImpact")
+    public void broadcastImpact(BulletImpactMessage message) {
+        messagingTemplate.convertAndSend("/topic/bulletImpacts", message);
     }
 
     // ✨ 새로 추가: 아이템 줍기 요청 처리

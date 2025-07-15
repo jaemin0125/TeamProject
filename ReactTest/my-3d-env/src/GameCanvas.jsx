@@ -1,6 +1,6 @@
 // GameCanvas.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Canvas, extend } from '@react-three/fiber';
+import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
 import { Leva } from 'leva';
@@ -16,6 +16,8 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
+
+
 
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
@@ -83,10 +85,18 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-
 // GameCanvas 컴포넌트: 게임의 주요 렌더링 및 로직을 담당합니다.
 export function GameCanvas({ playerNickname }) {
     // HUD 상태 관리 (체력, 피격 여부, 다른 플레이어 정보, 사망 여부, 시점, 리스폰 진행도)
+    function SceneCapture() {
+        const { scene } = useThree();
+        useEffect(() => {
+            sceneRef.current = scene;
+        }, [scene]);
+        return null;
+    }
+
+    const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
 
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
@@ -137,6 +147,38 @@ export function GameCanvas({ playerNickname }) {
     const setViewModeInGameCanvas = useCallback((mode) => {
         setHudState(prev => ({ ...prev, viewMode: mode }));
     }, []);
+
+    function spawnBulletHole(hitPosition, hitNormal) {
+        const scene = sceneRef.current;
+        const decalSize = 0.2;
+        const geometry = new THREE.PlaneGeometry(decalSize, decalSize);
+        const texture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(hitPosition.x, hitPosition.y, hitPosition.z);
+
+        const normal = new THREE.Vector3(hitNormal.x, hitNormal.y, hitNormal.z);
+        mesh.position.addScaledVector(normal, 0.001); // 표면에 약간 튀어나오게
+
+        const quat = new THREE.Quaternion();
+        quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+        mesh.quaternion.copy(quat);
+
+        // 씬에 추가
+        scene.add(mesh);
+
+        setTimeout(() => {
+            scene.remove(mesh);
+            geometry.dispose();
+            material.dispose();
+        }, 15000); // 15초 후 제거
+    }
+
 
 
     // 플레이어 죽음 및 리스폰 로직 (GameCanvas에서 관리)
@@ -279,6 +321,13 @@ export function GameCanvas({ playerNickname }) {
                     console.error("[STOMP Subscribe] Failed to parse player locations message:", e, message.body);
                 }
             });
+
+
+            client.subscribe('/topic/bulletImpacts', (message) => {
+                const { hitPosition, hitNormal } = JSON.parse(message.body);
+                spawnBulletHole(hitPosition, hitNormal);
+            });
+
 
             // 씬 오브젝트 정보 구독
             client.subscribe('/topic/sceneObjects', (message) => {
@@ -435,6 +484,7 @@ export function GameCanvas({ playerNickname }) {
 
     const selectedItem = inventory[selectedInventorySlot];
     const isArmed = selectedItem?.name === 'ak-47';
+
 
 
     // Player로부터 상호작용 요청을 받아 처리하는 함수
@@ -611,6 +661,8 @@ export function GameCanvas({ playerNickname }) {
                     }}
                     linear={false} // 텍스처 필터링 모드 (선형 보간 비활성화)
                 >
+
+                    <SceneCapture />
                     {/* 배경색 설정 */}
                     <color attach="background" args={['#8fafdb']} />
 

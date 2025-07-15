@@ -1,4 +1,4 @@
-import { useEffect, useRef} from 'react';
+import { useEffect, useRef } from 'react';
 
 export default function ChatBox({
   stompClient,
@@ -87,7 +87,7 @@ export default function ChatBox({
           ref={chatInputRef}
           onFocus={() => setIsChatting(true)}
           onBlur={() => setIsChatting(false)}
-          
+
           type="text"
           placeholder="채팅 입력 후 Enter"
           value={chatInput}
