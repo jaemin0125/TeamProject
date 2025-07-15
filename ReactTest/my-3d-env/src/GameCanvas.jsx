@@ -97,7 +97,7 @@ export function GameCanvas({ playerNickname }) {
         isHit: false,
         otherPlayers: new Map(),
         isDead: false, // isDead 상태를 GameCanvas로 올림
-        viewMode: 'firstPerson', // GameCanvas에서도 viewMode 상태를 관리
+        viewMode: 'thirdPerson', // GameCanvas에서도 viewMode 상태를 관리
         respawnProgress: 0, // 리스폰 진행도 상태 추가
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,

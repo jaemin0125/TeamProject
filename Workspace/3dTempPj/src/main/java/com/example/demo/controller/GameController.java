@@ -113,12 +113,12 @@ public class GameController {
 
         switch (weaponName) {
             case "ak-47":
-                damage = 20;
+                damage = 10;
                 maxRange = 100.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
             default:
-                damage = 10;
+                damage = 5;
                 maxRange = 2.5; // gameUtils.js에서 관리
                 break;
         }

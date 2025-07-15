@@ -119,11 +119,20 @@
               </children>
             </children>
             <children xsi:type="basic:PartSashContainer" xmi:id="_eQ88MVekEfCA-Zz1mTTecw" containerData="8276" selectedElement="_eQ88PVekEfCA-Zz1mTTecw">
-              <children xsi:type="basic:PartSashContainer" xmi:id="_eQ88MlekEfCA-Zz1mTTecw" containerData="6511" selectedElement="_ofs90GEVEfCmy7TRU7h1NA" horizontal="true">
-                <children xsi:type="basic:PartSashContainer" xmi:id="_ofs90GEVEfCmy7TRU7h1NA" containerData="5000" selectedElement="_eQ88M1ekEfCA-Zz1mTTecw" horizontal="true">
+              <children xsi:type="basic:PartSashContainer" xmi:id="_eQ88MlekEfCA-Zz1mTTecw" containerData="5154" selectedElement="_ofs90GEVEfCmy7TRU7h1NA" horizontal="true">
+                <children xsi:type="basic:PartSashContainer" xmi:id="_ofs90GEVEfCmy7TRU7h1NA" containerData="5000" selectedElement="_ofs90WEVEfCmy7TRU7h1NA" horizontal="true">
                   <children xsi:type="basic:PartStack" xmi:id="_ofs90WEVEfCmy7TRU7h1NA" elementId="PartStack@756fdb13" containerData="5000" selectedElement="_mjOv4FvMEfCbnfeDFS8L9A">
+                    <tags>active</tags>
                     <children xsi:type="basic:Part" xmi:id="_mjOv4FvMEfCbnfeDFS8L9A" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="GameController.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
-                      <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;GameController.java&quot; partName=&quot;GameController.java&quot; title=&quot;GameController.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;1588&quot; selectionTopPixel=&quot;300&quot;/>&#xD;&#xA;&lt;/editor>"/>
+                      <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;GameController.java&quot; partName=&quot;GameController.java&quot; title=&quot;GameController.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/controller/GameController.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;4989&quot; selectionTopPixel=&quot;1290&quot;/>&#xD;&#xA;&lt;/editor>"/>
+                      <tags>Editor</tags>
+                      <tags>removeOnHide</tags>
+                      <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
+                      <tags>active</tags>
+                      <tags>activeOnClose</tags>
+                    </children>
+                    <children xsi:type="basic:Part" xmi:id="_7vIAEGEVEfCmy7TRU7h1NA" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="PlayerState.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
+                      <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerState.java&quot; partName=&quot;PlayerState.java&quot; title=&quot;PlayerState.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/dto/PlayerState.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/dto/PlayerState.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;470&quot; selectionTopPixel=&quot;0&quot;/>&#xD;&#xA;&lt;/editor>"/>
                       <tags>Editor</tags>
                       <tags>removeOnHide</tags>
                       <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
@@ -165,9 +174,8 @@
                   </children>
                 </children>
               </children>
-              <children xsi:type="basic:PartStack" xmi:id="_eQ88PVekEfCA-Zz1mTTecw" elementId="bottom" containerData="3489" selectedElement="_eQ88QlekEfCA-Zz1mTTecw">
+              <children xsi:type="basic:PartStack" xmi:id="_eQ88PVekEfCA-Zz1mTTecw" elementId="bottom" containerData="4846" selectedElement="_eQ88QlekEfCA-Zz1mTTecw">
                 <tags>org.eclipse.e4.secondaryDataStack</tags>
-                <tags>active</tags>
                 <children xsi:type="advanced:Placeholder" xmi:id="_eQ88PlekEfCA-Zz1mTTecw" elementId="org.eclipse.ui.views.ProblemView" toBeRendered="false" ref="_eQ9lW1ekEfCA-Zz1mTTecw" closeable="true">
                   <tags>View</tags>
                   <tags>categoryTag:General</tags>
@@ -249,13 +257,7 @@
           <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
         </children>
         <children xsi:type="basic:Part" xmi:id="_0tizsGEVEfCmy7TRU7h1NA" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="PlayerService.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
-          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerService.java&quot; partName=&quot;PlayerService.java&quot; title=&quot;PlayerService.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;0&quot; selectionOffset=&quot;4432&quot; selectionTopPixel=&quot;1065&quot;/>&#xD;&#xA;&lt;/editor>"/>
-          <tags>Editor</tags>
-          <tags>removeOnHide</tags>
-          <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
-        </children>
-        <children xsi:type="basic:Part" xmi:id="_7vIAEGEVEfCmy7TRU7h1NA" elementId="org.eclipse.e4.ui.compatibility.editor" contributionURI="bundleclass://org.eclipse.ui.workbench/org.eclipse.ui.internal.e4.compatibility.CompatibilityEditor" label="PlayerState.java" iconURI="platform:/plugin/org.eclipse.jdt.ui/icons/full/obj16/jcu_obj.png" closeable="true">
-          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerState.java&quot; partName=&quot;PlayerState.java&quot; title=&quot;PlayerState.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/dto/PlayerState.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/dto/PlayerState.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;5&quot; selectionOffset=&quot;295&quot; selectionTopPixel=&quot;0&quot;/>&#xD;&#xA;&lt;/editor>"/>
+          <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;editor id=&quot;org.eclipse.jdt.ui.CompilationUnitEditor&quot; name=&quot;PlayerService.java&quot; partName=&quot;PlayerService.java&quot; title=&quot;PlayerService.java&quot; tooltip=&quot;3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;>&#xD;&#xA;&lt;input factoryID=&quot;org.eclipse.ui.part.FileEditorInputFactory&quot; path=&quot;/3dTempPj/src/main/java/com/example/demo/service/PlayerService.java&quot;/>&#xD;&#xA;&lt;editorState selectionHorizontalPixel=&quot;0&quot; selectionLength=&quot;208&quot; selectionOffset=&quot;4572&quot; selectionTopPixel=&quot;915&quot;/>&#xD;&#xA;&lt;/editor>"/>
           <tags>Editor</tags>
           <tags>removeOnHide</tags>
           <tags>org.eclipse.jdt.ui.CompilationUnitEditor</tags>
@@ -340,8 +342,6 @@
       <persistedState key="memento" value="&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?>&#xD;&#xA;&lt;view/>"/>
       <tags>View</tags>
       <tags>categoryTag:General</tags>
-      <tags>active</tags>
-      <tags>activeOnClose</tags>
       <menus xmi:id="_eQ9laFekEfCA-Zz1mTTecw" elementId="org.eclipse.ui.console.ConsoleView">
         <tags>ViewMenu</tags>
         <tags>menuContribution:menu</tags>
@@ -445,7 +445,7 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_eQ9lrlekEfCA-Zz1mTTecw" elementId="org.eclipse.ui.workbench.file">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_m839UGEOEfCmy7TRU7h1NA" elementId="print" visible="false" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/print_edit.png" tooltip="Print" command="_eQ-0VlekEfCA-Zz1mTTecw"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_KVA8V2EfEfCyXrRq7oA4wg" elementId="print" visible="false" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/print_edit.png" tooltip="Print" command="_eQ-0VlekEfCA-Zz1mTTecw"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_eQ9lu1ekEfCA-Zz1mTTecw" elementId="group.edit" toBeRendered="false">
         <tags>toolbarSeparator</tags>
@@ -453,8 +453,8 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_eQ9lvVekEfCA-Zz1mTTecw" elementId="org.eclipse.ui.workbench.edit">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_m84kY2EOEfCmy7TRU7h1NA" elementId="undo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/undo_edit.png" tooltip="Undo" enabled="false" command="_eQ-yflekEfCA-Zz1mTTecw"/>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_m84kZGEOEfCmy7TRU7h1NA" elementId="redo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/redo_edit.png" tooltip="Redo" enabled="false" command="_eQ-y_lekEfCA-Zz1mTTecw"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_KVA8XWEfEfCyXrRq7oA4wg" elementId="undo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/undo_edit.png" tooltip="Undo" enabled="false" command="_eQ-yflekEfCA-Zz1mTTecw"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_KVA8XmEfEfCyXrRq7oA4wg" elementId="redo" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/redo_edit.png" tooltip="Redo" enabled="false" command="_eQ-y_lekEfCA-Zz1mTTecw"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_eQ9lwVekEfCA-Zz1mTTecw" elementId="additions" toBeRendered="false">
         <tags>toolbarSeparator</tags>
@@ -478,7 +478,7 @@
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_eQ9mBFekEfCA-Zz1mTTecw" elementId="org.eclipse.ui.workbench.navigate">
         <tags>Draggable</tags>
-        <children xsi:type="menu:HandledToolItem" xmi:id="_m85LdWEOEfCmy7TRU7h1NA" elementId="org.eclipse.ui.window.pinEditor" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/pin_editor.png" tooltip="Pin Editor" enabled="false" type="Check" command="_eQ-0DVekEfCA-Zz1mTTecw"/>
+        <children xsi:type="menu:HandledToolItem" xmi:id="_KVA8ZGEfEfCyXrRq7oA4wg" elementId="org.eclipse.ui.window.pinEditor" iconURI="platform:/plugin/org.eclipse.ui/icons/full/etool16/pin_editor.png" tooltip="Pin Editor" enabled="false" type="Check" command="_eQ-0DVekEfCA-Zz1mTTecw"/>
       </children>
       <children xsi:type="menu:ToolBar" xmi:id="_m63wsFsEEfCIaIscZlo_HA" elementId="SpringBootYMLPropertyEditor" visible="false">
         <tags>Draggable</tags>
