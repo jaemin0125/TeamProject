@@ -105,9 +105,9 @@ export function GameCanvas({ playerNickname }) {
     const [hudState, setHudState] = useState({
         health: 100,
         isHit: false,
+        id:currentPlayerId,
         otherPlayers: new Map(),
         isDead: false, // isDead 상태를 GameCanvas로 올림
-        viewMode: 'thirdPerson', // GameCanvas에서도 viewMode 상태를 관리
         respawnProgress: 0, // 리스폰 진행도 상태 추가
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,
@@ -141,11 +141,6 @@ export function GameCanvas({ playerNickname }) {
     // isDead 상태를 직접 제어하는 함수를 HUD 업데이트 함수와 분리
     const setIsDeadInGameCanvas = useCallback((deadState) => {
         setHudState(prev => ({ ...prev, isDead: deadState }));
-    }, []);
-
-    // Player 컴포넌트에서 viewMode를 업데이트할 수 있도록 함수 전달
-    const setViewModeInGameCanvas = useCallback((mode) => {
-        setHudState(prev => ({ ...prev, viewMode: mode }));
     }, []);
 
     function spawnBulletHole(hitPosition, hitNormal) {
@@ -189,10 +184,6 @@ export function GameCanvas({ playerNickname }) {
         // isDead 상태가 true가 될 때만 리스폰 타이머와 진행도 인터벌을 시작
         if (hudState.isDead) {
             console.log("플레이어 사망! 리스폰 타이머 시작 (5초)...");
-            // 사망 시 1인칭 시점으로 강제 변경
-            setViewModeInGameCanvas('firstPerson');
-
-            // 진행도 초기화 및 인터벌 시작
             setHudState(prev => ({ ...prev, respawnProgress: 0 })); // 사망 시 진행도 0으로 리셋
             let currentProgress = 0;
             progressInterval = setInterval(() => {
@@ -209,6 +200,7 @@ export function GameCanvas({ playerNickname }) {
                 console.log("플레이어 리스폰 중...");
                 // HP 100으로 리셋, isDead 상태 해제, 진행도 0으로 리셋
                 setHudState(prev => ({ ...prev, health: 100, isDead: false, respawnProgress: 0 }));
+
                 console.log("플레이어가 리스폰되었습니다.");
 
                 // if (stompClient && stompClient.connected) {
@@ -236,7 +228,7 @@ export function GameCanvas({ playerNickname }) {
                 console.log("진행도 인터벌 클리어됨.");
             }
         };
-    }, [hudState.isDead, stompClient, setHudState, setViewModeInGameCanvas]); // 의존성 배열
+    }, [hudState.isDead, stompClient, setHudState]); // 의존성 배열
 
     // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
     useEffect(() => {
@@ -533,7 +525,7 @@ export function GameCanvas({ playerNickname }) {
                     }),
                 });
             }
-        } else if (interactedObject && interactedObject.type === 'ak-47' && !isArmed) {
+        } else if (interactedObject && interactedObject.type === 'ak-47') {
             console.log('실행됨');
             console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`); // 추가된 로그
             setInventory(prevInventory => {
@@ -580,6 +572,11 @@ export function GameCanvas({ playerNickname }) {
             console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
         }
     }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
+
+    const clearInventory = () => {
+        setInventory([null, null, null, null, null, null, null, null]); // 또는 초기값으로 재설정
+        setSelectedInventorySlot(0); // 선택 슬롯도 초기화
+    };
 
     // 선택된 아이템 사용 함수 (좌클릭 시 호출)
     const handleUseSelectedItem = useCallback(() => {
@@ -635,6 +632,8 @@ export function GameCanvas({ playerNickname }) {
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
 
 
+
+
     return (
         <>
             {/* Leva 디버그 UI */}
@@ -687,7 +686,6 @@ export function GameCanvas({ playerNickname }) {
                                         playerNickname={playerNickname} // 플레이어 닉네임 전달
                                         isDead={hudState.isDead} // 사망 상태 전달
                                         setIsDead={setIsDeadInGameCanvas} // 사망 상태 설정 함수 전달
-                                        setViewMode={setViewModeInGameCanvas} // 시점 변경 함수 전달
                                         currentPlayerId={currentPlayerId} // 현재 플레이어 ID 전달
                                         onObjectProximityChange={onObjectProximityChange} // 새로 추가: 오브젝트 근접 감지 콜백
                                         onInteract={handlePlayerInteract} // 새로 추가: 플레이어 상호작용 요청 콜백
@@ -696,6 +694,7 @@ export function GameCanvas({ playerNickname }) {
                                         isItemSelected={isItemSelected} // 새로 추가: 선택된 슬롯에 아이템이 있는지 여부 전달
                                         selectedItem={inventory[selectedInventorySlot]}
                                         isChatting={isChatting}
+                                        clearInventory={clearInventory}
                                     />
                                 )}
                             </React.Suspense>

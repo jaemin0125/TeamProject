@@ -9,7 +9,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
     const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
     const otherPlayersInfo = otherPlayersArray
         .filter(p => p.id !== state.currentPlayerId)
-        .map(p => `ID: ${p.id.substring(0, 5)}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
+        .map(p => `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
         .join('\n');
 
     // 리스폰 프로그레스 바 너비 계산 (5초 기준)
@@ -49,15 +49,11 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     overflowY: 'auto',
                     boxShadow: '0 0 15px rgba(0,0,0,0.5)'
                 }}>
+                    <div><strong>ID:</strong> {state.id.substring(0,5)}</div>
                     <div><strong>닉네임:</strong> {playerNickname}</div>
-                    <div><strong>Current Player ID:</strong> {state.currentPlayerId ? state.currentPlayerId.substring(0, 5) : 'N/A'}</div>
-                    <div><strong>View:</strong> {state.viewMode}</div>
                     <div><strong>isGrounded:</strong> {state.isGrounded ? '✅' : '❌'}</div>
-                    <div><strong>Position:</strong> {state.position ? `(${state.position.x?.toFixed(2)}, ${state.position.y?.toFixed(2)}, ${state.position.z?.toFixed(2)})` : 'N/A'}</div>
-                    <div><strong>Velocity:</strong> {state.velocity ? `(${state.velocity.x?.toFixed(2)}, ${state.velocity.y?.toFixed(2)}, ${state.velocity.z?.toFixed(2)})` : 'N/A'}</div>
                     <div><strong>Yaw:</strong> {state.yaw?.toFixed(2) ?? 'N/A'}</div>
                     <div><strong>Pitch:</strong> {state.pitch?.toFixed(2) ?? 'N/A'}</div>
-                    <div><strong>Keys:</strong> {state.keys ? Object.entries(state.keys).filter(([, v]) => v).map(([k]) => k).join(', ') : 'N/A'}</div>
                     <br />
                     <div><strong>-- Other Players --</strong></div>
                     {otherPlayersArray.filter(p => p.id !== state.currentPlayerId).length > 0 &&
@@ -100,52 +96,57 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </span>
                 </div>
 
+
+                
                 {/* 인벤토리 핫바 (하단 중앙) - 주신 코드 그대로 유지하며 다른 요소들과 위치 조절 */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: 10,
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    display: 'flex',
-                    gap: '5px', // 슬롯 간 간격
-                    zIndex: 40
-                }}>
+                {!isScoped && ( 
+
+                    <div style={{
+                        position: 'absolute',
+                        bottom: 10,
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        display: 'flex',
+                        gap: '5px', // 슬롯 간 간격
+                        zIndex: 40
+                    }}>
+        
                     {inventory.map((item, index) => {
                         return (
                             <div
-                                key={index}
-                                style={{
-                                    width: '60px', // 슬롯 너비
-                                    height: '60px', // 슬롯 높이
-                                    border: `2px solid ${selectedInventorySlot === index ? 'gold' : 'gray'}`, // 선택된 슬롯 강조
-                                    borderRadius: '8px',
-                                    display: 'flex',
-                                    flexDirection: 'column', // 아이템 이름과 개수를 세로로 정렬
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'white', // 텍스트 색상
-                                    backgroundColor: 'rgba(0, 0, 0, 0.7)', // 슬롯 배경색 추가
-                                    boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-                                    pointerEvents: 'none', // 마우스 이벤트 무시
-                                }}
+                            key={index}
+                            style={{
+                                width: '60px', // 슬롯 너비
+                                height: '60px', // 슬롯 높이
+                                border: `2px solid ${selectedInventorySlot === index ? 'gold' : 'gray'}`, // 선택된 슬롯 강조
+                                borderRadius: '8px',
+                                display: 'flex',
+                                flexDirection: 'column', // 아이템 이름과 개수를 세로로 정렬
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: 'white', // 텍스트 색상
+                                backgroundColor: 'rgba(0, 0, 0, 0.7)', // 슬롯 배경색 추가
+                                boxShadow: '0 0 10px rgba(0,0,0,0.5)',
+                                pointerEvents: 'none', // 마우스 이벤트 무시
+                            }}
                             >
                                 {item ? (
                                     <>
                                         {/* 아이템 이미지가 있으면 렌더링 */}
                                         {item.image && (
                                             <img
-                                                src={item.image}
-                                                alt={item.name}
-                                                style={{
-                                                    width: '40px', // 이미지 크기 조절
-                                                    height: '40px', // 이미지 크기 조절
-                                                    objectFit: 'contain', // 비율 유지하며 슬롯에 맞춤
-                                                    marginBottom: '2px', // 이미지와 텍스트 사이 간격
-                                                }}
-                                                onError={(e) => {
-                                                    console.error(`[PlayerHUD] Failed to load image for ${item.name} at ${item.image}:`, e);
-                                                    e.target.style.display = 'none'; // 오류 발생 시 이미지 숨기기
-                                                }}
+                                            src={item.image}
+                                            alt={item.name}
+                                            style={{
+                                                width: '40px', // 이미지 크기 조절
+                                                height: '40px', // 이미지 크기 조절
+                                                objectFit: 'contain', // 비율 유지하며 슬롯에 맞춤
+                                                marginBottom: '2px', // 이미지와 텍스트 사이 간격
+                                            }}
+                                            onError={(e) => {
+                                                console.error(`[PlayerHUD] Failed to load image for ${item.name} at ${item.image}:`, e);
+                                                e.target.style.display = 'none'; // 오류 발생 시 이미지 숨기기
+                                            }}
                                             />
                                         )}
                                         <span style={{ fontSize: '0.7em', textShadow: '1px 1px 2px black' }}>{item.name}</span>
@@ -162,13 +163,14 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         );
                     })}
                 </div>
+                )}
 
                 {isHit && !isDead && (
                     <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
                             width: '100%',
                             height: '100%',
                             backgroundColor: 'rgba(255, 0, 0, 0.3)',
@@ -315,63 +317,43 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
+{isScoped && !isDead && (
+  <>
+    {/* 2x 스코프 이미지 오버레이 */}
+    <img
+      src="/textures/2xScope.png" // 이 경로는 실제로 이미지가 위치한 public 폴더 기준으로 작성
+      alt="2x Scope Overlay"
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        objectFit: 'contain',
+        pointerEvents: 'none',
+        zIndex: 9999,
+      }}
+    />
 
-                {isScoped && !isDead && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        pointerEvents: 'none',
-                        zIndex: 9999,
-                    }}>
-                        {/* 배경: 전체 검정, 중앙만 구멍 뚫기 */}
-                        <div style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(0, 0, 0, 0.9)', // 외곽 어두움
-                            WebkitMaskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
-                            maskImage: 'radial-gradient(circle at center, transparent 20vh, black 20.1vh)',
-                        }} />
+    {/* 중앙 빨간 점 (옵션) */}
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        width: '6px',
+        height: '6px',
+        backgroundColor: 'red',
+        borderRadius: '50%',
+        transform: 'translate(-50%, -50%)',
+        boxShadow: '0 0 6px red',
+        pointerEvents: 'none',
+        zIndex: 10000,
+      }}
+    />
+  </>
+)}
 
-                        {/* 중앙 조준점 (작은 빨간 점) */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            backgroundColor: 'red',
-                            transform: 'translate(-50%, -50%)',
-                            boxShadow: '0 0 6px red'
-                        }} />
-
-                        {/* 십자선 (선택) */}
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: 0,
-                            width: '100%',
-                            height: '1px',
-                            backgroundColor: 'rgba(255,255,255,0.1)',
-                            transform: 'translateY(-50%)',
-                        }} />
-                        <div style={{
-                            position: 'absolute',
-                            left: '50%',
-                            top: 0,
-                            width: '1px',
-                            height: '100%',
-                            backgroundColor: 'rgba(255,255,255,0.1)',
-                            transform: 'translateX(-50%)',
-                        }} />
-                    </div>
-                )}
 
 
 
@@ -379,7 +361,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
 
                 {/* F 키 상호작용 프롬프트 (크로스헤어 위에 보이도록 zIndex 높임) */}
-                {showInteractionPrompt && !isDead && !isScoped && (
+                {showInteractionPrompt && !isDead && !isScoped && !isAiming && (
                     <div style={{
                         position: 'absolute',
                         top: 'calc(50% + 40px)', // 크로스헤어 아래에 위치 (크로스헤어 높이의 절반 + 여백)

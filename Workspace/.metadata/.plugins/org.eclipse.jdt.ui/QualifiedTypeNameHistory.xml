@@ -3,4 +3,6 @@
     <fullyQualifiedTypeName name="com.example.demo.dto.PlayerState.Position"/>
     <fullyQualifiedTypeName name="org.springframework.scheduling.annotation.EnableScheduling"/>
     <fullyQualifiedTypeName name="com.example.demo.dto.ObjectState"/>
+    <fullyQualifiedTypeName name="lombok.Data"/>
+    <fullyQualifiedTypeName name="lombok.NoArgsConstructor"/>
 </qualifiedTypeNameHistroy>

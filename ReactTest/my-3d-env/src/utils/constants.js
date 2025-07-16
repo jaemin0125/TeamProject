@@ -8,7 +8,6 @@ export const controlsMap = [
     { name: 'left', keys: ['KeyA'] },
     { name: 'right', keys: ['KeyD'] },
     { name: 'jump', keys: ['Space'] },
-    { name: 'toggleView', keys: ['KeyV'] },
     { name: 'interact', keys: ['KeyF'] },
     { name: 'runFast', keys: ['ShiftLeft'] },
 ];
