@@ -1,6 +1,6 @@
 // GameCanvas.jsx
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { Canvas, extend } from '@react-three/fiber';
+import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
 import { Physics } from '@react-three/rapier';
 import { Leva } from 'leva';
@@ -16,6 +16,8 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
+
+
 
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
@@ -83,10 +85,18 @@ class ErrorBoundary extends React.Component {
     }
 }
 
-
 // GameCanvas 컴포넌트: 게임의 주요 렌더링 및 로직을 담당합니다.
 export function GameCanvas({ playerNickname }) {
     // HUD 상태 관리 (체력, 피격 여부, 다른 플레이어 정보, 사망 여부, 시점, 리스폰 진행도)
+    function SceneCapture() {
+        const { scene } = useThree();
+        useEffect(() => {
+            sceneRef.current = scene;
+        }, [scene]);
+        return null;
+    }
+
+    const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
 
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
@@ -97,7 +107,7 @@ export function GameCanvas({ playerNickname }) {
         isHit: false,
         otherPlayers: new Map(),
         isDead: false, // isDead 상태를 GameCanvas로 올림
-        viewMode: 'firstPerson', // GameCanvas에서도 viewMode 상태를 관리
+        viewMode: 'thirdPerson', // GameCanvas에서도 viewMode 상태를 관리
         respawnProgress: 0, // 리스폰 진행도 상태 추가
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,
@@ -137,6 +147,38 @@ export function GameCanvas({ playerNickname }) {
     const setViewModeInGameCanvas = useCallback((mode) => {
         setHudState(prev => ({ ...prev, viewMode: mode }));
     }, []);
+
+    function spawnBulletHole(hitPosition, hitNormal) {
+        const scene = sceneRef.current;
+        const decalSize = 0.2;
+        const geometry = new THREE.PlaneGeometry(decalSize, decalSize);
+        const texture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
+        const material = new THREE.MeshBasicMaterial({
+            map: texture,
+            transparent: true,
+            depthWrite: false,
+        });
+
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.set(hitPosition.x, hitPosition.y, hitPosition.z);
+
+        const normal = new THREE.Vector3(hitNormal.x, hitNormal.y, hitNormal.z);
+        mesh.position.addScaledVector(normal, 0.001); // 표면에 약간 튀어나오게
+
+        const quat = new THREE.Quaternion();
+        quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+        mesh.quaternion.copy(quat);
+
+        // 씬에 추가
+        scene.add(mesh);
+
+        setTimeout(() => {
+            scene.remove(mesh);
+            geometry.dispose();
+            material.dispose();
+        }, 15000); // 15초 후 제거
+    }
+
 
 
     // 플레이어 죽음 및 리스폰 로직 (GameCanvas에서 관리)
@@ -252,7 +294,8 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://localhost:8080/ws';
+        //const WS_URL = 'http://3.106.193.56:8080/ws';
+        const WS_URL = 'https://7ae1617320eb.ngrok-free.app/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -264,39 +307,28 @@ export function GameCanvas({ playerNickname }) {
         // STOMP 클라이언트 연결 시
         client.onConnect = (frame) => {
             //console.log("[STOMP] Connected to WebSocket from App.jsx!", frame); // 주석 해제하여 확인 가능
-            setStompClient(client); // STOMP 클라이언트 인스턴스 저장
+            setStompClient(client); // STOMP 클라이언트 인스턴스 저장8080
 
             // 플레이어 위치 정보 구독
             client.subscribe('/topic/playerLocations', (message) => {
                 try {
                     const allPlayerPositions = JSON.parse(message.body);
-                    window.onlinePlayers = new Map();
-                    let currentPlayersHealth = null; // 현재 플레이어의 체력을 저장할 변수
-
-                    allPlayerPositions.forEach(p => {
-                        if (p.id === currentPlayerId) {
-                            currentPlayersHealth = p.health; // 현재 플레이어의 체력 저장
-                        }
-                        window.onlinePlayers.set(p.id, p);
-                    });
-
-                    setHudState(prev => {
-                        const newState = {
-                            ...prev,
-                            otherPlayers: window.onlinePlayers
-                        };
-                        // 현재 플레이어의 체력이 업데이트된 경우에만 반영
-                        if (currentPlayersHealth !== null && newState.health !== currentPlayersHealth) {
-                            newState.health = currentPlayersHealth;
-                            // 체력이 0 이하면 isDead 상태도 업데이트
-                            newState.isDead = currentPlayersHealth <= 0;
-                        }
-                        return newState;
-                    });
+                    window.onlinePlayers = new Map(allPlayerPositions.map(p => [p.id, p]));
+                    setHudState(prev => ({
+                        ...prev,
+                        otherPlayers: window.onlinePlayers
+                    }));
                 } catch (e) {
                     console.error("[STOMP Subscribe] Failed to parse player locations message:", e, message.body);
                 }
             });
+
+
+            client.subscribe('/topic/bulletImpacts', (message) => {
+                const { hitPosition, hitNormal } = JSON.parse(message.body);
+                spawnBulletHole(hitPosition, hitNormal);
+            });
+
 
             // 씬 오브젝트 정보 구독
             client.subscribe('/topic/sceneObjects', (message) => {
@@ -455,6 +487,7 @@ export function GameCanvas({ playerNickname }) {
     const isArmed = selectedItem?.name === 'ak-47';
 
 
+
     // Player로부터 상호작용 요청을 받아 처리하는 함수
     const handlePlayerInteract = useCallback((interactedObjectId) => {
         console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
@@ -559,6 +592,14 @@ export function GameCanvas({ playerNickname }) {
                 if (itemToUse) {
                     console.log(`[GameCanvas] Using item: ${itemToUse.name} from slot ${selectedInventorySlot}. Current count: ${itemToUse.count}`); // 상세 로그
                     if (itemToUse.name === 'apple') {
+                        // 사과 사용 로직: 체력 회복
+                        setHudState(prevHud => {
+                            const currentHealth = prevHud.health ?? 100;
+                            const newHealth = Math.min(currentHealth + 20, 100); // 체력 20 회복, 최대 100
+                            console.log(`[GameCanvas] Player health: ${currentHealth} -> ${newHealth}`); // 상세 로그
+                            return { ...prevHud, health: newHealth };
+                        });
+
                         // 아이템 개수 감소 또는 슬롯 비우기
                         if (itemToUse.count > 1) {
                             newInventory[selectedInventorySlot] = { ...itemToUse, count: itemToUse.count - 1 };
@@ -621,6 +662,8 @@ export function GameCanvas({ playerNickname }) {
                     }}
                     linear={false} // 텍스처 필터링 모드 (선형 보간 비활성화)
                 >
+
+                    <SceneCapture />
                     {/* 배경색 설정 */}
                     <color attach="background" args={['#8fafdb']} />
 

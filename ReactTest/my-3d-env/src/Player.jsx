@@ -33,15 +33,18 @@ export function Player({
     const playerRef = useRef(); // 플레이어 RigidBody 참조
     const modelRef = useRef(); // 플레이어 3D 모델 참조
     const [isGrounded, setIsGrounded] = useState(false); // 바닥에 닿았는지 여부
-    const [currentViewMode, setCurrentViewMode] = useState('firstPerson'); // 플레이어 내부의 시점 모드
+    const [currentViewMode, setCurrentViewMode] = useState('thirdPerson'); // 플레이어 내부의 시점 모드
     const [isPunching, setIsPunching] = useState(false); // 펀치 동작 여부
     const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
-    const [AimingToggle, setAimingToggle] = useState(false);
+    // const [AimingToggle, setAimingToggle] = useState(false);
+    const [isAiming, setIsAiming] = useState(false);
+    const [isScoped, setIsScoped] = useState(false);
     const interactableObjectIdRef = useRef(null); // 플레이어가 근접한 상호작용 가능 오브젝트 ID
     const exitTimeoutRef = useRef(null); // 충돌 종료 지연을 위한 타이머 참조
     const [isFiring, setIsFiring] = useState(false);
     const firingIntervalRef = useRef(null);
+    const mouseDownTimeRef = useRef(0);
 
     // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
     const lastJumpKeyStatus = useRef(false);
@@ -85,7 +88,7 @@ export function Player({
         let verticalRecoil;
         let horizontalRecoil;
 
-        if (AimingToggle) { // 조준 중일 때 (반동 적게)
+        if (isAiming) { // 조준 중일 때 (반동 적게)
             verticalRecoil = Math.random() * 0.003; // 더 작은 수직 반동
             horizontalRecoil = (Math.random() - 0.5) * 0.002; // 더 작은 수평 반동
         } else { // 조준 안 할 때 (반동 크게)
@@ -93,7 +96,11 @@ export function Player({
             horizontalRecoil = (Math.random() - 0.5) * 0.01; // 기존 수평 반동
         }
 
-        pitch.current -= verticalRecoil;
+        if (currentViewMode === 'firstPerson') {
+            pitch.current += verticalRecoil; // 1인칭: pitch 감소가 위를 향함
+        } else {
+            pitch.current -= verticalRecoil; // 3인칭: pitch 증가가 위를 향함
+        }
         yaw.current += horizontalRecoil;
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
 
@@ -103,7 +110,7 @@ export function Player({
 
         // ✅ 레이캐스트 수행 (Rapier 방식)
         const ray = new rapier.Ray(origin, direction);
-        const hit = world.castRay(ray, 100, true); // maxDist 100, solidOnly true
+        const hit = world.castRayAndGetNormal(ray, 100, true);
 
         if (hit && hit.collider) {
             const colliderHandle = hit.collider.handle;
@@ -127,20 +134,78 @@ export function Player({
                     });
                 }
             }
-        }
 
-        // 🔴 시각화 (레이저 라인)
-        const endVec = origin.clone().add(direction.clone().multiplyScalar(100));
-        const laserGeo = new THREE.BufferGeometry().setFromPoints([origin, endVec]);
-        const laserMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
-        const laserLine = new THREE.Line(laserGeo, laserMat);
-        scene.add(laserLine);
-        setTimeout(() => {
-            scene.remove(laserLine);
-            laserGeo.dispose();
-            laserMat.dispose();
-        }, 200);
-    };
+            const toi = hit.toi ?? hit.timeOfImpact; // 둘 중 있는 걸 사용
+            if (toi === undefined) {
+                console.warn('❌ TOI 정보 없음:', hit);
+                return;
+            }
+
+            try {
+                const hitPoint = origin.clone().add(direction.clone().multiplyScalar(toi));
+                const hitNormal = new THREE.Vector3().copy(hit.normal);
+
+                stompClientInstance.publish({
+                    destination: '/app/bulletImpact',
+                    body: JSON.stringify({
+                        fromId: currentPlayerId,
+                        hitPosition: {
+                            x: hitPoint.x,
+                            y: hitPoint.y,
+                            z: hitPoint.z
+                        },
+                        hitNormal: {
+                            x: hitNormal.x,
+                            y: hitNormal.y,
+                            z: hitNormal.z
+                        }
+                    })
+                });
+
+
+                const decalSize = 0.2;
+                const decalGeometry = new THREE.PlaneGeometry(decalSize, decalSize);
+                const decalTexture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
+                const decalMaterial = new THREE.MeshBasicMaterial({
+                    map: decalTexture,
+                    transparent: true,
+                    depthWrite: false
+                });
+
+                const decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
+                decalMesh.position.copy(hitPoint);
+                decalMesh.position.addScaledVector(hitNormal, 0.001); // 표면에 살짝 띄움
+
+                const quat = new THREE.Quaternion();
+                quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hitNormal);
+                decalMesh.quaternion.copy(quat);
+
+                scene.add(decalMesh);
+
+                setTimeout(() => {
+                    scene.remove(decalMesh);
+                    decalMesh.geometry.dispose();
+                    decalMesh.material.dispose();
+                }, 15000);
+            } catch (e) {
+                console.warn('피탄 자국 생성 실패:', e);
+            }
+
+            //🔴 시각화 (레이저 라인)
+            // const endVec = origin.clone().add(direction.clone().multiplyScalar(100));
+            // const laserGeo = new THREE.BufferGeometry().setFromPoints([origin, endVec]);
+            // const laserMat = new THREE.LineBasicMaterial({ color: 0xff0000 });
+            // const laserLine = new THREE.Line(laserGeo, laserMat);
+            // scene.add(laserLine);
+            // setTimeout(() => {
+            //     scene.remove(laserLine);
+            //     laserGeo.dispose();
+            //     laserMat.dispose();
+            // }, 200);
+        };
+
+
+    }
 
 
 
@@ -192,7 +257,7 @@ export function Player({
         // 일정 간격으로 fireBullet 호출
         firingIntervalRef.current = setInterval(() => {
             fireBullet();
-        }, 500); // 150ms 간격으로 발사
+        }, 120); // 150ms 간격으로 발사
 
         return () => clearInterval(firingIntervalRef.current);
     }, [isFiring, isDead, selectedItem]);
@@ -273,56 +338,56 @@ export function Player({
 
             if (e.button === 0 && selectedItem?.name === 'ak-47') {
                 setIsFiring(true);
-                wait(2);
+                fireBullet();
+
             }
             if (e.button === 2 && selectedItem.name == 'ak-47') {
-                // 우클릭 눌렀을 때 → 조준 시작
-                setAimingToggle(true);
+                setIsAiming(true); // 무조건 조준 상태 시작
+                mouseDownTimeRef.current = performance.now(); // 시간 기록
 
             }
         };
         const handleMouseUp = (e) => {
             if (e.button === 0 && selectedItem?.name === 'ak-47') {
-                fireBullet();
+
                 setIsFiring(false);
             }
-            if (e.button === 2 && selectedItem.name == 'ak-47') {
-                // 우클릭 떼었을 때 → 조준 해제
-                setAimingToggle(false);
+            if (e.button === 2 && selectedItem?.name === 'ak-47') {
+                const heldTime = performance.now() - mouseDownTimeRef.current;
+                setIsAiming(false); // 꾹 누르기 해제
+
+                if (heldTime < 200) { // 200ms 미만이면 '클릭'으로 간주
+                    setIsScoped(prev => !prev); // 스코프 토글
+
+                }
             }
         };
 
         // 마우스 이벤트 리스너를 window 대신 캔버스에 직접 연결
         canvas.addEventListener('mousedown', handleMouseDown);
-        canvas.addEventListener('mouseup', handleMouseUp);
+        window.addEventListener('mouseup', handleMouseUp);
         return () => {
             canvas.removeEventListener('mousedown', handleMouseDown);
-            canvas.removeEventListener('mouseup', handleMouseUp);
+            window.removeEventListener('mouseup', handleMouseUp);
         };
     }, [canPunch, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
+
+
     useEffect(() => {
-        const unsubscribe = subscribeKeys(
-            (s) => s.toggleView,
-            (pressed) => {
-                if (isDead || isChatting) return; // 죽음 상태일 때 뷰 모드 전환 비활성화
-                if (pressed && !toggleViewPressed.current) {
-                    setCurrentViewMode((prev) => {
-                        const newMode = (prev === 'firstPerson' ? 'thirdPerson' : 'firstPerson');
-                        // 3인칭에서 1인칭으로 전환 시 pitch 보정
-                        if (newMode === 'firstPerson' && prev === 'thirdPerson') {
-                            pitch.current = 0; // 1인칭 전환 시 pitch를 0으로 초기화 (정면)
-                        }
-                        setViewMode(newMode); // GameCanvas의 viewMode도 업데이트
-                        return newMode;
-                    });
-                }
-                toggleViewPressed.current = pressed;
-            }
-        );
-        return () => unsubscribe();
-    }, [subscribeKeys, isDead, setViewMode, isChatting]); // 의존성 배열
+        camera.fov = isScoped ? 10 : 60;
+        camera.updateProjectionMatrix();
+        // if (isScoped && currentViewMode !== 'firstPerson') {
+        //     setCurrentViewMode('firstPerson'); // 내부 시점 전환
+        //     setViewMode('firstPerson');        // 외부(GameCanvas)에도 반영
+
+        // } else if(!isScoped && currentViewMode == 'firstPerson'){
+        //     setCurrentViewMode('thirdPerson');
+        //     setViewMode('thirdPerson');
+        // }
+
+    }, [isScoped, currentViewMode, setViewMode]);
 
     // 마우스 움직임으로 카메라 회전 로직
     const onMouseMove = useCallback((e) => {
@@ -393,12 +458,13 @@ export function Player({
         else if (!isDead && playerRef.current) {
             console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
             playerRef.current.setTranslation(new THREE.Vector3(0, 1.1, 0), true);
+
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
             playerRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
             // 필요하다면 RigidBody의 type을 다시 'kinematicPosition'으로 변경
             // playerRef.current.setType('kinematicPosition');
-            setCurrentViewMode('firstPerson'); // 리스폰 후에도 1인칭 시점 유지
-            setViewMode('firstPerson'); // GameCanvas의 viewMode도 업데이트
+            setCurrentViewMode('thirdPerson'); // 리스폰 후에도 1인칭 시점 유지
+            setViewMode('thirdPerson'); // GameCanvas의 viewMode도 업데이트
             roll.current = 0; // 리스폰 시 roll 각도 초기화
         }
     }, [isDead, setViewMode]); // 의존성 배열
@@ -422,16 +488,16 @@ export function Player({
         // const isBackwardAnim = keys.backward && !isDead && !isChatting;
         // const isLeftAnim = keys.left && !isDead && !isChatting;    =================>>>>>>>>>>>추후에 시점 오류 해결되면 애니메이션 추가 예정.
         // const isRightAnim = keys.right && !isDead && !isChatting;
-        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && isWalkingAnim;
+        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && isWalkingAnim;
         const isSittedAnim = sitToggle && !isDead && !isChatting;
         const isSittedAndWalkAnim = sitToggle && isWalkingAnim;
         const isLyingDownAnim = lieToggle && !isDead && !isChatting;
         const isLyingDownAndWalkAnim = lieToggle && isWalkingAnim;
         const isPunchingAnim = isPunching && !isDead && !isChatting;
         const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
-        const isJumpingAnim = isJumping && !AimingToggle && !isDead && !isChatting;
-        const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
-        const isAimingAndWalkAnim = AimingToggle && isWalkingAnim;
+        const isJumpingAnim = isJumping && !isAiming && !isDead && !isChatting;
+        const isAimingAnim = isAiming && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
+        const isAimingAndWalkAnim = isAiming && isWalkingAnim;
         const isDeadAnim = isDead;
         const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
         const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
@@ -487,13 +553,13 @@ export function Player({
                 actualSpeed = Math.max(speed * 0.5, 1.7);
             } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = Math.max(speed * 0.3, 1.3);
-            } else if (keys.runFast && !sitToggle && !lieToggle && !AimingToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+            } else if (keys.runFast && !sitToggle && !lieToggle && !isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = speed + 2;
-            } if (AimingToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+            } if (isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = Math.max(speed * 0.4, 1.5);
-            } if (AimingToggle && sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+            } if (isAiming && sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = Math.max(speed * 0.2, 1.1);
-            } if (AimingToggle && lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+            } if (isAiming && lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
                 actualSpeed = Math.max(speed * 0.1, 0.7);
             }
 
@@ -521,7 +587,7 @@ export function Player({
             playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
             // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
-            if (jump && !lastJumpKeyStatus.current && isGrounded && !AimingToggle && vel.y <= 0.1) {
+            if (jump && !lastJumpKeyStatus.current && isGrounded && !isAiming && vel.y <= 0.1) {
                 playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
                 setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
                 setIsJumping(true); // 점프 애니메이션 시작
@@ -572,7 +638,7 @@ export function Player({
             }
         }
 
-        
+
         // if (modelRef.current) { ======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직).
         //     modelRef.current.position.copy(playerBodyPos);
         //     modelRef.current.position.y += -0.725; // 모델 중심 정렬
@@ -640,7 +706,8 @@ export function Player({
             velocity: `(${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`,
             yaw: yaw.current,
             pitch: pitch.current,
-            isAiming: AimingToggle,
+            isAiming: isAiming,
+            isScoped: isScoped,
             keys, // 이 keys는 useFrame 스코프 내의 keys 임
         }));
     });
@@ -651,16 +718,16 @@ export function Player({
     // const isBackwardAnim = keys.backward && !isDead && !isChatting;
     // const isLeftAnim = keys.left && !isDead && !isChatting;    =================>>>>>>>>>>>추후에 시점 오류 해결되면 애니메이션 추가 예정.
     // const isRightAnim = keys.right && !isDead && !isChatting;
-    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !AimingToggle && isWalkingAnim;
+    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && isWalkingAnim;
     const isSittedAnim = sitToggle && !isDead && !isChatting;
     const isSittedAndWalkAnim = sitToggle && isWalkingAnim;
     const isLyingDownAnim = lieToggle && !isDead && !isChatting;
     const isLyingDownAndWalkAnim = lieToggle && isWalkingAnim;
     const isPunchingAnim = isPunching && !isDead && !isChatting;
     const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
-    const isJumpingAnim = isJumping && !AimingToggle && !isDead && !isChatting;
-    const isAimingAnim = AimingToggle && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
-    const isAimingAndWalkAnim = AimingToggle && isWalkingAnim;
+    const isJumpingAnim = isJumping && !isAiming && !isDead && !isChatting;
+    const isAimingAnim = isAiming && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
+    const isAimingAndWalkAnim = isAiming && isWalkingAnim;
     const isDeadAnim = isDead;
     const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
     const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;

@@ -7,7 +7,9 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.example.demo.dto.BulletImpactMessage;
 import com.example.demo.dto.ChatMessage;
 import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.PlayerHitMessage;
@@ -26,6 +28,7 @@ public class GameController {
 		this.playerService = playerService;
 	}
 
+	@ResponseBody
 	@GetMapping("/api/hello")
 	public String hello() {
 		//logger.info("Hello from Spring Boot server (HTTP request)!");
@@ -84,25 +87,25 @@ public class GameController {
         
         double tolerance = 0.2;
 
-        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
-    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
-            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
-            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
-        );
-        
-        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
-    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
-    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
-    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
-		);
-        
-        if (tolerance < checkAttackerPosition) {
-        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
-        	return;
-        } else if (tolerance < checkTargetPosition) {
-        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
-        	return;
-        }
+//        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
+//    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
+//            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
+//            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
+//        );
+//        
+//        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
+//    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
+//    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
+//    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
+//		);
+//        
+//        if (tolerance < checkAttackerPosition) {
+//        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+//        	return;
+//        } else if (tolerance < checkTargetPosition) {
+//        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+//        	return;
+//        }
         
         
         // 3. 무기 정보 설정 (데미지, 사거리)
@@ -114,11 +117,11 @@ public class GameController {
         switch (weaponName) {
             case "ak-47":
                 damage = 10;
-                maxRange = 1000.0; // AK-47의 유효 사거리 100
+                maxRange = 100.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
             default:
-                damage = 10;
+                damage = 5;
                 maxRange = 2.5; // gameUtils.js에서 관리
                 break;
         }
@@ -156,6 +159,11 @@ public class GameController {
 
         // 모든 클라이언트에게 유효한 공격이었음을 브로드캐스트
         messagingTemplate.convertAndSend("/topic/playerHit", message);
+    }
+    
+    @MessageMapping("/bulletImpact")
+    public void broadcastImpact(BulletImpactMessage message) {
+        messagingTemplate.convertAndSend("/topic/bulletImpacts", message);
     }
 
     // ✨ 새로 추가: 아이템 줍기 요청 처리
