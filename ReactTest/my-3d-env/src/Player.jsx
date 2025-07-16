@@ -35,6 +35,8 @@ export function Player({
     const [isPunching, setIsPunching] = useState(false); // 펀치 동작 여부
     const [isJumping, setIsJumping] = useState(false); // 점프 상태 관리 (유지)
     const [canPunch, setCanPunch] = useState(true); // 펀치 쿨타임 상태
+    const [isSlashing, setIsSlashing] = useState(false); // 펀치 동작 여부
+    const [canSlash, setCanSlash] = useState(true); // 펀치 쿨타임 상태
     const [isAiming, setIsAiming] = useState(false);
     const [isScoped, setIsScoped] = useState(false);
     const [wasDead, setWasDead] = useState(false);
@@ -52,24 +54,32 @@ export function Player({
     const yaw = useRef(0); // 카메라 좌우 회전 (yaw)
     const roll = useRef(0); // 카메라 Z축 회전 (roll)
 
+    const recoilPitchOffset = useRef(0); // 반동으로 인한 추가 피치 오프셋
+    const recoilYawOffset = useRef(0); // 반동으로 인한 추가 요 오프셋
+
     // 사망 시 카메라 애니메이션을 위한 목표 값
     const deathCameraTargetY = useRef(0.1); // 카메라가 최종적으로 도달할 Y 위치 (바닥에 가까움)
     const deathCameraTargetPitch = useRef(0); // 카메라가 최종적으로 바라볼 각도 (수평으로 시작)
     const deathCameraTargetRoll = useRef(Math.PI / 4); // 카메라가 최종적으로 옆으로 쓰러질 각도 (45도)
 
     // Leva를 통한 디버그 컨트롤 (속도, 점프 임펄스)
-    const { speed, jumpImpulse } = useControls({
+    const { speed, jumpImpulse, fireRate } = useControls({
         speed: { value: 5, min: 1, max: 100 },
-        jumpImpulse: { value: 10, min: 1, max: 100 } // 점프 임펄스 기본값 20으로 변경
+        jumpImpulse: { value: 10, min: 1, max: 100 },
+        fireRate: { value: 120, min: 20, max: 500 }
     });
 
     const { rapier, world } = useRapier(); // rapier world 객체 접근
     
     let characterModelPath = '/models/UnarmedCharacter.glb';
     let isArmed = false;
+    let isUsingPipe = false;
     if (selectedItem && selectedItem.name === 'ak-47') {
         characterModelPath = '/models/ArmedCharacter.glb';
         isArmed = true;
+    } if (selectedItem && selectedItem.name === 'pipe'){
+        characterModelPath = '/models/PipeCharacter.glb';
+        isUsingPipe = true;
     }
 
     const fireBullet = () => {
@@ -91,17 +101,20 @@ export function Player({
         let verticalRecoil;
         let horizontalRecoil;
 
-        if (isAiming) { // 조준 중일 때 (반동 적게)
-            verticalRecoil = Math.random() * 0.003; // 더 작은 수직 반동
+        if (isScoped) { // 조준 중일 때 (반동 적게)
+            verticalRecoil = Math.random() * 0.002; // 더 작은 수직 반동
             horizontalRecoil = (Math.random() - 0.5) * 0.002; // 더 작은 수평 반동
         } else { // 조준 안 할 때 (반동 크게)
-            verticalRecoil = Math.random() * 0.012; // 기존 수직 반동
-            horizontalRecoil = (Math.random() - 0.5) * 0.01; // 기존 수평 반동
+            verticalRecoil = Math.random() * 0.006; // 기존 수직 반동
+            horizontalRecoil = (Math.random() - 0.5) * 0.004; // 기존 수평 반동
         }
 
         pitch.current += verticalRecoil;
         yaw.current += horizontalRecoil;
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+
+        recoilPitchOffset.current += verticalRecoil;
+        recoilYawOffset.current += horizontalRecoil;
 
         // 6. 레이저 방향 결정 (반동 적용 후의 카메라 방향)
         const direction = new THREE.Vector3();
@@ -223,9 +236,9 @@ export function Player({
             if (targetId === currentPlayerId) return; // 자기 자신은 제외
 
             const targetPosition = targetPlayer.position; // 타겟 플레이어 위치
-            const isHit = checkHit(playerPosition, attackerQuat, targetPosition); // 히트 여부 확인
+            const isHit = checkHit(playerPosition, attackerQuat, targetPosition, isUsingPipe); // 히트 여부 확인
 
-            if (isHit) {
+            if (isHit && !isArmed) {
                 console.log(`[🥊 Player] 타격 성공 -> 대상: ${targetId}`);
                 // 서버에 플레이어 피격 메시지 전송
                 stompClientInstance.publish({
@@ -239,15 +252,29 @@ export function Player({
                     }),
                 });
                 hitOccurred = true; // 타격이 발생했음을 표시
+            } if (isUsingPipe && isHit){
+                stompClientInstance.publish({
+                    destination: '/app/playerHit',
+                    body: JSON.stringify({
+                        fromId: currentPlayerId,
+                        fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
+                        targetId: targetId,
+                        targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null,
+                        weaponName: "pipe" // 펀치 공격 시 무기 정보 추가
+                    }),
+                });
             }
+
         });
 
         if (hitOccurred) { // 타격이 발생했을 때만 쿨타임 적용
-            setCanPunch(false); // 쿨타임 시작
+            setCanPunch(false);
+            setCanSlash(false);
             setTimeout(() => {
                 setCanPunch(true); // 500ms 후 쿨타임 종료
+                setCanSlash(true);
             }, 500);
-        }
+        } 
     }, [isPunching, canPunch, stompClientInstance, isDead, currentPlayerId]); // 의존성 배열
 
     useEffect(() => {
@@ -256,7 +283,7 @@ export function Player({
         // 일정 간격으로 fireBullet 호출
         firingIntervalRef.current = setInterval(() => {
             fireBullet();
-        }, 120); // 150ms 간격으로 발사
+        }, fireRate); // 150ms 간격으로 발사
 
         return () => clearInterval(firingIntervalRef.current);
     }, [isFiring, isDead, selectedItem]);
@@ -274,7 +301,7 @@ export function Player({
                     isWalking: false,
                     // isBackward: false, isLeft: false, isRight: false,
                     isJumping: false, isRunning: false, isSitted: false, isSittedAndWalk: false,
-                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isArmed: false, isIdle: true,
+                    isLyingDown: false, isLyingDownAndWalk: false, isPunching: false, isHitted: false, isArmed: false, isUsingPipe: false, isIdle: true,
                     isDead: false // 죽음 상태 추가
                 }
             };
@@ -315,7 +342,9 @@ export function Player({
         const handleMouseDown = (e) => {
             if (isDead) return;
 
-
+            console.log(isSlashing);
+            console.log(canSlash);
+            console.log(selectedItem);
 
             if (e.button === 0) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
@@ -323,35 +352,40 @@ export function Player({
                         console.log(`[Player] Calling onUseItem with selected slot index: ${selectedInventorySlot}.`);
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
                     } else {
-                        if (canPunch) {
+                        if (canPunch && !isArmed) {
                             setIsPunching(true);
                             setTimeout(() => setIsPunching(false), 500);
+                        } if (canSlash && isUsingPipe){
+                            setIsSlashing(true);
+                            setTimeout(() => setIsSlashing(false), 500);
                         }
                     }
-                } else if (canPunch && !isArmed) {
+                } if (canPunch && !isArmed) {
                     console.log(`[Player] Condition not met for item use. Performing punch.`);
                     setIsPunching(true);
                     setTimeout(() => setIsPunching(false), 500);
+                } if (canSlash && isUsingPipe){
+                    setIsSlashing(true);
+                    setTimeout(() => setIsSlashing(false), 500);
                 }
             }
 
-            if (e.button === 0 && selectedItem?.name === 'ak-47') {
+            if (e.button === 0 && isArmed) {
                 setIsFiring(true);
                 fireBullet();
 
             }
-            if (e.button === 2 && selectedItem.name == 'ak-47') {
+            if (e.button === 2 && isArmed) {
                 setIsAiming(true); // 무조건 조준 상태 시작
                 mouseDownTimeRef.current = performance.now(); // 시간 기록
 
             }
         };
         const handleMouseUp = (e) => {
-            if (e.button === 0 && selectedItem?.name === 'ak-47') {
-
+            if (e.button === 0 && isArmed) {
                 setIsFiring(false);
             }
-            if (e.button === 2 && selectedItem?.name === 'ak-47') {
+            if (e.button === 2 && isArmed) {
                 const heldTime = performance.now() - mouseDownTimeRef.current;
                 setIsAiming(false); // 꾹 누르기 해제
 
@@ -369,7 +403,7 @@ export function Player({
             canvas.removeEventListener('mousedown', handleMouseDown);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [canPunch, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
+    }, [canPunch, canSlash, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
 
@@ -437,6 +471,8 @@ export function Player({
             console.log("Player 컴포넌트: 사망! 1인칭 시점으로 강제 전환.");
             setCurrentViewMode('firstPerson'); // Player 내부 viewMode를 1인칭으로 설정
             setWasDead(true);
+            setIsScoped(false);
+            setIsAiming(false);
             clearInventory();
             onObjectProximityChange(interactableObjectIdRef.current, false);
             interactableObjectIdRef.current = null;
@@ -467,6 +503,17 @@ export function Player({
 
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
+        // 반동 오프셋을 pitch와 yaw에 적용하고 점진적으로 감소
+        pitch.current += recoilPitchOffset.current;
+        yaw.current += recoilYawOffset.current;
+
+        recoilPitchOffset.current = THREE.MathUtils.lerp(recoilPitchOffset.current, 0, 0.2); // 0.1은 감쇠 속도
+        recoilYawOffset.current = THREE.MathUtils.lerp(recoilYawOffset.current, 0, 0.2); // 0.1은 감쇠 속도
+        
+        // pitch와 yaw 값을 다시 클램핑하여 유효한 범위 내에 있도록 함
+        pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+        yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
+
         const keys = getKeys(); // 현재 눌린 키 상태 가져오기
         const { jump } = keys; // 점프 키 상태 별도로 추출
         const vel = playerRef.current?.linvel() || { x: 0, y: 0, z: 0 }; // 플레이어 선형 속도
@@ -475,16 +522,17 @@ export function Player({
         // const isBackwardAnim = keys.backward && !isDead && !isChatting;
         // const isLeftAnim = keys.left && !isDead && !isChatting;    =================>>>>>>>>>>>추후에 시점 오류 해결되면 애니메이션 추가 예정.
         // const isRightAnim = keys.right && !isDead && !isChatting;
-        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && isWalkingAnim;
+        const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && !isScoped && isWalkingAnim;
         const isSittedAnim = sitToggle && !isDead && !isChatting;
         const isSittedAndWalkAnim = sitToggle && isWalkingAnim;
         const isLyingDownAnim = lieToggle && !isDead && !isChatting;
         const isLyingDownAndWalkAnim = lieToggle && isWalkingAnim;
         const isPunchingAnim = isPunching && !isDead && !isChatting;
+        const isSlashingAnim = isSlashing && !isDead && !isChatting;
         const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
-        const isJumpingAnim = isJumping && !isAiming && !isDead && !isChatting;
-        const isAimingAnim = isAiming && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
-        const isAimingAndWalkAnim = isAiming && isWalkingAnim;
+        const isJumpingAnim = isJumping && !isAiming && !isScoped && !isDead && !isChatting;
+        const isAimingAnim = (isAiming || isScoped) && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
+        const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
         const isDeadAnim = isDead;
         const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
         const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
@@ -493,8 +541,11 @@ export function Player({
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
         if(selectedItem?.name === 'ak-47'){
            isArmed = true; 
+        } else if (selectedItem?.name === 'pipe') {
+            isUsingPipe = true;
         } else {
             isArmed = false;
+            isUsingPipe = false;
         }
 
         if (stompClientInstance && stompClientInstance.connected) {
@@ -515,12 +566,14 @@ export function Player({
                     isLyingDown: isLyingDownAnim,
                     isLyingDownAndWalk: isLyingDownAndWalkAnim,
                     isPunching: isPunchingAnim,
+                    isSlashing: isSlashingAnim,
                     isHitted: isHittedAnim,
                     isAiming: isAimingAnim,
                     isAimingAndWalk: isAimingAndWalkAnim,
                     isIdle: isIdleAnim,
                     isDead: isDeadAnim,
                     isArmed: isArmed,
+                    isUsingPipe: isUsingPipe,
                     isChatting: isChatting,
                     isIdleFiring: isIdleFiringAnim,
                     isWalkingFiring: isWalkingFiringAnim,
@@ -593,7 +646,6 @@ export function Player({
 
             // 'F' 키 상호작용 트리거 (Player에서 직접 처리)
             if (keys.interact && !lastInteractKeyState.current) { // 'interact' 키가 새로 눌렸을 때
-                console.log(isArmed);
                 console.log(`[Player] 'F' key pressed. Current interactableObjectIdRef.current: ${interactableObjectIdRef.current}`); // 추가된 로그
                 if (onInteract && interactableObjectIdRef.current) { // interactableObjectIdRef.current 사용
                     onInteract(interactableObjectIdRef.current); // GameCanvas로 상호작용 요청
@@ -712,16 +764,17 @@ export function Player({
     // const isBackwardAnim = keys.backward && !isDead && !isChatting;
     // const isLeftAnim = keys.left && !isDead && !isChatting;    =================>>>>>>>>>>>추후에 시점 오류 해결되면 애니메이션 추가 예정.
     // const isRightAnim = keys.right && !isDead && !isChatting;
-    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && isWalkingAnim;
+    const isRunningAnim = keys.runFast && !sitToggle && !lieToggle && !isAiming && !isScoped && isWalkingAnim;
     const isSittedAnim = sitToggle && !isDead && !isChatting;
     const isSittedAndWalkAnim = sitToggle && isWalkingAnim;
     const isLyingDownAnim = lieToggle && !isDead && !isChatting;
     const isLyingDownAndWalkAnim = lieToggle && isWalkingAnim;
     const isPunchingAnim = isPunching && !isDead && !isChatting;
+    const isSlashingAnim = isSlashing && !isDead && !isChatting;
     const isHittedAnim = isPlayerHitted && !isDead && !isChatting;
-    const isJumpingAnim = isJumping && !isAiming && !isDead && !isChatting;
-    const isAimingAnim = isAiming && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
-    const isAimingAndWalkAnim = isAiming && isWalkingAnim;
+    const isJumpingAnim = isJumping && !isAiming && !isScoped && !isDead && !isChatting;
+    const isAimingAnim = (isAiming || isScoped) && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
+    const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
     const isDeadAnim = isDead;
     const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
     const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
@@ -752,7 +805,18 @@ export function Player({
             if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
                 interactableObjectIdRef.current = objectId;
                 onObjectProximityChange(objectId, true);
-                console.log("Player entered apple proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                console.log("Player entered ak-47 proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+            }
+        } else if (payload.other.rigidBodyObject?.userData?.type === 'pipe') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
+                clearTimeout(exitTimeoutRef.current);
+                exitTimeoutRef.current = null;
+            }
+            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
+                interactableObjectIdRef.current = objectId;
+                onObjectProximityChange(objectId, true);
+                console.log("Player entered pipe proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
             }
         }
     }, [onObjectProximityChange]);
@@ -778,7 +842,18 @@ export function Player({
                 if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
                     interactableObjectIdRef.current = null;
                     onObjectProximityChange(objectId, false);
-                    console.log("Player exited apple proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                    console.log("Player exited ak-47 proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                }
+                exitTimeoutRef.current = null;
+            }, 200); // 200ms debounce로 변경
+        } else if (payload.other.rigidBodyObject?.userData?.type === 'pipe') {
+            const objectId = payload.other.rigidBodyObject.userData.id;
+            // Set a timeout to clear the ID, allowing for brief re-entries
+            exitTimeoutRef.current = setTimeout(() => {
+                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
+                    interactableObjectIdRef.current = null;
+                    onObjectProximityChange(objectId, false);
+                    console.log("Player exited pipe proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
                 }
                 exitTimeoutRef.current = null;
             }, 200); // 200ms debounce로 변경
@@ -810,6 +885,7 @@ export function Player({
                 ref={modelRef}
                 glbPath={characterModelPath}
                 isArmed={isArmed}
+                isUsingPipe={isUsingPipe}
                 isWalking={isWalkingAnim}
                 // isBackward={isBackwardAnim}
                 // isLeft={isLeftAnim}
@@ -821,6 +897,7 @@ export function Player({
                 isLyingDownAndWalk={isLyingDownAndWalkAnim}
                 isLyingDown={isLyingDownAnim}
                 isPunching={isPunchingAnim} // isPunching 상태를 애니메이션 prop으로 전달
+                isSlashing={isSlashingAnim}
                 isHitted={isHittedAnim}
                 isAiming={isAimingAnim}
                 isAimingAndWalk={isAimingAndWalkAnim}

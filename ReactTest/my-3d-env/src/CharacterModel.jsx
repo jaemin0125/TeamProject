@@ -9,6 +9,7 @@ export const CharacterModel = React.forwardRef(
     ({
         glbPath = '/models/UnarmedCharacter.glb', // 기본값 설정
         isArmed = 'false',
+        isUsingPipe = 'false',
         isWalking,
         isBackward,
         isJumping,
@@ -21,6 +22,7 @@ export const CharacterModel = React.forwardRef(
         isLyingDown,
         isLyingDownAndWalk,
         isPunching,
+        isSlashing,
         isHitted,
         isDead,
         isAiming,
@@ -61,7 +63,9 @@ export const CharacterModel = React.forwardRef(
             else if (isSitted) nextActionName = isArmed ? 'ArmedSit' : 'Crouch';
             else if (isLyingDown) nextActionName = isArmed ? 'ArmedLieDown' : 'LieDown';
             else if (isWalking || isBackward || isLeft || isRight) nextActionName = isArmed ? 'ArmedWalk' : 'WalkForward';
-            else if (isIdle) nextActionName = isArmed ? 'ArmedIdle' : 'Idle';
+            else if (isIdle && isArmed) nextActionName = 'ArmedIdle';
+            else if (isIdle && !isArmed) nextActionName = isUsingPipe ? 'PipeIdle' : 'Idle';
+            else if (isSlashing) nextActionName = 'Slash';
             else if (isPunching) nextActionName = 'Punching';
 
             if (nextActionName && actions[nextActionName]) {
@@ -94,7 +98,7 @@ export const CharacterModel = React.forwardRef(
         }, [
             isWalking, isBackward, isJumping, isRight, isLeft, isIdle, isRunning,
             isSitted, isSittedAndWalk, isLyingDown, isLyingDownAndWalk,
-            isPunching, isHitted, isDead, isAiming, isAimingAndWalk, isIdleFiring, isWalkingFiring, isRunningFiring,
+            isPunching, isSlashing, isHitted, isDead, isAiming, isAimingAndWalk, isIdleFiring, isWalkingFiring, isRunningFiring,
             actions, mixer, clonedScene, animations, glbPath
         ]);
 

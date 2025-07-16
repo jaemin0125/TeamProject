@@ -118,8 +118,11 @@ public class GameController {
                 maxRange = 100.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
-            default:
                 damage = 5;
+                maxRange = 1.2; // gameUtils.js에서 관리
+                break;
+            case "pipe":
+                damage = 8;
                 maxRange = 2.5; // gameUtils.js에서 관리
                 break;
         }

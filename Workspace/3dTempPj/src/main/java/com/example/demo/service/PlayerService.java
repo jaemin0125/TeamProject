@@ -28,6 +28,7 @@ public class PlayerService {
     // --- 아이템 생성 제한 설정 ---
     private static final int MAX_APPLES = 15; // 맵에 존재할 수 있는 사과의 최대 개수
     private static final int MAX_GUNS = 3;   // 맵에 존재할 수 있는 총의 최대 개수
+    private static final int MAX_PIPES = 5;
     // --------------------------
 
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
@@ -68,6 +69,19 @@ public class PlayerService {
         if (currentGunCount < MAX_GUNS) {
             spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        }
+    }
+    
+    @Scheduled(fixedRate = 10000) // 60초마다 실행
+    public void spawnPipePeriodically() {
+        long currentPipeCount = sceneObjects.values().stream()
+                .filter(obj -> "pipe".equals(obj.getItemType()))
+                .count();
+
+        if (currentPipeCount < MAX_PIPES) {
+            spawnNewItem("pipe", "/models/pipe.glb", "pipe", -4.54); // y좌표 -4.4
+            logger.info("Spawning new pipe. Current pipes: {}/{}", currentPipeCount + 1, MAX_PIPES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
     }
@@ -237,6 +251,9 @@ public class PlayerService {
                 break;
             case "ak-47":
                 pickedItem = new Item(objectId, "ak-47", "weapon", 1, "/models/ak-47.png", 0);
+                break;
+            case "pipe":
+                pickedItem = new Item(objectId, "pipe", "weapon", 1, "/models/pipe.png", 0);
                 break;
             default:
                 logger.warn("Attempted to pick up unknown item type: {}", itemType);

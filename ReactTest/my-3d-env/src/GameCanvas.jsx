@@ -566,6 +566,47 @@ export function GameCanvas({ playerNickname }) {
                     }),
                 });
             }
+        } else if (interactedObject && interactedObject.type === 'pipe') {
+            console.log('실행됨');
+            console.log(`[GameCanvas] Interacted object is an pipe. Adding to inventory.`); // 추가된 로그
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'pipe');
+                if (existingItemIndex !== -1) {
+                    const newInventory = [...prevInventory];
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing pipe count. New inventory:`, newInventory); // 추가된 로그
+                    return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png' }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add pipe.`); // 추가된 로그
+                    return prevInventory;
+                }
+            });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("pipe collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing pipe with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
+                stompClient.publish({
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP'
+                    }),
+                });
+            }
         }
 
         else {
@@ -630,9 +671,6 @@ export function GameCanvas({ playerNickname }) {
             console.log(`[GameCanvas] No slot selected for item use.`); // 슬롯이 선택되지 않은 경우 로그
         }
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
-
-
-
 
     return (
         <>
@@ -716,6 +754,7 @@ export function GameCanvas({ playerNickname }) {
                                             rotationY={player.rotationY}
                                             animationState={player.animationState}
                                             chatMessages={chatMessages}
+                                            selectedItem={inventory[selectedInventorySlot]}
                                         />
                                     </React.Suspense>
                                 </ErrorBoundary>

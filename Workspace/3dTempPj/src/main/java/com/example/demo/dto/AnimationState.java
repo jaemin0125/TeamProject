@@ -18,6 +18,7 @@ public class AnimationState {
     private boolean isLyingDown;
     private boolean isLyingDownAndWalk;
     private boolean isPunching;
+    private boolean isSlashing;
     private boolean isHitted;
     private boolean isDead;
     private boolean isAiming;
@@ -27,6 +28,7 @@ public class AnimationState {
     private boolean isWalkingFiring;
     private boolean isRunningFiring;
     private boolean isArmed;
+    private boolean isUsingPipe;
 
     // 모든 getter를 수동으로 정의합니다 (getIsXxx 형태)
     public boolean getIsWalking() { return isWalking; }
@@ -62,6 +64,9 @@ public class AnimationState {
     public boolean getIsPunching() { return isPunching; }
     public void setIsPunching(boolean isPunching) { this.isPunching = isPunching; }
     
+    public boolean getIsSlashing() { return isSlashing; }
+    public void setIsSlashing(boolean isSlashing) { this.isSlashing = isSlashing; }
+    
     public boolean getIsHitted() { return isHitted; }
     public void setIsHitted(boolean isHitted) { this.isHitted = isHitted; }
     
@@ -88,6 +93,9 @@ public class AnimationState {
     
     public boolean getIsArmed() { return isArmed; }
     public void setIsArmed(boolean isArmed) { this.isArmed = isArmed; }
+    
+    public boolean getIsUsingPipe() { return isUsingPipe; }
+    public void setIsUsingPipe(boolean isUsingPipe) { this.isUsingPipe = isUsingPipe; }
     // toString() 메서드를 수동으로 오버라이드하여 로그에서 보기 좋게 만듭니다.
     @Override
     public String toString() {
@@ -103,6 +111,7 @@ public class AnimationState {
                ", isLyingDown=" + isLyingDown +
                ", isLyingDownAndWalk=" + isLyingDownAndWalk +
                ", isPunching=" + isPunching +
+               ", isSlashing=" + isSlashing +
                ", isHitted=" + isHitted +
                ", isDead=" + isDead +
                ", isAiming=" + isAiming +
@@ -112,6 +121,7 @@ public class AnimationState {
                ", isWalkingFiring=" + isWalkingFiring +
                ", isRunningFiring=" + isRunningFiring +
                ", isArmed=" + isArmed +
+               ", isUsingPipe=" + isUsingPipe +
                '}';
     }
 }
