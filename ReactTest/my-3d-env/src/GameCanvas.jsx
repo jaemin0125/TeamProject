@@ -16,6 +16,7 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
+import { vec2 } from 'three/tsl';
 
 
 
@@ -331,6 +332,13 @@ export function GameCanvas({ playerNickname }) {
     useEffect(() => {
         const handleKeyDown = (event) => {
             const key = event.key;
+            //포인터락 상태에서 새로고침 방지
+            if (document.pointerLockElement) {
+                if(event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+                    event.preventDefault();
+                    return;
+                }
+            }
             if (key >= '1' && key <= '8') {
                 const newSlot = parseInt(key) - 1; // 0-indexed
                 setSelectedInventorySlot(newSlot);
