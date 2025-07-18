@@ -192,7 +192,7 @@ export function GameCanvas({ playerNickname }) {
         const currentGun = inventory[selectedInventorySlot];
 
         // 총이 없거나, 탄약 정보가 없거나, 이미 재장전 중이면 무시
-        if (!currentGun || !currentGun.ammo || isReloading) {
+        if (!currentGun || !currentGun.ammo || isReloading || currentGun.ammo.reserve === 0) {
             return;
         }
 
