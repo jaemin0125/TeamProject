@@ -5,4 +5,7 @@
     <fullyQualifiedTypeName name="com.example.demo.dto.ObjectState"/>
     <fullyQualifiedTypeName name="lombok.Data"/>
     <fullyQualifiedTypeName name="lombok.NoArgsConstructor"/>
+    <fullyQualifiedTypeName name="com.example.demo.dto.ItemActionRequest.Ammo"/>
+    <fullyQualifiedTypeName name="com.example.demo.dto.ItemActionRequest"/>
+    <fullyQualifiedTypeName name="com.example.demo.dto.ItemActionRequest.ItemData"/>
 </qualifiedTypeNameHistroy>

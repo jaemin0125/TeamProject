@@ -172,6 +172,9 @@ public class GameController {
     public void pickUpItem(ItemActionRequest request) {
         logger.info("Pick up item request received: PlayerId={}, ItemId={}, ActionType={}", 
             request.getPlayerId(), request.getItemId(), request.getActionType());
+        
+        System.out.println(request.getItemData().getAmmo().getCurrent());
+        System.out.println(request.getItemData().getAmmo().getReserve());
 
         // PlayerService를 통해 씬에서 아이템 제거 및 인벤토리에 추가
         if (playerService.pickUpItemFromScene(request.getPlayerId(), request.getItemId())) {

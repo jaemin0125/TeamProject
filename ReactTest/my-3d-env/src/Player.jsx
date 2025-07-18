@@ -23,10 +23,9 @@ export function Player({
     selectedItem,
     isChatting,
     clearInventory,
-    setCurrentAmmo,
-    currentAmmo,
     handleReload,
-    maxAmmo
+    setInventory
+
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
@@ -88,10 +87,17 @@ export function Player({
         isUsingPipe = true;
     }
 
+    useEffect(() => {
+        if (!isArmed) {
+            setIsAiming(false);
+            setIsScoped(false);
+        }
+    }, [isArmed]);
+
     const fireBullet = () => {
         // 1. 플레이어의 현재 위치를 가져옵니다.
 
-        if (!canFire || currentAmmo <= 0) {
+        if (!canFire || !selectedItem?.ammo || selectedItem.ammo.current <= 0) {
             if (isFiring) {
                 setIsFiring(false);
                 clearInterval(firingIntervalRef.current);
@@ -99,14 +105,20 @@ export function Player({
             return;
         }
 
-        setCurrentAmmo(prev => {
-            const next = prev - 1;
-            if (next <= 0) {
-                setCanFire(false);
-                setIsFiring(false); // 연사 멈춤
-                clearInterval(firingIntervalRef.current); // 타이머 제거
+        setInventory(prevInventory => {
+            const updated = [...prevInventory];
+            const item = updated[selectedInventorySlot];
+            if (item?.ammo) {
+                item.ammo.current -= 1;
+
+                // 탄약 다 썼을 경우
+                if (item.ammo.current <= 0) {
+                    setCanFire(false);
+                    setIsFiring(false);
+                    clearInterval(firingIntervalRef.current);
+                }
             }
-            return next;
+            return updated;
         });
 
 
@@ -567,9 +579,9 @@ export function Player({
         const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
         const isDeadAnim = isDead;
         const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
-        const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
-        const isWalkingFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
-        const isRunningFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
+        const isIdleFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
+        const isWalkingFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
+        const isRunningFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
         if (selectedItem?.name === 'ak-47') {
             isArmed = true;
@@ -665,7 +677,7 @@ export function Player({
             playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
             // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
-                        // 점프 및 자세 변경 로직
+            // 점프 및 자세 변경 로직
             if (jump && !lastJumpKeyStatus.current) { // 스페이스바가 새로 눌렸을 때
                 if (lieToggle) {
                     // 1. 누운 상태 -> 앉은 상태로 변경
@@ -820,9 +832,9 @@ export function Player({
     const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
     const isDeadAnim = isDead;
     const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
-    const isIdleFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
-    const isWalkingFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
-    const isRunningFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
+    const isIdleFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
+    const isWalkingFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
+    const isRunningFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
 
     // 충돌 감지 (사과 상호작용)
     const handleCollisionEnter = useCallback((payload) => {

@@ -101,8 +101,6 @@ export function GameCanvas({ playerNickname }) {
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const [isChatting, setIsChatting] = useState(false);
-    const [currentAmmo, setCurrentAmmo] = useState(30);
-    const [maxAmmo, setMaxAmmo] = useState(180);
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -126,6 +124,13 @@ export function GameCanvas({ playerNickname }) {
         null, // 슬롯 7
         null  // 슬롯 8
     ]);
+
+    const inventoryRef = useRef(inventory);
+
+    useEffect(() => {
+        inventoryRef.current = inventory;
+    }, [inventory]);
+
     // 선택된 인벤토리 슬롯 상태 추가 (0부터 시작)
     const [selectedInventorySlot, setSelectedInventorySlot] = useState(0);
 
@@ -144,6 +149,9 @@ export function GameCanvas({ playerNickname }) {
     const setIsDeadInGameCanvas = useCallback((deadState) => {
         setHudState(prev => ({ ...prev, isDead: deadState }));
     }, []);
+
+    const selectedItem = inventory[selectedInventorySlot];
+
 
     function spawnBulletHole(hitPosition, hitNormal) {
         const scene = sceneRef.current;
@@ -176,22 +184,20 @@ export function GameCanvas({ playerNickname }) {
         }, 15000); // 15초 후 제거
     }
     const handleReload = useCallback(() => {
-    setCurrentAmmo(prevCurrent => {
-        if (prevCurrent >= 30) return prevCurrent;
-
-        const needed = 30 - prevCurrent;
-
-        // maxAmmo도 함께 업데이트
-        setMaxAmmo(prevMax => {
-            const toReload = Math.min(needed, prevMax);
-            const newCurrent = prevCurrent + toReload;
-            setCurrentAmmo(newCurrent); // 다시 set하여 정확히 업데이트
-            return prevMax - toReload;
-        });
-
-        return prevCurrent; // 이건 임시 반환값 (실제는 위에서 다시 설정)
+    setInventory(prev => {
+        const newInv = [...prev];
+        const gun = newInv[selectedInventorySlot];
+        if (gun && gun.ammo) {
+            const magazineSize = gun.magazineSize || 30; // 없으면 기본 30
+            const needed = magazineSize - gun.ammo.current;
+            const toReload = Math.min(needed, gun.ammo.reserve);
+            gun.ammo.current += toReload;
+            gun.ammo.reserve -= toReload;
+        }
+        return newInv;
     });
-    }, []);
+}, [selectedInventorySlot]);
+
 
 
 
@@ -279,6 +285,25 @@ export function GameCanvas({ playerNickname }) {
             window.removeEventListener('wheel', handleWheel); // 수정: handleWheel 리스너 제거
         };
     }, [inventory.length]); // inventory.length가 변경될 때만 이펙트 재실행
+
+    // 탄약이 모두 소진된 총기 아이템을 인벤토리에서 제거하는 로직
+    useEffect(() => {
+        const selectedItem = inventory[selectedInventorySlot];
+
+        // 현재 선택된 아이템이 'ak-47'이고 탄약이 모두 소진되었는지 확인
+        if (selectedItem && selectedItem.name === 'ak-47' && selectedItem?.ammo.current === 0 && selectedItem?.ammo.reserve === 0) {
+            console.log(`[GameCanvas] AK-47 has run out of ammo and is being removed from inventory.`);
+
+
+            // 인벤토리에서 해당 아이템 제거
+            setInventory(prevInventory => {
+                const newInventory = [...prevInventory];
+                newInventory[selectedInventorySlot] = null; // 현재 슬롯을 비웁니다.
+
+                return newInventory;
+            });
+        }
+    }, [selectedItem, inventory, selectedInventorySlot]); // currentAmmo, maxAmmo, 또는 선택된 슬롯이 변경될 때마다 실행
 
     // useEffect(() => {
     //     if (!stompClient || !stompClient.connected) return;
@@ -495,81 +520,227 @@ export function GameCanvas({ playerNickname }) {
 
 
     // Player로부터 상호작용 요청을 받아 처리하는 함수
+    // const handlePlayerInteract = useCallback((interactedObjectId) => {
+    //     console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`);
+
+    //     const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
+    //     console.log(`[GameCanvas] Found interactedObject:`, interactedObject);
+
+    //     if (!interactedObject) {
+    //         console.log(`[GameCanvas] Interacted object not found.`);
+    //         return;
+    //     }
+
+    //     const { id, type } = interactedObject;
+
+
+    //     // 처리할 수 있는 아이템인지 확인
+    //     const validItemTypes = ['apple', 'ak-47', 'pipe'];
+    //     if (!validItemTypes.includes(type)) {
+    //         console.log(`[GameCanvas] Interacted object is not a valid pickup item. Type: ${type}`);
+    //         return;
+    //     }
+
+    //     // 인벤토리 업데이트
+    //     setInventory(prevInventory => {
+    //         const existingItemIndex = prevInventory.findIndex(item => item && item.name === type);
+
+    //         if (existingItemIndex !== -1) {
+    //             const newInventory = [...prevInventory];
+    //             newInventory[existingItemIndex].count += 1;
+    //             console.log(`[GameCanvas] Updated existing ${type} count. New inventory:`, newInventory);
+    //             return newInventory;
+    //         } else {
+    //             const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+    //             if (firstEmptySlotIndex !== -1) {
+    //                 const newInventory = [...prevInventory];
+    //                 newInventory[firstEmptySlotIndex] = {
+    //                     name: type,
+    //                     count: 1,
+    //                     id: id,
+    //                     image: `/models/${type}.png`
+    //                 };
+    //                 console.log(`[GameCanvas] Added new ${type} to inventory. New inventory:`, newInventory);
+    //                 return newInventory;
+    //             }
+
+    //             console.log(`[GameCanvas] Inventory full, could not add ${type}.`);
+    //             return prevInventory;
+    //         }
+    //     });
+
+    //     // 상호작용 프롬프트 제거
+    //     setHudState(prev => ({
+    //         ...prev,
+    //         interactableObjectId: null,
+    //         showInteractionPrompt: false
+    //     }));
+    //     console.log(`${type} collected! Prompt removed.`);
+
+    //     // 씬에서 오브젝트 제거
+    //     console.log(`[GameCanvas] Removing ${type} with ID: ${id} from sceneObjects.`);
+    //     setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== id));
+
+    //     // STOMP 메시지 전송
+    //     if (stompClient && stompClient.connected) {
+    //         console.log(`[GameCanvas] Publishing pickUpItem event for ${id}`);
+    //         stompClient.publish({
+    //             destination: '/app/pickUpItem',
+    //             body: JSON.stringify({
+    //                 playerId: currentPlayerId,
+    //                 itemId: id,
+    //                 actionType: 'PICKUP'
+    //             }),
+    //         });
+    //     }
+    // }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
+
+
+
     const handlePlayerInteract = useCallback((interactedObjectId) => {
-        console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`);
-
+        console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
         const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
-        console.log(`[GameCanvas] Found interactedObject:`, interactedObject);
+        console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
 
-        if (!interactedObject) {
-            console.log(`[GameCanvas] Interacted object not found.`);
-            return;
-        }
-
-        const { id, type } = interactedObject;
-        
-
-        // 처리할 수 있는 아이템인지 확인
-        const validItemTypes = ['apple', 'ak-47', 'pipe'];
-        if (!validItemTypes.includes(type)) {
-            console.log(`[GameCanvas] Interacted object is not a valid pickup item. Type: ${type}`);
-            return;
-        }
-
-        // 인벤토리 업데이트
-        setInventory(prevInventory => {
-            const existingItemIndex = prevInventory.findIndex(item => item && item.name === type);
-
-            if (existingItemIndex !== -1) {
-                const newInventory = [...prevInventory];
-                newInventory[existingItemIndex].count += 1;
-                console.log(`[GameCanvas] Updated existing ${type} count. New inventory:`, newInventory);
-                return newInventory;
-            } else {
-                const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
-                if (firstEmptySlotIndex !== -1) {
+        if (interactedObject && interactedObject.type === 'apple') {
+            console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'apple');
+                if (existingItemIndex !== -1) {
                     const newInventory = [...prevInventory];
-                    newInventory[firstEmptySlotIndex] = {
-                        name: type,
-                        count: 1,
-                        id: id,
-                        image: `/models/${type}.png`
-                    };
-                    console.log(`[GameCanvas] Added new ${type} to inventory. New inventory:`, newInventory);
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
                     return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add apple.`); // 추가된 로그
+                    return prevInventory;
                 }
-
-                console.log(`[GameCanvas] Inventory full, could not add ${type}.`);
-                return prevInventory;
-            }
-        });
-
-        // 상호작용 프롬프트 제거
-        setHudState(prev => ({
-            ...prev,
-            interactableObjectId: null,
-            showInteractionPrompt: false
-        }));
-        console.log(`${type} collected! Prompt removed.`);
-
-        // 씬에서 오브젝트 제거
-        console.log(`[GameCanvas] Removing ${type} with ID: ${id} from sceneObjects.`);
-        setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== id));
-
-        // STOMP 메시지 전송
-        if (stompClient && stompClient.connected) {
-            console.log(`[GameCanvas] Publishing pickUpItem event for ${id}`);
-            stompClient.publish({
-                destination: '/app/pickUpItem',
-                body: JSON.stringify({
-                    playerId: currentPlayerId,
-                    itemId: id,
-                    actionType: 'PICKUP'
-                }),
             });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("Apple collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing apple with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
+                stompClient.publish({
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP'
+                    }),
+                });
+            }
+        } else if (interactedObject && interactedObject.type === 'ak-47') {
+            if (inventoryRef.current.some(item => item?.name === 'ak-47')) {
+                console.log('인벤토리에 이미 총기가 존재함.');
+                return;
+            }
+            console.log('실행됨');
+            console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`); // 추가된 로그
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'ak-47');
+                if (existingItemIndex !== -1) {
+                    const newInventory = [...prevInventory];
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
+                    return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/models/ak-47.png', ammo: { current: 30, reserve: 120 }, magazineSize: 30 }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new ak-47 to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add ak-47.`); // 추가된 로그
+                    return prevInventory;
+                }
+            });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("ak-47 collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing ak-47 with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
+                stompClient.publish({
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP',
+                        itemData: {
+                            name: 'ak-47',
+                            ammo: { current: 30, reserve: 120 },
+                            magazineSize: 30
+                        }
+                    }),
+                });
+            }
+        } else if (interactedObject && interactedObject.type === 'pipe') {
+            if (inventoryRef.current.some(item => item?.name === 'pipe')) {
+                console.log('이미 가지고 있는 무기임.')
+                return;
+            }
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'pipe');
+                if (existingItemIndex !== -1) {
+                    const newInventory = [...prevInventory];
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing pipe count. New inventory:`, newInventory); // 추가된 로그
+                    return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png', }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add pipe.`); // 추가된 로그
+                    return prevInventory;
+                }
+            });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("pipe collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing pipe with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
+                stompClient.publish({
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
+                        actionType: 'PICKUP'
+                    }),
+                });
+            }
+        }
+
+        else {
+            console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
         }
     }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
-
 
     const clearInventory = () => {
         setInventory([null, null, null, null, null, null, null, null]); // 또는 초기값으로 재설정
@@ -640,8 +811,8 @@ export function GameCanvas({ playerNickname }) {
                 inventory={inventory} // inventory prop 전달
                 selectedInventorySlot={selectedInventorySlot} // selectedInventorySlot prop 전달
                 selectedItem={inventory[selectedInventorySlot]}
-                currentAmmo={currentAmmo}
-                maxAmmo={maxAmmo}
+                currentAmmo={selectedItem?.ammo?.current}
+                maxAmmo={selectedItem?.ammo?.reserve}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -691,9 +862,7 @@ export function GameCanvas({ playerNickname }) {
                                         selectedInventorySlot={selectedInventorySlot} // 새로 추가: 선택된 인벤토리 슬롯 전달
                                         isItemSelected={isItemSelected} // 새로 추가: 선택된 슬롯에 아이템이 있는지 여부 전달
                                         selectedItem={inventory[selectedInventorySlot]}
-                                        currentAmmo={currentAmmo}
-                                        maxAmmo={maxAmmo}
-                                        setCurrentAmmo={setCurrentAmmo}
+                                        setInventory={setInventory}
                                         isChatting={isChatting}
                                         clearInventory={clearInventory}
                                         handleReload={handleReload}
