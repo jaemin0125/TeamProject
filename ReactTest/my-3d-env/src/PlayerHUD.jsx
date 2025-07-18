@@ -4,7 +4,7 @@
 import { div } from "three/tsl";
 
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot }) {
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem,  currentAmmo, maxAmmo }) {
     // state 객체에서 필요한 정보들을 구조 분해 할당
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
 
@@ -16,7 +16,6 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
         .join('\n');
 
     // 리스폰 프로그레스 바 너비 계산 (5초 기준)
-
     // 체력 바 색상 결정
     const healthBarColor = health > 50 ? 'limegreen' : health > 20 ? 'orange' : 'red';
 
@@ -99,6 +98,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </span>
                 </div>
 
+                <div></div>
 
 
                 {/* 인벤토리 핫바 (하단 중앙) - 주신 코드 그대로 유지하며 다른 요소들과 위치 조절 */}
@@ -385,6 +385,53 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         Press <span style={{ color: 'gold', fontWeight: 'bold' }}>[F]</span>
                     </div>
                 )}
+            {!isDead && selectedItem?.name === 'ak-47' && (
+
+                <div
+                    style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        right: '20px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: '10px 20px',
+                        marginRight: '400px',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '1.2em',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        zIndex: 1000,
+                        border: '2px solid #444',
+                        pointerEvents: 'none',
+                        boxShadow: '0 0 10px rgba(0,0,0,0.7)',
+                    }}
+                >
+                    {currentAmmo > 0 ? `${currentAmmo}` + '/' + `${maxAmmo}` : '🔄 Reload!'} 
+                </div>
+                )}
+                {/* {!isDead && selectedItem?.name === 'ak-47' && (maxAmmo == 0 && currentAmmo == 0) &&(
+                                    <div
+                    style={{
+                        position: 'absolute',
+                        bottom: '20px',
+                        right: '20px',
+                        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                        padding: '10px 20px',
+                        marginRight: '400px',
+                        borderRadius: '8px',
+                        color: 'white',
+                        fontSize: '1.2em',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        zIndex: 1000,
+                        border: '2px solid #444',
+                        pointerEvents: 'none',
+                        boxShadow: '0 0 10px rgba(0,0,0,0.7)',
+                    }}
+                >
+                    {'탄약 없음'} 
+                </div>
+                )} */}
             </div>
 
             {/* CSS Keyframes for animations */}

@@ -22,7 +22,11 @@ export function Player({
     isItemSelected,
     selectedItem,
     isChatting,
-    clearInventory
+    clearInventory,
+    setCurrentAmmo,
+    currentAmmo,
+    handleReload,
+    maxAmmo
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
@@ -45,6 +49,8 @@ export function Player({
     const [isFiring, setIsFiring] = useState(false);
     const firingIntervalRef = useRef(null);
     const mouseDownTimeRef = useRef(0);
+    const [canFire, setCanFire] = useState(true);
+
 
     // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
     const lastJumpKeyStatus = useRef(false);
@@ -70,20 +76,41 @@ export function Player({
     });
 
     const { rapier, world } = useRapier(); // rapier world 객체 접근
-    
+
     let characterModelPath = '/models/UnarmedCharacter.glb';
     let isArmed = false;
     let isUsingPipe = false;
     if (selectedItem && selectedItem.name === 'ak-47') {
         characterModelPath = '/models/ArmedCharacter.glb';
         isArmed = true;
-    } if (selectedItem && selectedItem.name === 'pipe'){
+    } if (selectedItem && selectedItem.name === 'pipe') {
         characterModelPath = '/models/PipeCharacter.glb';
         isUsingPipe = true;
     }
 
     const fireBullet = () => {
         // 1. 플레이어의 현재 위치를 가져옵니다.
+
+        if (!canFire || currentAmmo <= 0) {
+            if (isFiring) {
+                setIsFiring(false);
+                clearInterval(firingIntervalRef.current);
+            }
+            return;
+        }
+
+        setCurrentAmmo(prev => {
+            const next = prev - 1;
+            if (next <= 0) {
+                setCanFire(false);
+                setIsFiring(false); // 연사 멈춤
+                clearInterval(firingIntervalRef.current); // 타이머 제거
+            }
+            return next;
+        });
+
+
+
         const playerPosition = playerRef.current.translation();
         // 2. 플레이어의 현재 Y축 회전값을 가져옵니다.
         const playerRotationY = yaw.current;
@@ -101,12 +128,15 @@ export function Player({
         let verticalRecoil;
         let horizontalRecoil;
 
-        if (isScoped) { // 조준 중일 때 (반동 적게)
-            verticalRecoil = Math.random() * 0.002; // 더 작은 수직 반동
-            horizontalRecoil = (Math.random() - 0.5) * 0.002; // 더 작은 수평 반동
+        if (isAiming) {
+            verticalRecoil = Math.random() * 0.01; // 더 작은 수직 반동
+            horizontalRecoil = (Math.random() - 0.5) * 0.006; // 더 작은
+        } else if (isScoped) { // 조준 중일 때 (반동 적게)
+            verticalRecoil = Math.random() * 0.005; // 더 작은 수직 반동
+            horizontalRecoil = (Math.random() - 0.5) * 0.003; // 더 작은 수평 반동
         } else { // 조준 안 할 때 (반동 크게)
-            verticalRecoil = Math.random() * 0.006; // 기존 수직 반동
-            horizontalRecoil = (Math.random() - 0.5) * 0.004; // 기존 수평 반동
+            verticalRecoil = Math.random() * 0.015; // 기존 수직 반동
+            horizontalRecoil = (Math.random() - 0.5) * 0.01; // 기존 수평 반동
         }
 
         pitch.current += verticalRecoil;
@@ -146,12 +176,13 @@ export function Player({
                     });
                 }
             }
-
             const toi = hit.toi ?? hit.timeOfImpact; // 둘 중 있는 걸 사용
             if (toi === undefined) {
                 console.warn('❌ TOI 정보 없음:', hit);
                 return;
             }
+
+
 
             try {
                 const hitPoint = origin.clone().add(direction.clone().multiplyScalar(toi));
@@ -174,8 +205,7 @@ export function Player({
                     })
                 });
 
-
-                const decalSize = 0.2;
+                const decalSize = 0.5;
                 const decalGeometry = new THREE.PlaneGeometry(decalSize, decalSize);
                 const decalTexture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
                 const decalMaterial = new THREE.MeshBasicMaterial({
@@ -224,58 +254,61 @@ export function Player({
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
         // 펀치 동작 중이 아니고, 펀치 가능하며, STOMP 클라이언트가 연결되어 있고, 플레이어가 죽지 않았을 때만 실행
-        if (!isPunching || !canPunch || !stompClientInstance || !stompClientInstance.connected || isDead) return;
+        if (!stompClientInstance || !stompClientInstance.connected || isDead) return;
 
         const playerPosition = playerRef.current?.translation(); // 공격자 위치
         const attackerQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw.current, 0)); // 공격자 회전
 
-        let hitOccurred = false; // 타격 발생 여부 플래그
-
-        // 모든 온라인 플레이어를 순회하며 타격 감지
         (window.onlinePlayers || new Map()).forEach((targetPlayer, targetId) => {
             if (targetId === currentPlayerId) return; // 자기 자신은 제외
 
             const targetPosition = targetPlayer.position; // 타겟 플레이어 위치
-            const isHit = checkHit(playerPosition, attackerQuat, targetPosition, isUsingPipe); // 히트 여부 확인
 
-            if (isHit && !isArmed) {
-                console.log(`[🥊 Player] 타격 성공 -> 대상: ${targetId}`);
-                // 서버에 플레이어 피격 메시지 전송
-                stompClientInstance.publish({
-                    destination: '/app/playerHit',
-                    body: JSON.stringify({
-                        fromId: currentPlayerId,
-                        fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
-                        targetId: targetId,
-                        targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null,
-                        weaponName: "punch" // 펀치 공격 시 무기 정보 추가
-                    }),
-                });
-                hitOccurred = true; // 타격이 발생했음을 표시
-            } if (isUsingPipe && isHit){
-                stompClientInstance.publish({
-                    destination: '/app/playerHit',
-                    body: JSON.stringify({
-                        fromId: currentPlayerId,
-                        fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
-                        targetId: targetId,
-                        targetPosition: window.onlinePlayers.get(targetId)?.position ? { x: window.onlinePlayers.get(targetId).position.x, y: window.onlinePlayers.get(targetId).position.y, z: window.onlinePlayers.get(targetId).position.z } : null,
-                        weaponName: "pipe" // 펀치 공격 시 무기 정보 추가
-                    }),
-                });
+            if (isPunching && canPunch && !isArmed && !isUsingPipe) {
+                const isHit = checkHit(playerPosition, attackerQuat, targetPosition, false);
+                if (isHit) {
+                    stompClientInstance.publish({
+                        destination: '/app/playerHit',
+                        body: JSON.stringify({
+                            fromId: currentPlayerId,
+                            fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
+                            targetId,
+                            targetPosition: { x: targetPosition.x, y: targetPosition.y, z: targetPosition.z },
+                            weaponName: 'punch',
+                        }),
+                    });
+                }
             }
 
+            if (isSlashing && canSlash && isUsingPipe) {
+                const isHit = checkHit(playerPosition, attackerQuat, targetPosition, true);
+                if (isHit) {
+                    stompClientInstance.publish({
+                        destination: '/app/playerHit',
+                        body: JSON.stringify({
+                            fromId: currentPlayerId,
+                            fromPosition: { x: playerPosition.x, y: playerPosition.y, z: playerPosition.z },
+                            targetId,
+                            targetPosition: { x: targetPosition.x, y: targetPosition.y, z: targetPosition.z },
+                            weaponName: 'pipe',
+                        }),
+                    });
+                }
+            }
         });
 
-        if (hitOccurred) { // 타격이 발생했을 때만 쿨타임 적용
+        // ✅ 적중 여부와 관계 없이, 애니메이션 시작 시 쿨타임 적용
+        if (isPunching && canPunch && !isArmed) {
             setCanPunch(false);
+            setTimeout(() => setCanPunch(true), 500);
+        }
+
+        if (isSlashing && canSlash && isUsingPipe) {
             setCanSlash(false);
-            setTimeout(() => {
-                setCanPunch(true); // 500ms 후 쿨타임 종료
-                setCanSlash(true);
-            }, 500);
-        } 
-    }, [isPunching, canPunch, stompClientInstance, isDead, currentPlayerId]); // 의존성 배열
+            setTimeout(() => setCanSlash(true), 500);
+        }
+
+    }, [isPunching, isSlashing, canPunch, canSlash, stompClientInstance, isDead, currentPlayerId, isUsingPipe, isArmed]);
 
     useEffect(() => {
         if (!isFiring || isDead || selectedItem?.name !== 'ak-47') return;
@@ -331,10 +364,14 @@ export function Player({
                     return next;
                 });
             }
+            if (e.code === 'KeyR' && !isDead && isArmed) {
+                handleReload();
+                setCanFire(true);
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isDead, isChatting]); // isDead 의존성 추가
+    }, [isDead, isChatting, isArmed]);
 
     // 마우스 클릭 (펀치 또는 아이템 사용) 로직
     useEffect(() => {
@@ -342,29 +379,24 @@ export function Player({
         const handleMouseDown = (e) => {
             if (isDead) return;
 
-            console.log(isSlashing);
-            console.log(canSlash);
-            console.log(selectedItem);
-
             if (e.button === 0) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
                     if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
-                        console.log(`[Player] Calling onUseItem with selected slot index: ${selectedInventorySlot}.`);
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
+                        return;
                     } else {
                         if (canPunch && !isArmed) {
                             setIsPunching(true);
                             setTimeout(() => setIsPunching(false), 500);
-                        } if (canSlash && isUsingPipe){
+                        } if (canSlash && isUsingPipe) {
                             setIsSlashing(true);
                             setTimeout(() => setIsSlashing(false), 500);
                         }
                     }
                 } if (canPunch && !isArmed) {
-                    console.log(`[Player] Condition not met for item use. Performing punch.`);
                     setIsPunching(true);
                     setTimeout(() => setIsPunching(false), 500);
-                } if (canSlash && isUsingPipe){
+                } if (canSlash && isUsingPipe) {
                     setIsSlashing(true);
                     setTimeout(() => setIsSlashing(false), 500);
                 }
@@ -413,7 +445,7 @@ export function Player({
         camera.updateProjectionMatrix();
         if (isScoped && currentViewMode !== 'firstPerson') {
             setCurrentViewMode('firstPerson'); // 내부 시점 전환
-        } else if(!isScoped && currentViewMode == 'firstPerson'){
+        } else if (!isScoped && currentViewMode == 'firstPerson') {
             setCurrentViewMode('thirdPerson');
         }
 
@@ -476,7 +508,7 @@ export function Player({
             clearInventory();
             onObjectProximityChange(interactableObjectIdRef.current, false);
             interactableObjectIdRef.current = null;
-        
+
             // 사망 시 플레이어의 움직임을 멈추고 중력에 의해 떨어지도록
             if (playerRef.current) {
                 playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -509,7 +541,7 @@ export function Player({
 
         recoilPitchOffset.current = THREE.MathUtils.lerp(recoilPitchOffset.current, 0, 0.2); // 0.1은 감쇠 속도
         recoilYawOffset.current = THREE.MathUtils.lerp(recoilYawOffset.current, 0, 0.2); // 0.1은 감쇠 속도
-        
+
         // pitch와 yaw 값을 다시 클램핑하여 유효한 범위 내에 있도록 함
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
         yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
@@ -539,8 +571,8 @@ export function Player({
         const isWalkingFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
         const isRunningFiringAnim = isFiring && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
-        if(selectedItem?.name === 'ak-47'){
-           isArmed = true; 
+        if (selectedItem?.name === 'ak-47') {
+            isArmed = true;
         } else if (selectedItem?.name === 'pipe') {
             isUsingPipe = true;
         } else {
@@ -633,10 +665,21 @@ export function Player({
             playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
             // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
-            if (jump && !lastJumpKeyStatus.current && isGrounded && !isAiming && vel.y <= 0.1) {
-                playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
-                setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
-                setIsJumping(true); // 점프 애니메이션 시작
+                        // 점프 및 자세 변경 로직
+            if (jump && !lastJumpKeyStatus.current) { // 스페이스바가 새로 눌렸을 때
+                if (lieToggle) {
+                    // 1. 누운 상태 -> 앉은 상태로 변경
+                    setLieToggle(false);
+                    setSitToggle(true);
+                } else if (sitToggle) {
+                    // 2. 앉은 상태 -> 서 있는 상태로 변경
+                    setSitToggle(false);
+                } else if (isGrounded && !isAiming && vel.y <= 0.1) {
+                    // 3. 서 있는 상태 -> 점프
+                    playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
+                    setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
+                    setIsJumping(true); // 점프 애니메이션 시작
+                }
             }
 
             // 점프 애니메이션 종료 로직: 땅에 닿았고, 수직 속도가 거의 없을 때 점프 상태 해제
@@ -783,80 +826,46 @@ export function Player({
 
     // 충돌 감지 (사과 상호작용)
     const handleCollisionEnter = useCallback((payload) => {
-        setIsGrounded(true); // 바닥 접지 여부 업데이트
-        // 충돌한 오브젝트가 SceneObject에서 설정한 userData를 가지고 있는지 확인
-        if (payload.other.rigidBodyObject?.userData?.type === 'apple') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
+        setIsGrounded(true);
+
+        const rigidBody = payload.other.rigidBodyObject;
+        const type = rigidBody?.userData?.type;
+        const id = rigidBody?.userData?.id;
+
+        const validTypes = ['apple', 'ak-47', 'pipe'];
+
+        if (validTypes.includes(type)) {
+            if (exitTimeoutRef.current) {
                 clearTimeout(exitTimeoutRef.current);
                 exitTimeoutRef.current = null;
             }
-            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
-                interactableObjectIdRef.current = objectId;
-                onObjectProximityChange(objectId, true);
-                console.log("Player entered apple proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-            }
-        } else if (payload.other.rigidBodyObject?.userData?.type === 'ak-47') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
-                clearTimeout(exitTimeoutRef.current);
-                exitTimeoutRef.current = null;
-            }
-            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
-                interactableObjectIdRef.current = objectId;
-                onObjectProximityChange(objectId, true);
-                console.log("Player entered ak-47 proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-            }
-        } else if (payload.other.rigidBodyObject?.userData?.type === 'pipe') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            if (exitTimeoutRef.current) { // If there was an pending exit, clear it
-                clearTimeout(exitTimeoutRef.current);
-                exitTimeoutRef.current = null;
-            }
-            if (interactableObjectIdRef.current !== objectId) { // Only update if it's a new object or null
-                interactableObjectIdRef.current = objectId;
-                onObjectProximityChange(objectId, true);
-                console.log("Player entered pipe proximity:", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+            if (interactableObjectIdRef.current !== id) {
+                interactableObjectIdRef.current = id;
+                onObjectProximityChange(id, true);
+                console.log(`Player entered ${type} proximity:`, id);
             }
         }
     }, [onObjectProximityChange]);
 
+
     const handleCollisionExit = useCallback((payload) => {
         setIsGrounded(false); // 바닥 접지 여부 업데이트
-        // 충돌 해제된 오브젝트가 SceneObject에서 설정한 userData를 가지고 있는지 확인
-        if (payload.other.rigidBodyObject?.userData?.type === 'apple') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            // Set a timeout to clear the ID, allowing for brief re-entries
+
+        const rigidBody = payload.other.rigidBodyObject;
+        const type = rigidBody?.userData?.type;
+        const id = rigidBody?.userData?.id;
+
+        const validTypes = ['apple', 'ak-47', 'pipe'];
+
+        if (validTypes.includes(type)) {
             exitTimeoutRef.current = setTimeout(() => {
-                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
+                if (interactableObjectIdRef.current === id) {
                     interactableObjectIdRef.current = null;
-                    onObjectProximityChange(objectId, false);
-                    console.log("Player exited apple proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
+                    onObjectProximityChange(id, false);
+                    console.log(`Player exited ${type} proximity (debounced):`, id, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
                 }
                 exitTimeoutRef.current = null;
-            }, 200); // 200ms debounce로 변경
-        } else if (payload.other.rigidBodyObject?.userData?.type === 'ak-47') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            // Set a timeout to clear the ID, allowing for brief re-entries
-            exitTimeoutRef.current = setTimeout(() => {
-                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
-                    interactableObjectIdRef.current = null;
-                    onObjectProximityChange(objectId, false);
-                    console.log("Player exited ak-47 proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-                }
-                exitTimeoutRef.current = null;
-            }, 200); // 200ms debounce로 변경
-        } else if (payload.other.rigidBodyObject?.userData?.type === 'pipe') {
-            const objectId = payload.other.rigidBodyObject.userData.id;
-            // Set a timeout to clear the ID, allowing for brief re-entries
-            exitTimeoutRef.current = setTimeout(() => {
-                if (interactableObjectIdRef.current === objectId) { // Only clear if it's still this object
-                    interactableObjectIdRef.current = null;
-                    onObjectProximityChange(objectId, false);
-                    console.log("Player exited pipe proximity (debounced):", objectId, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-                }
-                exitTimeoutRef.current = null;
-            }, 200); // 200ms debounce로 변경
+            }, 200);
         }
     }, [onObjectProximityChange]);
 

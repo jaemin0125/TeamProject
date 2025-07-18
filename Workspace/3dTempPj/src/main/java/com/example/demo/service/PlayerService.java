@@ -60,7 +60,7 @@ public class PlayerService {
     /**
      * 60초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
      */
-    @Scheduled(fixedRate = 60000) // 60초마다 실행
+    @Scheduled(fixedRate = 1000) // 60초마다 실행
     public void spawnGunPeriodically() {
         long currentGunCount = sceneObjects.values().stream()
                 .filter(obj -> "ak-47".equals(obj.getItemType()))
