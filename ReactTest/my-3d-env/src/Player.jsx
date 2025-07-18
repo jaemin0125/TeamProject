@@ -25,7 +25,8 @@ export function Player({
     clearInventory,
     handleReload,
     setInventory,
-    playerRef // playerRef를 props로 받음
+    playerRef, // playerRef를 props로 받음
+    isReloading // isReloading prop 추가
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -49,6 +50,12 @@ export function Player({
     const firingIntervalRef = useRef(null);
     const mouseDownTimeRef = useRef(0);
     const [canFire, setCanFire] = useState(true);
+
+    const isReloadingRef = useRef(isReloading); // isReloading prop의 최신 값을 추적하기 위한 ref
+
+    useEffect(() => {
+        isReloadingRef.current = isReloading;
+    }, [isReloading]);
 
 
     // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
@@ -95,6 +102,7 @@ export function Player({
     }, [isArmed]);
 
     const fireBullet = () => {
+        if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
         // 1. 플레이어의 현재 위치를 가져옵니다.
 
         if (!canFire || !selectedItem?.ammo || selectedItem.ammo.current <= 0) {
@@ -323,7 +331,7 @@ export function Player({
     }, [isPunching, isSlashing, canPunch, canSlash, stompClientInstance, isDead, currentPlayerId, isUsingPipe, isArmed]);
 
     useEffect(() => {
-        if (!isFiring || isDead || selectedItem?.name !== 'ak-47') return;
+        if (!isFiring || isDead || selectedItem?.name !== 'ak-47' || isReloadingRef.current) return;
 
         // 일정 간격으로 fireBullet 호출
         firingIntervalRef.current = setInterval(() => {
@@ -331,7 +339,7 @@ export function Player({
         }, fireRate); // 150ms 간격으로 발사
 
         return () => clearInterval(firingIntervalRef.current);
-    }, [isFiring, isDead, selectedItem]);
+    }, [isFiring, isDead, selectedItem, isReloading]);
 
     // 컴포넌트 마운트 시 초기 플레이어 등록
     useEffect(() => {
@@ -376,14 +384,15 @@ export function Player({
                     return next;
                 });
             }
-            if (e.code === 'KeyR' && !isDead && isArmed) {
+            if (e.code === 'KeyR' && !isDead && isArmed && !isReloadingRef.current) {
                 handleReload();
+                
                 setCanFire(true);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isDead, isChatting, isArmed]);
+    }, [isDead, isChatting, isArmed, isReloading]);
 
     // 마우스 클릭 (펀치 또는 아이템 사용) 로직
     useEffect(() => {
@@ -415,6 +424,7 @@ export function Player({
             }
 
             if (e.button === 0 && isArmed) {
+                if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
                 setIsFiring(true);
                 fireBullet();
 

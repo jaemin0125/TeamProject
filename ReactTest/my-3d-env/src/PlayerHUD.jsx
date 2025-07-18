@@ -4,7 +4,7 @@
 import { div } from "three/tsl";
 
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo }) {
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress }) {
     // state 객체에서 필요한 정보들을 구조 분해 할당
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
 
@@ -400,10 +400,39 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                             boxShadow: '0 0 10px rgba(0,0,0,0.7)',
                         }}
                     >
-                        {currentAmmo === 0 && maxAmmo > 0
-                            ? '🔄 Reload!'
-                            : `Bullet : ${currentAmmo}/${maxAmmo}`
-                        }
+                        {isReloading ? (
+                            <div style={{
+                                width: '150px',
+                                height: '20px',
+                                backgroundColor: '#333',
+                                borderRadius: '5px',
+                                overflow: 'hidden',
+                                border: '1px solid #555',
+                                position: 'relative',
+                            }}>
+                                <div style={{
+                                    width: `${reloadProgress}%`,
+                                    height: '100%',
+                                    backgroundColor: '#4CAF50',
+                                    transition: 'width 0.1s linear',
+                                }}></div>
+                                <span style={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    color: 'white',
+                                    fontSize: '0.8em',
+                                    textShadow: '1px 1px 2px black',
+                                }}>
+
+                                </span>
+                            </div>
+                        ) : (
+                            currentAmmo === 0 && maxAmmo > 0
+                                ? 'R!'
+                                : `Bullet : ${currentAmmo}/${maxAmmo}`
+                        )}
                     </div>
                 )}
 

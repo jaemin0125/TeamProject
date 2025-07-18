@@ -185,20 +185,60 @@ export function GameCanvas({ playerNickname }) {
             material.dispose();
         }, 15000); // 15초 후 제거
     }
+    const [isReloading, setIsReloading] = useState(false); // 재장전 상태 추가
+    const [reloadProgress, setReloadProgress] = useState(0); // 재장전 진행도 상태 추가
+
     const handleReload = useCallback(() => {
-    setInventory(prev => {
-        const newInv = [...prev];
-        const gun = newInv[selectedInventorySlot];
-        if (gun && gun.ammo) {
-            const magazineSize = gun.magazineSize || 30; // 없으면 기본 30
-            const needed = magazineSize - gun.ammo.current;
-            const toReload = Math.min(needed, gun.ammo.reserve);
-            gun.ammo.current += toReload;
-            gun.ammo.reserve -= toReload;
+        const currentGun = inventory[selectedInventorySlot];
+
+        // 총이 없거나, 탄약 정보가 없거나, 이미 재장전 중이면 무시
+        if (!currentGun || !currentGun.ammo || isReloading) {
+            return;
         }
-        return newInv;
-    });
-}, [selectedInventorySlot]);
+
+        const magazineSize = currentGun.magazineSize || 30; // 무기 자체의 탄창 크기 사용 (기본값 30)
+
+        // 현재 탄창이 가득 차 있으면 재장전 불필요
+        if (currentGun.ammo.current >= magazineSize) {
+            console.log("Magazine is already full. No need to reload.");
+            return;
+        }
+
+        setIsReloading(true); // 재장전 시작
+        setReloadProgress(0); // 진행도 초기화
+
+        let progress = 0;
+        const intervalTime = 50; // 50ms마다 업데이트
+        const totalTime = 2000; // 총 2초
+        const increment = (intervalTime / totalTime) * 100; // 각 스텝별 증가량
+
+        const reloadInterval = setInterval(() => {
+            progress += increment;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(reloadInterval);
+                setInventory(prev => {
+                    const newInv = [...prev];
+                    const gun = newInv[selectedInventorySlot];
+                    if (gun && gun.ammo) {
+                        const magSize = gun.magazineSize || 30; // 없으면 기본 30
+                        const needed = magSize - gun.ammo.current;
+                        const toReload = Math.min(needed, gun.ammo.reserve);
+                        gun.ammo.current += toReload;
+                        gun.ammo.reserve -= toReload;
+                    }
+                    return newInv;
+                });
+                setIsReloading(false); // 재장전 완료
+                setReloadProgress(0); // 진행도 다시 초기화
+            }
+            setReloadProgress(progress);
+        }, intervalTime);
+
+        // 컴포넌트 언마운트 시 인터벌 정리
+        return () => clearInterval(reloadInterval);
+
+    }, [selectedInventorySlot, isReloading, inventory]);
 
     // 아이템 버리기 함수
     const handleDropItem = useCallback(() => {
@@ -814,6 +854,8 @@ export function GameCanvas({ playerNickname }) {
                 selectedItem={inventory[selectedInventorySlot]}
                 currentAmmo={selectedItem?.ammo?.current}
                 maxAmmo={selectedItem?.ammo?.reserve}
+                isReloading={isReloading} // 재장전 상태 전달
+                reloadProgress={reloadProgress} // 재장전 진행도 전달
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -868,6 +910,7 @@ export function GameCanvas({ playerNickname }) {
                                         clearInventory={clearInventory}
                                         handleReload={handleReload}
                                         playerRef={playerRef} // playerRef 전달
+                                        isReloading={isReloading} // 재장전 상태 전달
                                     />
                                 )}
                             </React.Suspense>
