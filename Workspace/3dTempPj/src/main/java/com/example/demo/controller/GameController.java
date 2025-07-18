@@ -7,7 +7,6 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.example.demo.dto.BulletImpactMessage;
 import com.example.demo.dto.ChatMessage;
@@ -28,7 +27,6 @@ public class GameController {
 		this.playerService = playerService;
 	}
 
-	@ResponseBody
 	@GetMapping("/api/hello")
 	public String hello() {
 		//logger.info("Hello from Spring Boot server (HTTP request)!");
@@ -87,25 +85,25 @@ public class GameController {
         
         double tolerance = 0.2;
 
-//        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
-//    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
-//            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
-//            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
-//        );
-//        
-//        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
-//    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
-//    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
-//    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
-//		);
-//        
-//        if (tolerance < checkAttackerPosition) {
-//        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
-//        	return;
-//        } else if (tolerance < checkTargetPosition) {
-//        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
-//        	return;
-//        }
+        double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
+    		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +
+            Math.pow(attackerPos.getY() - message.getFromPosition().getY(), 2) +
+            Math.pow(attackerPos.getZ() - message.getFromPosition().getZ(), 2)
+        );
+        
+        double checkTargetPosition = Math.sqrt(  // 프론트 <-> 서버 간 피격자 좌표의 오차임
+    		Math.pow(targetPos.getX() - message.getTargetPosition().getX(), 2) +
+    		Math.pow(targetPos.getY() - message.getTargetPosition().getY(), 2) +
+    		Math.pow(targetPos.getZ() - message.getTargetPosition().getZ(), 2)
+		);
+        
+        if (tolerance < checkAttackerPosition) {
+        	logger.warn("공격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        } else if (tolerance < checkTargetPosition) {
+        	logger.warn("피격자의 좌표 이상. 오차: {}", checkAttackerPosition);
+        	return;
+        }
         
         
         // 3. 무기 정보 설정 (데미지, 사거리)
@@ -120,8 +118,11 @@ public class GameController {
                 maxRange = 100.0; // AK-47의 유효 사거리 100
                 break;
             case "punch":
-            default:
                 damage = 5;
+                maxRange = 1.2; // gameUtils.js에서 관리
+                break;
+            case "pipe":
+                damage = 8;
                 maxRange = 2.5; // gameUtils.js에서 관리
                 break;
         }
@@ -171,9 +172,9 @@ public class GameController {
     public void pickUpItem(ItemActionRequest request) {
         logger.info("Pick up item request received: PlayerId={}, ItemId={}, ActionType={}", 
             request.getPlayerId(), request.getItemId(), request.getActionType());
-
+        
         // PlayerService를 통해 씬에서 아이템 제거 및 인벤토리에 추가
-        if (playerService.pickUpItemFromScene(request.getPlayerId(), request.getItemId())) {
+        if (playerService.pickUpItemFromScene(request.getPlayerId(), request.getItemId(), request.getItemData())) {
             logger.info("Player {} picked up item {}.", request.getPlayerId(), request.getItemId());
             // 씬 오브젝트 및 플레이어 인벤토리 업데이트 브로드캐스트
             messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getAllSceneObjects());
@@ -198,6 +199,22 @@ public class GameController {
         } else {
             logger.warn("Use item failed: PlayerId={} or ItemId={}.", request.getPlayerId(), request.getItemId());
         }
+    }
+
+    // ✨ 새로 추가: 아이템 버리기 요청 처리
+    @MessageMapping("/dropItem")
+    public void dropItem(ItemActionRequest request) {
+        logger.info("Drop item request received: PlayerId={}, ItemId={}, ActionType={}, Position={}",
+            request.getPlayerId(), request.getItemId(), request.getActionType(), request.getPosition());
+
+        if (playerService.dropItemFromInventory(request.getPlayerId(), request.getItemId(), request.getItemData(), request.getPosition(), request.getQuantity())) {
+            logger.info("Player {} dropped item {}.", request.getPlayerId(), request.getItemId());
+            messagingTemplate.convertAndSend("/topic/sceneObjects", playerService.getAllSceneObjects());
+        } else {
+            logger.warn("Drop item failed: PlayerId={} or ItemId={} not found.", request.getPlayerId(), request.getItemId());
+        }
+        // 인벤토리 변경사항은 항상 브로드캐스트
+        messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
     }
     
     @MessageMapping("/chat.send")

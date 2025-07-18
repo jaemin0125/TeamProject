@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.AnimationState;
 import com.example.demo.dto.Item;
+import com.example.demo.dto.ItemActionRequest;
+import com.example.demo.dto.Ammo;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
@@ -28,6 +30,7 @@ public class PlayerService {
     // --- 아이템 생성 제한 설정 ---
     private static final int MAX_APPLES = 15; // 맵에 존재할 수 있는 사과의 최대 개수
     private static final int MAX_GUNS = 3;   // 맵에 존재할 수 있는 총의 최대 개수
+    private static final int MAX_PIPES = 5;
     // --------------------------
 
     private final Map<String, PlayerState> connectedPlayers = new ConcurrentHashMap<>();
@@ -43,7 +46,7 @@ public class PlayerService {
     /**
      * 30초마다 사과 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
      */
-    @Scheduled(fixedRate = 30000) // 30초마다 실행
+    @Scheduled(fixedRate = 1000) // 30초마다 실행
     public void spawnApplePeriodically() {
         long currentAppleCount = sceneObjects.values().stream()
                 .filter(obj -> "apple".equals(obj.getItemType()))
@@ -59,7 +62,7 @@ public class PlayerService {
     /**
      * 60초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
      */
-    @Scheduled(fixedRate = 60000) // 60초마다 실행
+    @Scheduled(fixedRate = 1000) // 60초마다 실행
     public void spawnGunPeriodically() {
         long currentGunCount = sceneObjects.values().stream()
                 .filter(obj -> "ak-47".equals(obj.getItemType()))
@@ -68,6 +71,19 @@ public class PlayerService {
         if (currentGunCount < MAX_GUNS) {
             spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
+            messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
+        }
+    }
+    
+    @Scheduled(fixedRate = 10000) // 60초마다 실행
+    public void spawnPipePeriodically() {
+        long currentPipeCount = sceneObjects.values().stream()
+                .filter(obj -> "pipe".equals(obj.getItemType()))
+                .count();
+
+        if (currentPipeCount < MAX_PIPES) {
+            spawnNewItem("pipe", "/models/pipe.glb", "pipe", -4.54); // y좌표 -4.4
+            logger.info("Spawning new pipe. Current pipes: {}/{}", currentPipeCount + 1, MAX_PIPES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
     }
@@ -87,7 +103,7 @@ public class PlayerService {
 
         // 새로운 아이템 객체 생성
         String itemId = itemType + "-" + UUID.randomUUID().toString();
-        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType);
+        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType, null); // ammo는 null로 초기화
 
         // 씬에 아이템 추가
         sceneObjects.put(newItem.getId(), newItem);
@@ -210,7 +226,7 @@ public class PlayerService {
      * @param objectId 씬에서 주울 오브젝트의 ID
      * @return 아이템 줍기 성공 여부
      */
-    public boolean pickUpItemFromScene(String playerId, String objectId) {
+    public boolean pickUpItemFromScene(String playerId, String objectId, com.example.demo.dto.ItemActionRequest.ItemData itemData) {
         PlayerState player = connectedPlayers.get(playerId);
         ObjectState sceneObject = sceneObjects.get(objectId);
 
@@ -233,10 +249,17 @@ public class PlayerService {
         // 아이템 타입에 따라 다른 아이템 정보를 생성
         switch (itemType) {
             case "apple":
-                pickedItem = new Item(objectId, "apple", "food", 1, "/models/apple.png", 10);
+                pickedItem = new Item(objectId, "apple", "food", 1, "/models/apple.png", 10, 0, 0); // 사과는 탄약 없음
                 break;
             case "ak-47":
-                pickedItem = new Item(objectId, "ak-47", "weapon", 1, "/models/ak-47.png", 0);
+                int ak47CurrentAmmo = (itemData != null && itemData.getAmmo() != null) ? itemData.getAmmo().getCurrent() : 0;
+                int ak47ReserveAmmo = (itemData != null && itemData.getAmmo() != null) ? itemData.getAmmo().getReserve() : 0;
+                pickedItem = new Item(objectId, "ak-47", "weapon", 1, "/models/ak-47.png", 0, ak47CurrentAmmo, ak47ReserveAmmo);
+                break;
+            case "pipe":
+                int pipeCurrentAmmo = (itemData != null && itemData.getAmmo() != null) ? itemData.getAmmo().getCurrent() : 0;
+                int pipeReserveAmmo = (itemData != null && itemData.getAmmo() != null) ? itemData.getAmmo().getReserve() : 0;
+                pickedItem = new Item(objectId, "pipe", "weapon", 1, "/models/pipe.png", 0, pipeCurrentAmmo, pipeReserveAmmo);
                 break;
             default:
                 logger.warn("Attempted to pick up unknown item type: {}", itemType);
@@ -334,6 +357,61 @@ public class PlayerService {
             player.getInventory().remove(itemToUse);
             logger.info("Player {} consumed last {} from inventory.", playerId, itemToUse.getName());
         }
+
+        return true;
+    }
+
+    /**
+     * 플레이어 인벤토리에서 아이템을 제거하고 씬에 다시 생성합니다.
+     * @param playerId 아이템을 버릴 플레이어의 ID
+     * @param itemId 버릴 아이템의 ID (인벤토리 아이템 ID)
+     * @param itemData 버릴 아이템의 상세 데이터 (탄약 정보 포함)
+     * @param dropPosition 아이템이 버려질 위치
+     * @return 아이템 버리기 성공 여부
+     */
+    public boolean dropItemFromInventory(String playerId, String itemId, com.example.demo.dto.ItemActionRequest.ItemData itemData, Position dropPosition, int quantity) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("Player {} not found. Cannot drop item {}.", playerId, itemId);
+            return false;
+        }
+
+        Optional<Item> itemToDropOpt = player.getInventory().stream()
+            .filter(i -> i.getId().equals(itemId))
+            .findFirst();
+        
+        if (itemToDropOpt.isEmpty()) {
+            logger.warn("Player {} does not have item {} in inventory.", playerId, itemId);
+            return false;
+        }
+
+        Item itemToDrop = itemToDropOpt.get();
+        
+        if (itemToDrop.getCount() < quantity) {
+            logger.warn("Player {} only has {} of item {} but tried to drop {}.", playerId, itemToDrop.getCount(), itemId, quantity);
+            return false;
+        }
+
+        itemToDrop.setCount(itemToDrop.getCount() - quantity);
+        logger.info("Player {} dropped {} of item {}. Remaining count: {}.", playerId, quantity, itemToDrop.getName(), itemToDrop.getCount());
+
+        if (itemToDrop.getCount() <= 0) {
+            player.getInventory().remove(itemToDrop);
+            logger.info("Player {} completely dropped item {} from inventory.", playerId, itemToDrop.getName());
+        }
+
+        // 씬에 다시 생성할 ObjectState 생성 (항상 1개만 생성)
+        String newObjectId = itemToDrop.getName() + "-" + UUID.randomUUID().toString();
+        ObjectState droppedObject = new ObjectState(
+            newObjectId,
+            dropPosition,
+            itemToDrop.getName(), // objectType
+            itemToDrop.getImagePath().replace(".png", ".glb"), // modelPath (png -> glb)
+            itemToDrop.getName(), // itemType
+            itemToDrop.getCurrentAmmo() > 0 || itemToDrop.getReserveAmmo() > 0 ? new Ammo(itemToDrop.getCurrentAmmo(), itemToDrop.getReserveAmmo()) : null // 탄약 정보
+        );
+        sceneObjects.put(droppedObject.getId(), droppedObject);
+        logger.info("Dropped item {} re-added to scene at position {}.", droppedObject.getId(), dropPosition);
 
         return true;
     }

@@ -105,9 +105,9 @@ export function GameCanvas({ playerNickname }) {
     const [hudState, setHudState] = useState({
         health: 100,
         isHit: false,
+        id: currentPlayerId,
         otherPlayers: new Map(),
         isDead: false, // isDead 상태를 GameCanvas로 올림
-        viewMode: 'thirdPerson', // GameCanvas에서도 viewMode 상태를 관리
         respawnProgress: 0, // 리스폰 진행도 상태 추가
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,
@@ -124,6 +124,13 @@ export function GameCanvas({ playerNickname }) {
         null, // 슬롯 7
         null  // 슬롯 8
     ]);
+
+    const inventoryRef = useRef(inventory);
+
+    useEffect(() => {
+        inventoryRef.current = inventory;
+    }, [inventory]);
+
     // 선택된 인벤토리 슬롯 상태 추가 (0부터 시작)
     const [selectedInventorySlot, setSelectedInventorySlot] = useState(0);
 
@@ -143,10 +150,9 @@ export function GameCanvas({ playerNickname }) {
         setHudState(prev => ({ ...prev, isDead: deadState }));
     }, []);
 
-    // Player 컴포넌트에서 viewMode를 업데이트할 수 있도록 함수 전달
-    const setViewModeInGameCanvas = useCallback((mode) => {
-        setHudState(prev => ({ ...prev, viewMode: mode }));
-    }, []);
+    const selectedItem = inventory[selectedInventorySlot];
+    const playerRef = useRef(); // Player 컴포넌트의 RigidBody 참조를 위한 ref
+
 
     function spawnBulletHole(hitPosition, hitNormal) {
         const scene = sceneRef.current;
@@ -178,6 +184,92 @@ export function GameCanvas({ playerNickname }) {
             material.dispose();
         }, 15000); // 15초 후 제거
     }
+    const handleReload = useCallback(() => {
+    setInventory(prev => {
+        const newInv = [...prev];
+        const gun = newInv[selectedInventorySlot];
+        if (gun && gun.ammo) {
+            const magazineSize = gun.magazineSize || 30; // 없으면 기본 30
+            const needed = magazineSize - gun.ammo.current;
+            const toReload = Math.min(needed, gun.ammo.reserve);
+            gun.ammo.current += toReload;
+            gun.ammo.reserve -= toReload;
+        }
+        return newInv;
+    });
+}, [selectedInventorySlot]);
+
+    // 아이템 버리기 함수
+    const handleDropItem = useCallback(() => {
+        if (isChatting) return; // 채팅 중에는 아이템 버리기 방지
+
+        const itemToDrop = inventoryRef.current[selectedInventorySlot];
+        if (!itemToDrop) {
+            console.log("버릴 아이템이 없습니다.");
+            return;
+        }
+
+        // 플레이어의 현재 위치 가져오기
+        const playerPosition = playerRef.current?.translation();
+        if (!playerPosition) {
+            console.warn("플레이어 위치를 가져올 수 없습니다.");
+            return;
+        }
+
+        // 인벤토리에서 아이템 개수 감소 또는 제거
+        setInventory(prevInventory => {
+            const newInventory = [...prevInventory];
+            const itemInSlot = { ...newInventory[selectedInventorySlot] }; // 불변성을 위해 복사
+
+            if (itemInSlot.count > 1) {
+                itemInSlot.count -= 1;
+                newInventory[selectedInventorySlot] = itemInSlot;
+            } else {
+                newInventory[selectedInventorySlot] = null; // 아이템이 1개 이하면 슬롯 비움
+            }
+            return newInventory;
+        });
+
+        // 서버에 아이템 버리기 요청 전송
+        if (stompClient && stompClient.connected) {
+            console.log(`[GameCanvas] Publishing dropItem event for ${itemToDrop.name} (ID: ${itemToDrop.id})`);
+            stompClient.publish({
+                destination: '/app/dropItem',
+                body: JSON.stringify({
+                    playerId: currentPlayerId,
+                    itemId: itemToDrop.id,
+                    actionType: 'DROP',
+                    itemData: {
+                        name: itemToDrop.name,
+                        image: itemToDrop.image,
+                        ammo: itemToDrop.ammo ? { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve } : undefined,
+                        magazineSize: itemToDrop.magazineSize,
+                    },
+                    quantity: 1, // 항상 1개만 버리도록 설정
+                    position: {
+                        x: playerPosition.x,
+                        y: playerPosition.y - 0.5, // 플레이어 발 밑에 놓이도록 약간 아래로
+                        z: playerPosition.z,
+                    }
+                }),
+            });
+        }
+    }, [selectedInventorySlot, isChatting, stompClient, currentPlayerId]);
+
+    // 'Q' 키 입력 감지
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.code === 'KeyQ' && !isChatting) {
+                handleDropItem();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleDropItem, isChatting]);
+
 
 
 
@@ -189,10 +281,6 @@ export function GameCanvas({ playerNickname }) {
         // isDead 상태가 true가 될 때만 리스폰 타이머와 진행도 인터벌을 시작
         if (hudState.isDead) {
             console.log("플레이어 사망! 리스폰 타이머 시작 (5초)...");
-            // 사망 시 1인칭 시점으로 강제 변경
-            setViewModeInGameCanvas('firstPerson');
-
-            // 진행도 초기화 및 인터벌 시작
             setHudState(prev => ({ ...prev, respawnProgress: 0 })); // 사망 시 진행도 0으로 리셋
             let currentProgress = 0;
             progressInterval = setInterval(() => {
@@ -209,6 +297,7 @@ export function GameCanvas({ playerNickname }) {
                 console.log("플레이어 리스폰 중...");
                 // HP 100으로 리셋, isDead 상태 해제, 진행도 0으로 리셋
                 setHudState(prev => ({ ...prev, health: 100, isDead: false, respawnProgress: 0 }));
+
                 console.log("플레이어가 리스폰되었습니다.");
 
                 // if (stompClient && stompClient.connected) {
@@ -236,7 +325,7 @@ export function GameCanvas({ playerNickname }) {
                 console.log("진행도 인터벌 클리어됨.");
             }
         };
-    }, [hudState.isDead, stompClient, setHudState, setViewModeInGameCanvas]); // 의존성 배열
+    }, [hudState.isDead, stompClient, setHudState]); // 의존성 배열
 
     // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
     useEffect(() => {
@@ -269,6 +358,25 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [inventory.length]); // inventory.length가 변경될 때만 이펙트 재실행
 
+    // 탄약이 모두 소진된 총기 아이템을 인벤토리에서 제거하는 로직
+    useEffect(() => {
+        const selectedItem = inventory[selectedInventorySlot];
+
+        // 현재 선택된 아이템이 'ak-47'이고 탄약이 모두 소진되었는지 확인
+        if (selectedItem && selectedItem.name === 'ak-47' && selectedItem?.ammo.current === 0 && selectedItem?.ammo.reserve === 0) {
+            console.log(`[GameCanvas] AK-47 has run out of ammo and is being removed from inventory.`);
+
+
+            // 인벤토리에서 해당 아이템 제거
+            setInventory(prevInventory => {
+                const newInventory = [...prevInventory];
+                newInventory[selectedInventorySlot] = null; // 현재 슬롯을 비웁니다.
+
+                return newInventory;
+            });
+        }
+    }, [selectedItem, inventory, selectedInventorySlot]); // currentAmmo, maxAmmo, 또는 선택된 슬롯이 변경될 때마다 실행
+
     // useEffect(() => {
     //     if (!stompClient || !stompClient.connected) return;
 
@@ -294,8 +402,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        //const WS_URL = 'http://3.106.193.56:8080/ws';
-        const WS_URL = 'https://7ae1617320eb.ngrok-free.app/ws';
+        const WS_URL = 'http://localhost:8080/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -307,7 +414,7 @@ export function GameCanvas({ playerNickname }) {
         // STOMP 클라이언트 연결 시
         client.onConnect = (frame) => {
             //console.log("[STOMP] Connected to WebSocket from App.jsx!", frame); // 주석 해제하여 확인 가능
-            setStompClient(client); // STOMP 클라이언트 인스턴스 저장8080
+            setStompClient(client); // STOMP 클라이언트 인스턴스 저장
 
             // 플레이어 위치 정보 구독
             client.subscribe('/topic/playerLocations', (message) => {
@@ -483,12 +590,6 @@ export function GameCanvas({ playerNickname }) {
         }));
     }, []);
 
-    const selectedItem = inventory[selectedInventorySlot];
-    const isArmed = selectedItem?.name === 'ak-47';
-
-
-
-    // Player로부터 상호작용 요청을 받아 처리하는 함수
     const handlePlayerInteract = useCallback((interactedObjectId) => {
         console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
         const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
@@ -534,7 +635,11 @@ export function GameCanvas({ playerNickname }) {
                     }),
                 });
             }
-        } else if (interactedObject && interactedObject.type === 'ak-47' && !isArmed) {
+        } else if (interactedObject && interactedObject.type === 'ak-47') {
+            if (inventoryRef.current.some(item => item?.name === 'ak-47')) {
+                console.log('인벤토리에 이미 총기가 존재함.');
+                return;
+            }
             console.log('실행됨');
             console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`); // 추가된 로그
             setInventory(prevInventory => {
@@ -549,7 +654,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/models/ak-47.png' }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/models/ak-47.png', ammo: { current: 30, reserve: 120 }, magazineSize: 30 }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new ak-47 to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -571,6 +676,54 @@ export function GameCanvas({ playerNickname }) {
                     body: JSON.stringify({
                         playerId: currentPlayerId,
                         itemId: interactedObject.id,
+                        actionType: 'PICKUP',
+                        itemData: {
+                            name: 'ak-47',
+                            ammo: { current: 30, reserve: 120 },
+                            magazineSize: 30
+                        }
+                    }),
+                });
+            }
+        } else if (interactedObject && interactedObject.type === 'pipe') {
+            if (inventoryRef.current.some(item => item?.name === 'pipe')) {
+                console.log('이미 가지고 있는 무기임.')
+                return;
+            }
+            setInventory(prevInventory => {
+                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'pipe');
+                if (existingItemIndex !== -1) {
+                    const newInventory = [...prevInventory];
+                    newInventory[existingItemIndex].count += 1;
+                    console.log(`[GameCanvas] Updated existing pipe count. New inventory:`, newInventory); // 추가된 로그
+                    return newInventory;
+                } else {
+                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
+                    if (firstEmptySlotIndex !== -1) {
+                        const newInventory = [...prevInventory];
+                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png', }; // 이미지 경로 수정
+                        console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
+                        return newInventory;
+                    }
+                    console.log(`[GameCanvas] Inventory full, could not add pipe.`); // 추가된 로그
+                    return prevInventory;
+                }
+            });
+            setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
+            console.log("pipe collected! Prompt removed."); // 추가된 로그
+
+            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
+            console.log(`[GameCanvas] Removing pipe with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+
+            if (stompClient && stompClient.connected) {
+                console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
+                stompClient.publish({
+                    destination: '/app/pickUpItem',
+                    body: JSON.stringify({
+                        playerId: currentPlayerId,
+                        itemId: interactedObject.id,
                         actionType: 'PICKUP'
                     }),
                 });
@@ -581,6 +734,11 @@ export function GameCanvas({ playerNickname }) {
             console.log(`[GameCanvas] Interacted object is not an apple or not found. Object:`, interactedObject); // 추가된 로그
         }
     }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
+
+    const clearInventory = () => {
+        setInventory([null, null, null, null, null, null, null, null]); // 또는 초기값으로 재설정
+        setSelectedInventorySlot(0); // 선택 슬롯도 초기화
+    };
 
     // 선택된 아이템 사용 함수 (좌클릭 시 호출)
     const handleUseSelectedItem = useCallback(() => {
@@ -635,7 +793,6 @@ export function GameCanvas({ playerNickname }) {
         }
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
 
-
     return (
         <>
             {/* Leva 디버그 UI */}
@@ -646,6 +803,9 @@ export function GameCanvas({ playerNickname }) {
                 playerNickname={playerNickname}
                 inventory={inventory} // inventory prop 전달
                 selectedInventorySlot={selectedInventorySlot} // selectedInventorySlot prop 전달
+                selectedItem={inventory[selectedInventorySlot]}
+                currentAmmo={selectedItem?.ammo?.current}
+                maxAmmo={selectedItem?.ammo?.reserve}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -672,7 +832,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]} > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}> {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
@@ -686,9 +846,8 @@ export function GameCanvas({ playerNickname }) {
                                         stompClientInstance={stompClient} // STOMP 클라이언트 인스턴스 전달
                                         isPlayerHitted={hudState.isHit} // 플레이어 피격 상태 전달
                                         playerNickname={playerNickname} // 플레이어 닉네임 전달
-                                        isDead={hudState.isDead} // 사망 상태 전달
+                                        isDead={hudState.isDead} // 사망 상태 전달z`
                                         setIsDead={setIsDeadInGameCanvas} // 사망 상태 설정 함수 전달
-                                        setViewMode={setViewModeInGameCanvas} // 시점 변경 함수 전달
                                         currentPlayerId={currentPlayerId} // 현재 플레이어 ID 전달
                                         onObjectProximityChange={onObjectProximityChange} // 새로 추가: 오브젝트 근접 감지 콜백
                                         onInteract={handlePlayerInteract} // 새로 추가: 플레이어 상호작용 요청 콜백
@@ -696,7 +855,11 @@ export function GameCanvas({ playerNickname }) {
                                         selectedInventorySlot={selectedInventorySlot} // 새로 추가: 선택된 인벤토리 슬롯 전달
                                         isItemSelected={isItemSelected} // 새로 추가: 선택된 슬롯에 아이템이 있는지 여부 전달
                                         selectedItem={inventory[selectedInventorySlot]}
+                                        setInventory={setInventory}
                                         isChatting={isChatting}
+                                        clearInventory={clearInventory}
+                                        handleReload={handleReload}
+                                        playerRef={playerRef} // playerRef 전달
                                     />
                                 )}
                             </React.Suspense>
@@ -718,6 +881,7 @@ export function GameCanvas({ playerNickname }) {
                                             rotationY={player.rotationY}
                                             animationState={player.animationState}
                                             chatMessages={chatMessages}
+                                            selectedItem={inventory[selectedInventorySlot]}
                                         />
                                     </React.Suspense>
                                 </ErrorBoundary>

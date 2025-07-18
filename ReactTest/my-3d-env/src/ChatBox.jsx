@@ -46,6 +46,7 @@ export default function ChatBox({
       });
 
       setChatInput('');
+      chatInputRef.current?.blur(); // 메시지 전송 후 입력창 포커스 해제
     }
   };
 
@@ -92,7 +93,12 @@ export default function ChatBox({
           placeholder="채팅 입력 후 Enter"
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.stopPropagation(); // 이벤트 전파 중단
+              sendMessage();
+            }
+          }}
           style={styles.input}
         />
         <button onClick={sendMessage} style={styles.button}>보내기</button>

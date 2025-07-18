@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import com.example.demo.dto.PlayerState.Position;
+import com.example.demo.dto.Ammo;
 
 @Data
 @NoArgsConstructor
@@ -16,4 +17,5 @@ public class ObjectState {
     private String objectType; // 기존 필드 (예: "box", "sphere", "model")
     private String modelPath;  // 모델이 있는 경우 (예: "/models/apple.glb")
     private String itemType;   // ✨ 새로 추가: 이 오브젝트가 아이템일 경우 아이템 타입 (예: "APPLE")
+    private Ammo ammo; // 총기류 아이템의 탄약 정보
 }

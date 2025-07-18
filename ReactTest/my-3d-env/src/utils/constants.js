@@ -8,9 +8,10 @@ export const controlsMap = [
     { name: 'left', keys: ['KeyA'] },
     { name: 'right', keys: ['KeyD'] },
     { name: 'jump', keys: ['Space'] },
-    { name: 'toggleView', keys: ['KeyV'] },
     { name: 'interact', keys: ['KeyF'] },
+    { name: 'reload', keys: ['KeyR'] },
     { name: 'runFast', keys: ['ShiftLeft'] },
+    { name: 'dropItem', keys: ['KeyQ'] },
 ];
 
 // 플레이어 ID를 localStorage에서 로드하거나 새로 생성하는 함수

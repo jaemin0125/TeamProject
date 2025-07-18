@@ -10,7 +10,7 @@ import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
 import { Plane, useTexture } from '@react-three/drei';
 
 // OtherPlayer 컴포넌트: 다른 플레이어의 모델, 위치, 애니메이션 상태를 렌더링합니다.
-export function OtherPlayer({ id, position, rotationY, animationState, nickname, chatMessages }) {
+export function OtherPlayer({ id, position, rotationY, animationState, nickname, chatMessages, selectedItem }) {
     const rigidBodyRef = useRef(); // RigidBody에 대한 ref
     const modelGroupRef = useRef(); // 모델 그룹에 대한 ref
 
@@ -58,10 +58,15 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
     // 플레이어 ID에 따라 렌더링할 캐릭터 모델을 결정 (현재는 CharacterModel 고정)
 
     const isArmed = safeAnimationState.isArmed === true;
-    const characterModelPath = isArmed
-        ? '/models/ArmedCharacter.glb'
-        : '/models/UnarmedCharacter.glb';
-
+    const isUsingPipe = safeAnimationState.isUsingPipe === true;
+    let characterModelPath = '';
+        if(isArmed){
+            characterModelPath = '/models/ArmedCharacter.glb';
+        } else if (isUsingPipe){
+            characterModelPath = '/models/PipeCharacter.glb';
+        } else {
+            characterModelPath = '/models/UnarmedCharacter.glb';
+        }
 
     return (
         <RigidBody
