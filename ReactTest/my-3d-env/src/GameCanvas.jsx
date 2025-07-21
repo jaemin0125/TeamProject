@@ -362,6 +362,21 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [hudState.isDead, stompClient, setHudState]); // 의존성 배열
 
+    // ✨ 새로 추가: 우클릭 컨텍스트 메뉴 방지 로직
+    useEffect(() => {
+        const handleContextMenu = (event) => {
+            event.preventDefault(); // 브라우저의 기본 우클릭 메뉴 동작을 막습니다.
+        };
+
+        // 전체 윈도우에 contextmenu 이벤트 리스너를 추가합니다.
+        window.addEventListener('contextmenu', handleContextMenu);
+
+        // 컴포넌트가 언마운트될 때 이벤트 리스너를 제거합니다.
+        return () => {
+            window.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, []); // 빈 배열을 전달하여 이 useEffect가 컴포넌트 마운트 시 한 번만 실행되도록 합니다.
+
     // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
     useEffect(() => {
         const handleKeyDown = (event) => {
