@@ -1,8 +1,11 @@
 package com.example.demo.controller;
 
+import java.util.UUID;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
@@ -10,6 +13,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 
 import com.example.demo.dto.BulletImpactMessage;
 import com.example.demo.dto.ChatMessage;
+import com.example.demo.dto.Item;
 import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
@@ -216,12 +220,26 @@ public class GameController {
         // 인벤토리 변경사항은 항상 브로드캐스트
         messagingTemplate.convertAndSend("/topic/playerLocations", playerService.getAllPlayers());
     }
-    
-    @MessageMapping("/chat.send")
-    public void sendChatMessage(ChatMessage chatMessage) {
-        messagingTemplate.convertAndSend("/topic/chat/" + chatMessage.getRoomId(), chatMessage);
-    }
 
+ // 서버 수신
+    @MessageMapping("/chat")
+    public void handleChat(@Payload ChatMessage message) {
+        messagingTemplate.convertAndSend("/topic/chat", message);
+    }
+    @MessageMapping("/npc/action")
+    public void handleNpcAction(ItemActionRequest request) {
+
+    	if ("give".equals(request.getActionType())) {
+    		Item apple = new Item(UUID.randomUUID().toString(), // 아이템 고유 아이디 부여
+    				"apple", // 아이템 이름 (예: "사과")
+    				"food", // 아이템 타입 (예: "food", "weapon", "consumable")
+    				1, // 아이템 개수
+    				"/models/apple.png " // 프론트엔드에서 사용할 아이템 이미지 경로 (예: "/assets/apple.png")
+    		);
+    		playerService.addItemToInventory(request.getPlayerId(), apple);
+    	}
+    }
+    
 
 	/**
 	 * 웹소켓 연결이 끊어졌을 때 호출되는 메서드. 이 메서드는 WebSocketEventListener의
@@ -237,3 +255,6 @@ public class GameController {
 	
 	
 }
+
+
+

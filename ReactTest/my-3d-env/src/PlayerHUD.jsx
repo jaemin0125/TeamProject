@@ -8,12 +8,19 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
     // state 객체에서 필요한 정보들을 구조 분해 할당
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
 
-    // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
-    const otherPlayersArray = state.otherPlayers ? Array.from(state.otherPlayers.values()) : [];
-    const otherPlayersInfo = otherPlayersArray
-        .filter(p => p.id !== state.currentPlayerId)
-        .map(p => `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || 'N/A'}, ${p.position?.y?.toFixed(1) || 'N/A'}, ${p.position?.z?.toFixed(1) || 'N/A'})`)
-        .join('\n');
+  // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
+  const otherPlayersArray = state.otherPlayers
+    ? Array.from(state.otherPlayers.values())
+    : [];
+  const otherPlayersInfo = otherPlayersArray
+    .filter((p) => p.id !== state.currentPlayerId)
+    .map(
+      (p) =>
+        `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || "N/A"}, ${
+          p.position?.y?.toFixed(1) || "N/A"
+        }, ${p.position?.z?.toFixed(1) || "N/A"})`
+    )
+    .join("\n");
 
     // 리스폰 프로그레스 바 너비 계산 (5초 기준)
     // 체력 바 색상 결정

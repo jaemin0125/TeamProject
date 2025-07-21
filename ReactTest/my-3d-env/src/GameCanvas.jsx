@@ -16,6 +16,7 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
+import Npc from './Npc';
 import { vec2 } from 'three/tsl';
 
 
@@ -114,17 +115,9 @@ export function GameCanvas({ playerNickname }) {
         showInteractionPrompt: false,
         interactableObjectId: null,
     });
-    // 인벤토리 상태 관리 (8칸 핫바)
-    const [inventory, setInventory] = useState([
-        null, // 슬롯 1
-        null, // 슬롯 2
-        null, // 슬롯 3
-        null, // 슬롯 4
-        null, // 슬롯 5
-        null, // 슬롯 6
-        null, // 슬롯 7
-        null  // 슬롯 8
-    ]);
+    // 추가 --> 인벤토리 상태 관리 (8칸 핫바) / 기존 인벤토리 방식 사용하면 Npc 아이템 수령이 제한되서 변경
+    const MAX_SLOTS = 8;
+    const [inventory, setInventory] = useState(() => new Array(MAX_SLOTS).fill(null));
 
     const inventoryRef = useRef(inventory);
 
@@ -245,6 +238,7 @@ export function GameCanvas({ playerNickname }) {
         if (isChatting) return; // 채팅 중에는 아이템 버리기 방지
 
         const itemToDrop = inventoryRef.current[selectedInventorySlot];
+        console.log(itemToDrop.id);
         if (!itemToDrop) {
             console.log("버릴 아이템이 없습니다.");
             return;
@@ -483,6 +477,48 @@ export function GameCanvas({ playerNickname }) {
                 const { hitPosition, hitNormal } = JSON.parse(message.body);
                 spawnBulletHole(hitPosition, hitNormal);
             });
+
+            // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
+          const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
+
+            client.subscribe(`/topic/inventory/${playerId}`, (message) => {
+                const receivedItem = JSON.parse(message.body);
+
+                // 받은 아이템에 이미지 경로 붙이기
+                const itemWithImage = {
+                    ...receivedItem,
+                    image: `/models/${receivedItem.name}.png`, // 
+                }; // 서버가 보낸 인벤토리 변경 알림을 받아서, 클라 화면을 실시간으로 갱신(서버 -> 클라)
+
+                setInventory((prevInventory) => {
+                    // 기존에 같은 아이템이 있는지 확인
+                    const existingIndex = prevInventory.findIndex(
+                        (item) => item && item.name === itemWithImage.name
+                    );
+
+                    if (existingIndex !== -1) {
+                        // 수량만 증가
+                        const updated = [...prevInventory];
+                        updated[existingIndex] = {
+                            ...updated[existingIndex],
+                            count: updated[existingIndex].count + itemWithImage.count,
+                        };
+                        return updated;
+                    }
+
+                    // 빈 슬롯 찾기
+                    const emptyIndex = prevInventory.findIndex((item) => item === null);
+                    if (emptyIndex !== -1) {
+                        const updated = [...prevInventory];
+                        updated[emptyIndex] = itemWithImage;
+                        return updated;
+                    }
+
+                    console.warn("빈 인벤토리 슬롯 없음");
+                    return prevInventory; // 그대로 유지
+                });
+            });
+            //////////////////////////////////
 
 
             // 씬 오브젝트 정보 구독
@@ -947,19 +983,19 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-
+   <Npc client={stompClient} /> 
                     </Physics>
                 </Canvas>
-                {stompClient && (
+                   {stompClient && (
                     <ChatBox
                         stompClient={stompClient}
                         currentPlayerId={currentPlayerId}
-                        roomId="room1"
                         chatMessages={chatMessages}
                         setChatMessages={setChatMessages}
                         chatInput={chatInput}
                         setChatInput={setChatInput}
                         setIsChatting={setIsChatting}
+                        playerNickname={playerNickname} 
                     />
                 )}
             </KeyboardControls>

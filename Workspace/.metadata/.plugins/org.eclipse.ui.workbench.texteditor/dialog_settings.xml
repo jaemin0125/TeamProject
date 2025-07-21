@@ -10,9 +10,6 @@
 		<item key="selection" value="0.8739314079284668"/>
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="itemAc"/>
-			<item value="damage"/>
-			<item value="HttpSession"/>
 			<item value="ak-47"/>
 			<item value="player"/>
 			<item value="playerHit"/>
@@ -25,6 +22,9 @@
 			<item value="collectobject"/>
 			<item value="updatePlayerState"/>
 			<item value="playerid"/>
+			<item value="dead"/>
+			<item value="public boolean"/>
+			<item value="decrease"/>
 		</list>
 		<list key="replacehistory">
 		</list>
