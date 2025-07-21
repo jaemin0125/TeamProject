@@ -11,5 +11,10 @@ public class InventoryItem {
     private String id;
     private String name;
     private int count;
-    // 필요한 경우 아이템 타입, 설명 등 추가 필드를 여기에 정의할 수 있습니다.
+    
+    public InventoryItem(String name, int count) {
+        this.name = name;
+        this.count = count;
+    }
+    // 
 }

@@ -24,14 +24,15 @@ export function Player({
     isChatting,
     clearInventory,
     handleReload,
-    setInventory
+    setInventory,
+    playerRef, // playerRef를 props로 받음
+    isReloading // isReloading prop 추가
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
     const [subscribeKeys, getKeys] = useKeyboardControls(); // 키보드 컨트롤 훅
     const [sitToggle, setSitToggle] = useState(false); // 앉기 토글 상태
     const [lieToggle, setLieToggle] = useState(false); // 눕기 토글 상태
-    const playerRef = useRef(); // 플레이어 RigidBody 참조
     const modelRef = useRef(); // 플레이어 3D 모델 참조
     const [isGrounded, setIsGrounded] = useState(false); // 바닥에 닿았는지 여부
     const [currentViewMode, setCurrentViewMode] = useState('thirdPerson'); // 플레이어 내부의 시점 모드
@@ -49,6 +50,12 @@ export function Player({
     const firingIntervalRef = useRef(null);
     const mouseDownTimeRef = useRef(0);
     const [canFire, setCanFire] = useState(true);
+
+    const isReloadingRef = useRef(isReloading); // isReloading prop의 최신 값을 추적하기 위한 ref
+
+    useEffect(() => {
+        isReloadingRef.current = isReloading;
+    }, [isReloading]);
 
 
     // 스페이스바의 이전 눌림 상태를 추적하는 Ref 추가
@@ -95,6 +102,7 @@ export function Player({
     }, [isArmed]);
 
     const fireBullet = () => {
+        if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
         // 1. 플레이어의 현재 위치를 가져옵니다.
 
         if (!canFire || !selectedItem?.ammo || selectedItem.ammo.current <= 0) {
@@ -323,7 +331,7 @@ export function Player({
     }, [isPunching, isSlashing, canPunch, canSlash, stompClientInstance, isDead, currentPlayerId, isUsingPipe, isArmed]);
 
     useEffect(() => {
-        if (!isFiring || isDead || selectedItem?.name !== 'ak-47') return;
+        if (!isFiring || isDead || selectedItem?.name !== 'ak-47' || isReloadingRef.current) return;
 
         // 일정 간격으로 fireBullet 호출
         firingIntervalRef.current = setInterval(() => {
@@ -331,7 +339,7 @@ export function Player({
         }, fireRate); // 150ms 간격으로 발사
 
         return () => clearInterval(firingIntervalRef.current);
-    }, [isFiring, isDead, selectedItem]);
+    }, [isFiring, isDead, selectedItem, isReloading]);
 
     // 컴포넌트 마운트 시 초기 플레이어 등록
     useEffect(() => {
@@ -361,7 +369,7 @@ export function Player({
     // 'C' (앉기) 및 'Z' (눕기) 토글 로직
     useEffect(() => {
         const handleKeyDown = (e) => {
-            if (isDead || isChatting) return; // 죽음 상태일 때 움직임 비활성화
+            if (isDead || isChatting || e.repeat) return; // 죽음 상태일 때 움직임 비활성화
             if (e.code === 'KeyC') {
                 setSitToggle(prev => {
                     const next = !prev;
@@ -376,14 +384,15 @@ export function Player({
                     return next;
                 });
             }
-            if (e.code === 'KeyR' && !isDead && isArmed) {
+            if (e.code === 'KeyR' && !isDead && isArmed && !isReloadingRef.current) {
                 handleReload();
+
                 setCanFire(true);
             }
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isDead, isChatting, isArmed]);
+    }, [isDead, isChatting, isArmed, isReloading]);
 
     // 마우스 클릭 (펀치 또는 아이템 사용) 로직
     useEffect(() => {
@@ -415,6 +424,7 @@ export function Player({
             }
 
             if (e.button === 0 && isArmed) {
+                if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
                 setIsFiring(true);
                 fireBullet();
 
@@ -558,6 +568,8 @@ export function Player({
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
         yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
 
+
+
         const keys = getKeys(); // 현재 눌린 키 상태 가져오기
         const { jump } = keys; // 점프 키 상태 별도로 추출
         const vel = playerRef.current?.linvel() || { x: 0, y: 0, z: 0 }; // 플레이어 선형 속도
@@ -578,10 +590,48 @@ export function Player({
         const isAimingAnim = (isAiming || isScoped) && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
         const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
         const isDeadAnim = isDead;
-        const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
+        const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
         const isIdleFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
         const isWalkingFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
         const isRunningFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
+
+
+
+        // isGrounded 판정을 위한 레이캐스팅
+        // CapsuleCollider의 args는 [halfHeight, radius] 순서입니다.
+        const capsuleHalfHeight = 0.35; // args[0]
+        const capsuleRadius = 0.4;    // args[1]
+
+        // 레이 시작점을 캡슐 콜라이더의 가장 낮은 지점에서 약간 위로 설정합니다.
+        // 플레이어 위치(pos.y)에서 (캡슐 반높이 + 캡슐 반지름) 만큼 내린 후 약간의 오프셋을 더합니다.
+        const rayOriginY = pos.y - capsuleHalfHeight - capsuleRadius + 0.1;
+        const groundRayOrigin = { x: pos.x, y: rayOriginY, z: pos.z };
+        const groundRayDir = { x: 0, y: -1, z: 0 };
+        const ray = new rapier.Ray(groundRayOrigin, groundRayDir);
+
+        // 아래로 0.15m 이내에 바닥이 있는지 검사합니다.
+        // 플레이어 자신의 콜라이더는 검사에서 제외합니다.
+        const hit = world.castRay(
+            ray,
+            0.15, // 레이 길이
+            true, // solid 객체만 감지
+            undefined,
+            undefined,
+            undefined,
+            playerRef.current // 플레이어 리지드바디 제외
+        );
+
+        // 레이가 어딘가에 부딪혔다면 땅에 닿은 것으로 간주합니다.
+        const newGroundedState = hit !== null;
+
+        // isGrounded 상태를 업데이트합니다.
+        if (newGroundedState !== isGrounded) {
+            setIsGrounded(newGroundedState);
+        }
+
+
+
+
         // STOMP 클라이언트가 연결되어 있을 때 플레이어 상태를 서버에 전송
         if (selectedItem?.name === 'ak-47') {
             isArmed = true;
@@ -637,79 +687,83 @@ export function Player({
         let actualSpeed = speed;
 
         // 플레이어 움직임 로직 (사망 시 비활성화)
-        if (!isDead && !isChatting) {
-            // 앉거나 누웠을 때, 또는 달릴 때 속도 조절
-            if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = Math.max(speed * 0.5, 1.7);
-            } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = Math.max(speed * 0.3, 1.3);
-            } else if (keys.runFast && !sitToggle && !lieToggle && !isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = speed + 2;
-            } if (isScoped || isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = Math.max(speed * 0.4, 1.5);
-            } if (isScoped || isAiming && sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = Math.max(speed * 0.2, 1.1);
-            } if (isScoped || isAiming && lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
-                actualSpeed = Math.max(speed * 0.1, 0.7);
-            }
-
-            let vx = 0, vz = 0;
-
-            // 키 입력에 따른 x, z 속도 계산
-            if (keys.forward) {
-                vx += forwardVector.x * actualSpeed;
-                vz += forwardVector.z * actualSpeed;
-            }
-            if (keys.backward) {
-                vx -= forwardVector.x * actualSpeed;
-                vz -= forwardVector.z * actualSpeed;
-            }
-            if (keys.left) {
-                vx -= rightVector.x * actualSpeed;
-                vz -= rightVector.z * actualSpeed;
-            }
-            if (keys.right) {
-                vx += rightVector.x * actualSpeed;
-                vz += rightVector.z * actualSpeed;
-            }
-
-            // 플레이어 선형 속도 설정
-            playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
-
-            // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
-            // 점프 및 자세 변경 로직
-            if (jump && !lastJumpKeyStatus.current) { // 스페이스바가 새로 눌렸을 때
-                if (lieToggle) {
-                    // 1. 누운 상태 -> 앉은 상태로 변경
-                    setLieToggle(false);
-                    setSitToggle(true);
-                } else if (sitToggle) {
-                    // 2. 앉은 상태 -> 서 있는 상태로 변경
-                    setSitToggle(false);
-                } else if (isGrounded && !isAiming && vel.y <= 0.1) {
-                    // 3. 서 있는 상태 -> 점프
-                    playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
-                    setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
-                    setIsJumping(true); // 점프 애니메이션 시작
+        if (!isDead) { // isDead일 때만 완전히 멈춤
+            if (isChatting) {
+                // 채팅 중일 때는 수평 움직임만 멈추고, 수직 속도는 유지하여 중력 적용
+                playerRef.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
+            } else {
+                // 앉거나 누웠을 때, 또는 달릴 때 속도 조절
+                if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = Math.max(speed * 0.5, 1.7);
+                } else if (lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = Math.max(speed * 0.3, 1.3);
+                } else if (keys.runFast && !sitToggle && !lieToggle && !isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = speed + 2;
+                } if (isScoped || isAiming && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = Math.max(speed * 0.4, 1.5);
+                } if (isScoped || isAiming && sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = Math.max(speed * 0.2, 1.1);
+                } if (isScoped || isAiming && lieToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
+                    actualSpeed = Math.max(speed * 0.1, 0.7);
                 }
-            }
 
-            // 점프 애니메이션 종료 로직: 땅에 닿았고, 수직 속도가 거의 없을 때 점프 상태 해제
-            if (isGrounded && isJumping && vel.y < 0.1) {
-                setIsJumping(false);
-            }
+                let vx = 0, vz = 0;
 
-            // 'F' 키 상호작용 트리거 (Player에서 직접 처리)
-            if (keys.interact && !lastInteractKeyState.current) { // 'interact' 키가 새로 눌렸을 때
-                console.log(`[Player] 'F' key pressed. Current interactableObjectIdRef.current: ${interactableObjectIdRef.current}`); // 추가된 로그
-                if (onInteract && interactableObjectIdRef.current) { // interactableObjectIdRef.current 사용
-                    onInteract(interactableObjectIdRef.current); // GameCanvas로 상호작용 요청
-                } else {
-                    console.log("[Player] No interactable object in range or onInteract is null.");
+                // 키 입력에 따른 x, z 속도 계산
+                if (keys.forward) {
+                    vx += forwardVector.x * actualSpeed;
+                    vz += forwardVector.z * actualSpeed;
                 }
-            }
-            lastInteractKeyState.current = keys.interact; // 'interact' 키의 현재 상태 저장
+                if (keys.backward) {
+                    vx -= forwardVector.x * actualSpeed;
+                    vz -= forwardVector.z * actualSpeed;
+                }
+                if (keys.left) {
+                    vx -= rightVector.x * actualSpeed;
+                    vz -= rightVector.z * actualSpeed;
+                }
+                if (keys.right) {
+                    vx += rightVector.x * actualSpeed;
+                    vz += rightVector.z * actualSpeed;
+                }
 
+                // 플레이어 선형 속도 설정
+                playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
+
+                // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
+                // 점프 및 자세 변경 로직
+                if (jump && !lastJumpKeyStatus.current) { // 스페이스바가 새로 눌렸을 때
+                    if (lieToggle) {
+                        // 1. 누운 상태 -> 앉은 상태로 변경
+                        setLieToggle(false);
+                        setSitToggle(true);
+                    } else if (sitToggle) {
+                        // 2. 앉은 상태 -> 서 있는 상태로 변경
+                        setSitToggle(false);
+                    } else if (isGrounded && !isAiming && vel.y <= 0.1) {
+                        // 3. 서 있는 상태 -> 점프
+                        playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
+                        setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
+                        setIsJumping(true); // 점프 애니메이션 시작
+                    }
+                }
+
+                // 점프 애니메이션 종료 로직: 땅에 닿았고, 수직 속도가 거의 없을 때 점프 상태 해제
+                if (isGrounded && isJumping && vel.y < 0.1) {
+                    setIsJumping(false);
+                }
+
+                // 'F' 키 상호작용 트리거 (Player에서 직접 처리)
+                if (keys.interact && !lastInteractKeyState.current) { // 'interact' 키가 새로 눌렸을 때
+                    console.log(`[Player] 'F' key pressed. Current interactableObjectIdRef.current: ${interactableObjectIdRef.current}`); // 추가된 로그
+                    if (onInteract && interactableObjectIdRef.current) { // interactableObjectIdRef.current 사용
+                        onInteract(interactableObjectIdRef.current); // GameCanvas로 상호작용 요청
+                    } else {
+                        console.log("[Player] No interactable object in range or onInteract is null.");
+                    }
+                }
+                lastInteractKeyState.current = keys.interact; // 'interact' 키의 현재 상태 저장
+            }
         } else {
             // 플레이어가 죽었을 때 움직임 멈춤
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -831,7 +885,7 @@ export function Player({
     const isAimingAnim = (isAiming || isScoped) && !isDead && !sitToggle && !lieToggle && !isSittedAndWalkAnim && !isLyingDownAndWalkAnim && !isChatting && isArmed;
     const isAimingAndWalkAnim = (isAiming || isScoped) && isWalkingAnim;
     const isDeadAnim = isDead;
-    const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || keys.runFast || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
+    const isIdleAnim = !(keys.forward || keys.backward || keys.left || keys.right || keys.jump || isPunching || isPlayerHitted) && !sitToggle && !lieToggle && !isDead && !isChatting;
     const isIdleFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isArmed;
     const isWalkingFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isWalkingAnim && isArmed;
     const isRunningFiringAnim = isFiring && canFire && !isDead && !isChatting && !sitToggle && !lieToggle && isRunningAnim && isArmed;
@@ -860,7 +914,7 @@ export function Player({
     }, [onObjectProximityChange]);
 
 
-    const handleCollisionExit = useCallback((payload) => {
+     const handleCollisionExit = useCallback((payload) => {
         setIsGrounded(false); // 바닥 접지 여부 업데이트
 
         const rigidBody = payload.other.rigidBodyObject;
@@ -887,18 +941,18 @@ export function Player({
         <>
             {/* 플레이어 RigidBody (물리 적용) */}
             <RigidBody
-                ref={playerRef}
+                ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
                 enabledRotations={[false, false, false]} // 회전 비활성화 (캐릭터가 넘어지지 않도록)
-                onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
-                onCollisionExit={handleCollisionExit}   // 충돌 종료 시
+            onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
+            onCollisionExit={handleCollisionExit}   // 충돌 종료 시
             >
                 {/* 플레이어의 캡슐 콜라이더 (실제 물리 충돌용) */}
                 <CapsuleCollider args={[0.35, 0.4]} />
                 {/* 추가: 아이템 줍기 감지를 위한 센서 콜라이더 */}
                 {/* 이 센서는 isSensor={true}로 설정되어 물리적 충돌을 일으키지 않고 겹침만 감지합니다. */}
-                <CapsuleCollider args={[0.35, 0.4]} sensor position={[0, 0, 0]} /> {/* 플레이어 주변의 넓은 센서 (크기 증가) */}
+                <CapsuleCollider args={[0.35, 0.4]} /> {/* 플레이어 주변의 넓은 센서 (크기 증가) */}
             </RigidBody>
 
             {/* 플레이어 3D 모델 */}
@@ -931,4 +985,4 @@ export function Player({
             />
         </>
     );
-}
+} 

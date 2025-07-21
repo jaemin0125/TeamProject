@@ -13,6 +13,8 @@ public class ItemActionRequest {
     private String itemId;   // 액션을 수행할 아이템의 ID (씬 오브젝트 ID 또는 인벤토리 아이템 ID)
     private String actionType; // 액션의 종류 (예: "PICKUP", "USE")
     private ItemData itemData;
+    private PlayerState.Position position;
+    private int quantity;
     // 필요한 경우 추가적인 데이터 (예: quantity 등)를 넣을 수 있습니다.
     
     @Data
@@ -23,12 +25,5 @@ public class ItemActionRequest {
     	private Ammo ammo;
     }
     
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class Ammo {
-    	private int current;
-    	private int reserve;
-    	
-    }
+
 }

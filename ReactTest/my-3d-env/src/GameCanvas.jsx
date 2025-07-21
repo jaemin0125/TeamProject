@@ -16,6 +16,8 @@ import { SceneObject } from './SceneObject';
 import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
+import Npc from './Npc';
+import { vec2 } from 'three/tsl';
 
 
 
@@ -113,17 +115,9 @@ export function GameCanvas({ playerNickname }) {
         showInteractionPrompt: false,
         interactableObjectId: null,
     });
-    // 인벤토리 상태 관리 (8칸 핫바)
-    const [inventory, setInventory] = useState([
-        null, // 슬롯 1
-        null, // 슬롯 2
-        null, // 슬롯 3
-        null, // 슬롯 4
-        null, // 슬롯 5
-        null, // 슬롯 6
-        null, // 슬롯 7
-        null  // 슬롯 8
-    ]);
+    // 추가 --> 인벤토리 상태 관리 (8칸 핫바) / 기존 인벤토리 방식 사용하면 Npc 아이템 수령이 제한되서 변경
+    const MAX_SLOTS = 8;
+    const [inventory, setInventory] = useState(() => new Array(MAX_SLOTS).fill(null));
 
     const inventoryRef = useRef(inventory);
 
@@ -151,6 +145,7 @@ export function GameCanvas({ playerNickname }) {
     }, []);
 
     const selectedItem = inventory[selectedInventorySlot];
+    const playerRef = useRef(); // Player 컴포넌트의 RigidBody 참조를 위한 ref
 
 
     function spawnBulletHole(hitPosition, hitNormal) {
@@ -183,20 +178,132 @@ export function GameCanvas({ playerNickname }) {
             material.dispose();
         }, 15000); // 15초 후 제거
     }
+    const [isReloading, setIsReloading] = useState(false); // 재장전 상태 추가
+    const [reloadProgress, setReloadProgress] = useState(0); // 재장전 진행도 상태 추가
+
     const handleReload = useCallback(() => {
-    setInventory(prev => {
-        const newInv = [...prev];
-        const gun = newInv[selectedInventorySlot];
-        if (gun && gun.ammo) {
-            const magazineSize = gun.magazineSize || 30; // 없으면 기본 30
-            const needed = magazineSize - gun.ammo.current;
-            const toReload = Math.min(needed, gun.ammo.reserve);
-            gun.ammo.current += toReload;
-            gun.ammo.reserve -= toReload;
+        const currentGun = inventory[selectedInventorySlot];
+
+        // 총이 없거나, 탄약 정보가 없거나, 이미 재장전 중이면 무시
+        if (!currentGun || !currentGun.ammo || isReloading || currentGun.ammo.reserve === 0) {
+            return;
         }
-        return newInv;
-    });
-}, [selectedInventorySlot]);
+
+        const magazineSize = currentGun.magazineSize || 30; // 무기 자체의 탄창 크기 사용 (기본값 30)
+
+        // 현재 탄창이 가득 차 있으면 재장전 불필요
+        if (currentGun.ammo.current >= magazineSize) {
+            console.log("Magazine is already full. No need to reload.");
+            return;
+        }
+
+        setIsReloading(true); // 재장전 시작
+        setReloadProgress(0); // 진행도 초기화
+
+        let progress = 0;
+        const intervalTime = 50; // 50ms마다 업데이트
+        const totalTime = 2000; // 총 2초
+        const increment = (intervalTime / totalTime) * 100; // 각 스텝별 증가량
+
+        const reloadInterval = setInterval(() => {
+            progress += increment;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(reloadInterval);
+                setInventory(prev => {
+                    const newInv = [...prev];
+                    const gun = newInv[selectedInventorySlot];
+                    if (gun && gun.ammo) {
+                        const magSize = gun.magazineSize || 30; // 없으면 기본 30
+                        const needed = magSize - gun.ammo.current;
+                        const toReload = Math.min(needed, gun.ammo.reserve);
+                        gun.ammo.current += toReload;
+                        gun.ammo.reserve -= toReload;
+                    }
+                    return newInv;
+                });
+                setIsReloading(false); // 재장전 완료
+                setReloadProgress(0); // 진행도 다시 초기화
+            }
+            setReloadProgress(progress);
+        }, intervalTime);
+
+        // 컴포넌트 언마운트 시 인터벌 정리
+        return () => clearInterval(reloadInterval);
+
+    }, [selectedInventorySlot, isReloading, inventory]);
+
+    // 아이템 버리기 함수
+    const handleDropItem = useCallback(() => {
+        if (isChatting) return; // 채팅 중에는 아이템 버리기 방지
+
+        const itemToDrop = inventoryRef.current[selectedInventorySlot];
+        console.log(itemToDrop.id);
+        if (!itemToDrop) {
+            console.log("버릴 아이템이 없습니다.");
+            return;
+        }
+
+        // 플레이어의 현재 위치 가져오기
+        const playerPosition = playerRef.current?.translation();
+        if (!playerPosition) {
+            console.warn("플레이어 위치를 가져올 수 없습니다.");
+            return;
+        }
+
+        // 인벤토리에서 아이템 개수 감소 또는 제거
+        setInventory(prevInventory => {
+            const newInventory = [...prevInventory];
+            const itemInSlot = { ...newInventory[selectedInventorySlot] }; // 불변성을 위해 복사
+
+            if (itemInSlot.count > 1) {
+                itemInSlot.count -= 1;
+                newInventory[selectedInventorySlot] = itemInSlot;
+            } else {
+                newInventory[selectedInventorySlot] = null; // 아이템이 1개 이하면 슬롯 비움
+            }
+            return newInventory;
+        });
+
+        // 서버에 아이템 버리기 요청 전송
+        if (stompClient && stompClient.connected) {
+            console.log(`[GameCanvas] Publishing dropItem event for ${itemToDrop.name} (ID: ${itemToDrop.id})`);
+            stompClient.publish({
+                destination: '/app/dropItem',
+                body: JSON.stringify({
+                    playerId: currentPlayerId,
+                    itemId: itemToDrop.id,
+                    actionType: 'DROP',
+                    itemData: {
+                        name: itemToDrop.name,
+                        image: itemToDrop.image,
+                        ammo: itemToDrop.ammo ? { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve } : undefined,
+                        magazineSize: itemToDrop.magazineSize,
+                    },
+                    quantity: 1, // 항상 1개만 버리도록 설정
+                    position: {
+                        x: playerPosition.x,
+                        y: playerPosition.y - 0.5, // 플레이어 발 밑에 놓이도록 약간 아래로
+                        z: playerPosition.z,
+                    }
+                }),
+            });
+        }
+    }, [selectedInventorySlot, isChatting, stompClient, currentPlayerId]);
+
+    // 'Q' 키 입력 감지
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.code === 'KeyQ' && !isChatting) {
+                handleDropItem();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [handleDropItem, isChatting]);
 
 
 
@@ -255,10 +362,32 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [hudState.isDead, stompClient, setHudState]); // 의존성 배열
 
+     useEffect(() => {
+        const handleContextMenu = (event) => {
+            event.preventDefault(); // 브라우저의 기본 우클릭 메뉴 동작을 막습니다.
+        };
+
+        // 전체 윈도우에 contextmenu 이벤트 리스너를 추가합니다.
+        window.addEventListener('contextmenu', handleContextMenu);
+
+        // 컴포넌트가 언마운트될 때 이벤트 리스너를 제거합니다.
+        return () => {
+            window.removeEventListener('contextmenu', handleContextMenu);
+        };
+    }, []); // 빈 배열을 전달하여 이 useEffect가 컴포넌트 마운트 시 한 번만 실행되도록 합니다.
+
+
     // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
     useEffect(() => {
         const handleKeyDown = (event) => {
             const key = event.key;
+            //포인터락 상태에서 새로고침 방지
+            if (document.pointerLockElement) {
+                if(event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+                    event.preventDefault();
+                    return;
+                }
+            }
             if (key >= '1' && key <= '8') {
                 const newSlot = parseInt(key) - 1; // 0-indexed
                 setSelectedInventorySlot(newSlot);
@@ -363,6 +492,48 @@ export function GameCanvas({ playerNickname }) {
                 const { hitPosition, hitNormal } = JSON.parse(message.body);
                 spawnBulletHole(hitPosition, hitNormal);
             });
+
+            // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
+          const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
+
+            client.subscribe(`/topic/inventory/${playerId}`, (message) => {
+                const receivedItem = JSON.parse(message.body);
+
+                // 받은 아이템에 이미지 경로 붙이기
+                const itemWithImage = {
+                    ...receivedItem,
+                    image: `/models/${receivedItem.name}.png`, // 
+                }; // 서버가 보낸 인벤토리 변경 알림을 받아서, 클라 화면을 실시간으로 갱신(서버 -> 클라)
+
+                setInventory((prevInventory) => {
+                    // 기존에 같은 아이템이 있는지 확인
+                    const existingIndex = prevInventory.findIndex(
+                        (item) => item && item.name === itemWithImage.name
+                    );
+
+                    if (existingIndex !== -1) {
+                        // 수량만 증가
+                        const updated = [...prevInventory];
+                        updated[existingIndex] = {
+                            ...updated[existingIndex],
+                            count: updated[existingIndex].count + itemWithImage.count,
+                        };
+                        return updated;
+                    }
+
+                    // 빈 슬롯 찾기
+                    const emptyIndex = prevInventory.findIndex((item) => item === null);
+                    if (emptyIndex !== -1) {
+                        const updated = [...prevInventory];
+                        updated[emptyIndex] = itemWithImage;
+                        return updated;
+                    }
+
+                    console.warn("빈 인벤토리 슬롯 없음");
+                    return prevInventory; // 그대로 유지
+                });
+            });
+            //////////////////////////////////
 
 
             // 씬 오브젝트 정보 구독
@@ -517,85 +688,6 @@ export function GameCanvas({ playerNickname }) {
             showInteractionPrompt: isNear,
         }));
     }, []);
-
-
-    // Player로부터 상호작용 요청을 받아 처리하는 함수
-    // const handlePlayerInteract = useCallback((interactedObjectId) => {
-    //     console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`);
-
-    //     const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
-    //     console.log(`[GameCanvas] Found interactedObject:`, interactedObject);
-
-    //     if (!interactedObject) {
-    //         console.log(`[GameCanvas] Interacted object not found.`);
-    //         return;
-    //     }
-
-    //     const { id, type } = interactedObject;
-
-
-    //     // 처리할 수 있는 아이템인지 확인
-    //     const validItemTypes = ['apple', 'ak-47', 'pipe'];
-    //     if (!validItemTypes.includes(type)) {
-    //         console.log(`[GameCanvas] Interacted object is not a valid pickup item. Type: ${type}`);
-    //         return;
-    //     }
-
-    //     // 인벤토리 업데이트
-    //     setInventory(prevInventory => {
-    //         const existingItemIndex = prevInventory.findIndex(item => item && item.name === type);
-
-    //         if (existingItemIndex !== -1) {
-    //             const newInventory = [...prevInventory];
-    //             newInventory[existingItemIndex].count += 1;
-    //             console.log(`[GameCanvas] Updated existing ${type} count. New inventory:`, newInventory);
-    //             return newInventory;
-    //         } else {
-    //             const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
-    //             if (firstEmptySlotIndex !== -1) {
-    //                 const newInventory = [...prevInventory];
-    //                 newInventory[firstEmptySlotIndex] = {
-    //                     name: type,
-    //                     count: 1,
-    //                     id: id,
-    //                     image: `/models/${type}.png`
-    //                 };
-    //                 console.log(`[GameCanvas] Added new ${type} to inventory. New inventory:`, newInventory);
-    //                 return newInventory;
-    //             }
-
-    //             console.log(`[GameCanvas] Inventory full, could not add ${type}.`);
-    //             return prevInventory;
-    //         }
-    //     });
-
-    //     // 상호작용 프롬프트 제거
-    //     setHudState(prev => ({
-    //         ...prev,
-    //         interactableObjectId: null,
-    //         showInteractionPrompt: false
-    //     }));
-    //     console.log(`${type} collected! Prompt removed.`);
-
-    //     // 씬에서 오브젝트 제거
-    //     console.log(`[GameCanvas] Removing ${type} with ID: ${id} from sceneObjects.`);
-    //     setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== id));
-
-    //     // STOMP 메시지 전송
-    //     if (stompClient && stompClient.connected) {
-    //         console.log(`[GameCanvas] Publishing pickUpItem event for ${id}`);
-    //         stompClient.publish({
-    //             destination: '/app/pickUpItem',
-    //             body: JSON.stringify({
-    //                 playerId: currentPlayerId,
-    //                 itemId: id,
-    //                 actionType: 'PICKUP'
-    //             }),
-    //         });
-    //     }
-    // }, [sceneObjects, setInventory, setHudState, stompClient, currentPlayerId]);
-
-
 
     const handlePlayerInteract = useCallback((interactedObjectId) => {
         console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
@@ -813,6 +905,8 @@ export function GameCanvas({ playerNickname }) {
                 selectedItem={inventory[selectedInventorySlot]}
                 currentAmmo={selectedItem?.ammo?.current}
                 maxAmmo={selectedItem?.ammo?.reserve}
+                isReloading={isReloading} // 재장전 상태 전달
+                reloadProgress={reloadProgress} // 재장전 진행도 전달
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -866,6 +960,8 @@ export function GameCanvas({ playerNickname }) {
                                         isChatting={isChatting}
                                         clearInventory={clearInventory}
                                         handleReload={handleReload}
+                                        playerRef={playerRef} // playerRef 전달
+                                        isReloading={isReloading} // 재장전 상태 전달
                                     />
                                 )}
                             </React.Suspense>
@@ -902,19 +998,19 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-
+   <Npc client={stompClient} /> 
                     </Physics>
                 </Canvas>
-                {stompClient && (
+                   {stompClient && (
                     <ChatBox
                         stompClient={stompClient}
                         currentPlayerId={currentPlayerId}
-                        roomId="room1"
                         chatMessages={chatMessages}
                         setChatMessages={setChatMessages}
                         chatInput={chatInput}
                         setChatInput={setChatInput}
                         setIsChatting={setIsChatting}
+                        playerNickname={playerNickname} 
                     />
                 )}
             </KeyboardControls>

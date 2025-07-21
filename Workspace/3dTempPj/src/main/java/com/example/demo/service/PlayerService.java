@@ -1,7 +1,10 @@
 // src/main/java/com/example/demo/service/PlayerService.java
 package com.example.demo.service;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
@@ -15,7 +18,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.example.demo.dto.AnimationState;
+import com.example.demo.dto.InventoryItem;
 import com.example.demo.dto.Item;
+import com.example.demo.dto.ItemActionRequest;
+import com.example.demo.dto.Ammo;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
@@ -44,43 +50,46 @@ public class PlayerService {
     /**
      * 30초마다 사과 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
      */
-    @Scheduled(fixedRate = 30000) // 30초마다 실행
+    @Scheduled(fixedRate = 1000) // 5초마다 실행
     public void spawnApplePeriodically() {
         long currentAppleCount = sceneObjects.values().stream()
                 .filter(obj -> "apple".equals(obj.getItemType()))
                 .count();
 
         if (currentAppleCount < MAX_APPLES) {
-            spawnNewItem("apple", "/models/apple.glb", "apple", -4.5); // y좌표 -4.5
+            spawnNewItem("apple", "/models/apple.glb", "apple", -4.5, true); // y좌표 -4.5, stackable: true
             logger.info("Spawning new apple. Current apples: {}/{}", currentAppleCount + 1, MAX_APPLES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
     }
 
     /**
-     * 60초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     * 30초마다 총 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
      */
-    @Scheduled(fixedRate = 1000) // 60초마다 실행
+    @Scheduled(fixedRate = 1000) // 30초마다 실행
     public void spawnGunPeriodically() {
         long currentGunCount = sceneObjects.values().stream()
                 .filter(obj -> "ak-47".equals(obj.getItemType()))
                 .count();
 
         if (currentGunCount < MAX_GUNS) {
-            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4); // y좌표 -4.4
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", -4.4, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
     }
     
-    @Scheduled(fixedRate = 10000) // 60초마다 실행
+    /**
+     * 20초마다 파이프 생성을 시도하고, 변경 사항이 있을 경우 모든 클라이언트에게 씬 업데이트를 브로드캐스트합니다.
+     */
+    @Scheduled(fixedRate = 1000) // 20초마다 실행
     public void spawnPipePeriodically() {
         long currentPipeCount = sceneObjects.values().stream()
                 .filter(obj -> "pipe".equals(obj.getItemType()))
                 .count();
 
         if (currentPipeCount < MAX_PIPES) {
-            spawnNewItem("pipe", "/models/pipe.glb", "pipe", -4.54); // y좌표 -4.4
+            spawnNewItem("pipe", "/models/pipe.glb", "pipe", -4.54, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new pipe. Current pipes: {}/{}", currentPipeCount + 1, MAX_PIPES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -93,7 +102,7 @@ public class PlayerService {
      * @param objectType 오브젝트 타입
      * @param yPos 생성될 높이 (y 좌표)
      */
-    private void spawnNewItem(String itemType, String modelPath, String objectType, double yPos) {
+    private void spawnNewItem(String itemType, String modelPath, String objectType, double yPos, boolean stackable) {
         // 맵의 특정 영역 내에서 랜덤 위치 생성
         double x = -15 + (30 * random.nextDouble()); // -15 to 15
         double z = -15 + (30 * random.nextDouble()); // -15 to 15
@@ -101,7 +110,7 @@ public class PlayerService {
 
         // 새로운 아이템 객체 생성
         String itemId = itemType + "-" + UUID.randomUUID().toString();
-        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType);
+        ObjectState newItem = new ObjectState(itemId, randomPosition, objectType, modelPath, itemType, null, stackable); // ammo는 null로 초기화
 
         // 씬에 아이템 추가
         sceneObjects.put(newItem.getId(), newItem);
@@ -224,7 +233,7 @@ public class PlayerService {
      * @param objectId 씬에서 주울 오브젝트의 ID
      * @return 아이템 줍기 성공 여부
      */
-    public boolean pickUpItemFromScene(String playerId, String objectId) {
+    public boolean pickUpItemFromScene(String playerId, String objectId, com.example.demo.dto.ItemActionRequest.ItemData itemData) {
         PlayerState player = connectedPlayers.get(playerId);
         ObjectState sceneObject = sceneObjects.get(objectId);
 
@@ -233,34 +242,12 @@ public class PlayerService {
             return false;
         }
 
-        String itemType = sceneObject.getItemType();
-        if (itemType == null) {
-            logger.warn("Pickup failed: SceneObject {} has no itemType.", objectId);
-            return false;
-        }
-
         // 씬에서 오브젝트 제거
         sceneObjects.remove(objectId);
-        logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, itemType, playerId);
+        logger.info("Scene object {} (type: {}) removed from scene by player {}.", objectId, sceneObject.getItemType(), playerId);
 
-        Item pickedItem;
-        // 아이템 타입에 따라 다른 아이템 정보를 생성
-        switch (itemType) {
-            case "apple":
-                pickedItem = new Item(objectId, "apple", "food", 1, "/models/apple.png", 10);
-                break;
-            case "ak-47":
-                pickedItem = new Item(objectId, "ak-47", "weapon", 1, "/models/ak-47.png", 0);
-                break;
-            case "pipe":
-                pickedItem = new Item(objectId, "pipe", "weapon", 1, "/models/pipe.png", 0);
-                break;
-            default:
-                logger.warn("Attempted to pick up unknown item type: {}", itemType);
-                // 알 수 없는 아이템을 주웠을 경우, 다시 씬에 돌려놓거나 다른 처리를 할 수 있음 (여기서는 그냥 무시)
-                sceneObjects.put(objectId, sceneObject); // 예시: 다시 씬에 돌려놓기
-                return false;
-        }
+        // ObjectState에서 Item으로 변환
+        Item pickedItem = convertObjectStateToItem(sceneObject, itemData);
 
         // 플레이어 인벤토리에 아이템 추가
         if (addItemToPlayerInventory(playerId, pickedItem)) {
@@ -274,13 +261,21 @@ public class PlayerService {
         }
     }
 
+    private Item convertObjectStateToItem(ObjectState sceneObject, com.example.demo.dto.ItemActionRequest.ItemData itemData) {
+        String itemType = sceneObject.getItemType();
+        boolean stackable = sceneObject.isStackable();
+        String imagePath = "/models/" + itemType + ".png";
 
-    /**
-     * 플레이어에게 아이템을 추가합니다. 이미 가진 아이템이라면 개수를 늘리고, 새로운 아이템이라면 추가합니다.
-     * @param playerId 아이템을 받을 플레이어의 ID
-     * @param itemToAdd 추가할 아이템 DTO (Item)
-     * @return 아이템 추가 성공 여부
-     */
+        int currentAmmo = 0;
+        int reserveAmmo = 0;
+        if (itemData != null && itemData.getAmmo() != null) {
+            currentAmmo = itemData.getAmmo().getCurrent();
+            reserveAmmo = itemData.getAmmo().getReserve();
+        }
+
+        return new Item(sceneObject.getId(), itemType, sceneObject.getObjectType(), 1, imagePath, 10, currentAmmo, reserveAmmo, stackable);
+    }
+
     public boolean addItemToPlayerInventory(String playerId, Item itemToAdd) {
         PlayerState player = connectedPlayers.get(playerId);
         if (player == null) {
@@ -288,19 +283,24 @@ public class PlayerService {
             return false;
         }
 
-        Optional<Item> existingItemOpt = player.getInventory().stream()
-            .filter(i -> i.getId().equals(itemToAdd.getId()))
-            .findFirst();
+        // 중첩 가능한 아이템인 경우, 이름(타입)으로 기존 아이템을 찾음
+        if (itemToAdd.isStackable()) {
+            Optional<Item> existingItemOpt = player.getInventory().stream()
+                .filter(i -> i.getName().equals(itemToAdd.getName()))
+                .findFirst();
 
-        if (existingItemOpt.isPresent()) {
-            Item existingItem = existingItemOpt.get();
-            existingItem.setCount(existingItem.getCount() + itemToAdd.getCount());
-            logger.info("Player {} already has item {}. Increased count to {}.", playerId, existingItem.getName(), existingItem.getCount());
-        } else {
-            // 새로운 Item 객체를 인벤토리에 추가 (count가 설정된 상태로)
-            player.getInventory().add(itemToAdd);
-            logger.info("Player {} added new item {} (count: {}).", playerId, itemToAdd.getName(), itemToAdd.getCount());
-        }
+            if (existingItemOpt.isPresent()) {
+                Item existingItem = existingItemOpt.get();
+                existingItem.setCount(existingItem.getCount() + itemToAdd.getCount());
+                logger.info("Player {} already has stackable item {}. Increased count to {}.", playerId, existingItem.getName(), existingItem.getCount());
+                return true; // 추가 성공
+            }
+        } 
+        
+        // 중첩 불가능한 아이템이거나, 중첩 가능한데 기존에 없던 아이템인 경우
+        // 인벤토리에 새롭게 추가
+        player.getInventory().add(itemToAdd);
+        logger.info("Player {} added new item {} (ID: {}, Count: {}).", playerId, itemToAdd.getName(), itemToAdd.getId(), itemToAdd.getCount());
         return true;
     }
 
@@ -356,6 +356,73 @@ public class PlayerService {
     }
 
     /**
+     * 플레이어 인벤토리에서 아이템을 제거하고 씬에 다시 생성합니다.
+     * @param playerId 아이템을 버릴 플레이어의 ID
+     * @param itemId 버릴 아이템의 ID (인벤토리 아이템 ID)
+     * @param itemData 버릴 아이템의 상세 데이터 (탄약 정보 포함)
+     * @param dropPosition 아이템이 버려질 위치
+     * @return 아이템 버리기 성공 여부
+     */
+    public boolean dropItemFromInventory(String playerId, String itemId, com.example.demo.dto.ItemActionRequest.ItemData itemData, Position dropPosition, int quantity) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("Player {} not found. Cannot drop item {}.", playerId, itemId);
+            return false;
+        }
+
+        Optional<Item> itemToDropOpt = player.getInventory().stream()
+            .filter(i -> i.getId().equals(itemId))
+            .findFirst();
+        
+        if (itemToDropOpt.isEmpty()) {
+            logger.warn("Player {} does not have item {} in inventory.", playerId, itemId);
+            return false;
+        }
+
+        Item itemToDrop = itemToDropOpt.get();
+        
+        if (itemToDrop.getCount() < quantity) {
+            logger.warn("Player {} only has {} of item {} but tried to drop {}.", playerId, itemToDrop.getCount(), itemId, quantity);
+            return false;
+        }
+
+        itemToDrop.setCount(itemToDrop.getCount() - quantity);
+        logger.info("Player {} dropped {} of item {}. Remaining count: {}.", playerId, quantity, itemToDrop.getName(), itemToDrop.getCount());
+
+        // 아이템 개수가 0이 되면 인벤토리에서 완전히 제거
+        if (itemToDrop.getCount() <= 0) {
+            player.getInventory().remove(itemToDrop);
+            logger.info("Player {} completely dropped item {} from inventory.", playerId, itemToDrop.getName());
+        }
+
+        // 씬에 다시 생성할 ObjectState 생성
+        String newObjectId;
+        boolean isStackable = itemToDrop.isStackable();
+
+        // 중첩 가능한 아이템(사과 등)은 버릴 때마다 새로운 ID를 부여
+        if (isStackable) {
+            newObjectId = itemToDrop.getName() + "-" + UUID.randomUUID().toString();
+        } else {
+            // 중첩 불가능한 아이템(무기 등)은 원래 가지고 있던 ID를 그대로 사용
+            newObjectId = itemToDrop.getId();
+        }
+
+        ObjectState droppedObject = new ObjectState(
+            newObjectId,
+            dropPosition,
+            itemToDrop.getName(), // objectType
+            itemToDrop.getImagePath().replace(".png", ".glb"), // modelPath (png -> glb)
+            itemToDrop.getName(), // itemType
+            itemToDrop.getCurrentAmmo() > 0 || itemToDrop.getReserveAmmo() > 0 ? new Ammo(itemToDrop.getCurrentAmmo(), itemToDrop.getReserveAmmo()) : null, // 탄약 정보
+            isStackable // 중첩 가능 여부 설정
+        );
+        sceneObjects.put(droppedObject.getId(), droppedObject);
+        logger.info("Dropped item {} re-added to scene at position {}.", droppedObject.getId(), dropPosition);
+
+        return true;
+    }
+
+    /**
      * 플레이어의 체력을 직접 설정합니다.
      * @param playerId 체력을 설정할 플레이어의 ID
      * @param newHealth 설정할 새로운 체력 값
@@ -400,4 +467,34 @@ public class PlayerService {
             logger.info("Player {} has respawned.", playerId);
         }
     }
+    
+    
+ // 추가 - 유저별 인벤토리 관리 Map (이건 나중에 playerstate 인벤토리에 합칠 예정)
+    private final Map<String, List<InventoryItem>> playerInventories = new HashMap<>();// 유저별로 인벤토리(아이템목록) 따로 관리 
+
+    public void addItemToInventory(String playerId, Item item) {
+        List<InventoryItem> inventory = playerInventories.computeIfAbsent(playerId, k -> new ArrayList<>());//유저 인벤토리 초기화 또는 불러오기
+
+        Optional<InventoryItem> existing = inventory.stream()
+                .filter(i -> i.getName().equals(item.getName()))
+                .findFirst(); //  해당 이름의 아이템이 인벤토리에 이미 있는지 확인
+
+        if (existing.isPresent()) {
+            InventoryItem i = existing.get();
+            i.setCount(i.getCount() + item.getCount()); //이미 있다면 수량 증가(기존 사과 수량에 +1 (또는 item이 가진 수량만큼 누적))
+
+        } else {
+            inventory.add(new InventoryItem(item.getName(), item.getCount()));//  없다면 새로 추가/ 처음 받은 아이템이면 새로 리스트에 추가
+        }
+
+        // 최신 인벤토리 아이템을 클라이언트에 전송(STOMP WebSocket을 통해 해당 유저에게 인벤토리 변경 정보를 전송)
+        messagingTemplate.convertAndSend(
+            "/topic/inventory/" + playerId,
+            new InventoryItem(item.getName(),item.getCount())
+        );
+    }
+    
 }
+
+
+
