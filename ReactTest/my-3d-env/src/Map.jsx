@@ -20,7 +20,7 @@ export function GModMap() {
         // RigidBody로 맵을 물리 엔진에 고정합니다. (움직이지 않음)
         // type="fixed"로 설정하여 정적인 오브젝트로 만듭니다.
         // colliders="trimesh"는 복잡한 메쉬 형태를 위한 정밀한 콜라이더를 생성합니다.
-        <RigidBody type="fixed" colliders="trimesh">
+        <RigidBody type="fixed" colliders="trimesh" friction={0}>
             {/* 로드된 맵 씬을 primitive로 렌더링 */}
             {/* 위치, 회전, 스케일 조정이 필요할 수 있습니다. */}
             <primitive

@@ -17,7 +17,7 @@ import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
 import Npc from './Npc';
-import { vec2 } from 'three/tsl';
+import { debug, vec2 } from 'three/tsl';
 
 
 
@@ -140,8 +140,8 @@ export function GameCanvas({ playerNickname }) {
     const [stompClient, setStompClient] = useState(null);
 
     // isDead 상태를 직접 제어하는 함수를 HUD 업데이트 함수와 분리
-    const setIsDeadInGameCanvas = useCallback((deadState) => {
-        setHudState(prev => ({ ...prev, isDead: deadState }));
+    const setIsDeadInGameCanvas = useCallback(() => {
+        setHudState(prev => ({ ...prev, isDead: !prev.isDead }));
     }, []);
 
     const selectedItem = inventory[selectedInventorySlot];
@@ -933,7 +933,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}> {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]} debug > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 

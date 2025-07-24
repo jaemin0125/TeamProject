@@ -44,10 +44,10 @@ export function SceneObject({ obj, objectRefs }) {
 
     return (
         <RigidBody
-            type={'fixed'} // 기본은 'fixed', 필요에 따라 변경 가능 (예: 'dynamic')
+            type={obj.type === 'pipe' ? 'fixed' : 'dynamic'} // 기본은 'fixed', 필요에 따라 변경 가능 (예: 'dynamic')
             ref={rigidBodyRef}
             position={[obj.position.x, obj.position.y, obj.position.z]} // 초기 위치 설정
-            colliders={'ball'} // 콜라이더 타입 설정
+            //colliders={'ball'} // 콜라이더 타입 설정
             userData={obj} // **추가: 오브젝트 데이터를 RigidBody의 userData로 전달**
         >
             {/* 오브젝트의 3D 메쉬 */}

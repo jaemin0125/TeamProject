@@ -66,7 +66,7 @@ useEffect(() => {
   };
 
   return (
-    <RigidBody type="fixed" position={position} colliders={false}>
+    <RigidBody type="dynamic" position={position} colliders={false}>
       <primitive
         object={gltf.scene}
         ref={npcRef}

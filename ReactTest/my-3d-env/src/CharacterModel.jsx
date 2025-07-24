@@ -65,8 +65,8 @@ export const CharacterModel = React.forwardRef(
             else if (isWalking || isBackward || isLeft || isRight) nextActionName = isArmed ? 'ArmedWalk' : 'WalkForward';
             else if (isIdle && isArmed) nextActionName = 'ArmedIdle';
             else if (isIdle && !isArmed) nextActionName = isUsingPipe ? 'PipeIdle' : 'Idle';
-            else if (isSlashing) nextActionName = 'Slash';
-            else if (isPunching) nextActionName = 'Punching';
+            else if (isSlashing && !isArmed) nextActionName = 'Slash';
+            else if (isPunching && !isArmed) nextActionName = 'Punching';
 
             if (nextActionName && actions[nextActionName]) {
                 const nextAction = actions[nextActionName];
