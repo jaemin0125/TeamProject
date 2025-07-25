@@ -75,11 +75,10 @@ export function Player({
     const deathCameraTargetRoll = useRef(Math.PI / 4); // 카메라가 최종적으로 옆으로 쓰러질 각도 (45도)
 
     // Leva를 통한 디버그 컨트롤 (속도, 점프 임펄스)
-    const { speed, jumpImpulse, fireRate, airControl } = useControls({
+    const { speed, jumpImpulse, fireRate } = useControls({
         speed: { value: 5, min: 1, max: 100 },
         jumpImpulse: { value: 10, min: 1, max: 100 },
-        fireRate: { value: 120, min: 20, max: 500 },
-        airControl: { value: 0.3, min: 0, max: 1 } // 공중 제어 값 추가
+        fireRate: { value: 120, min: 20, max: 500 }
     });
 
     const { rapier, world } = useRapier(); // rapier world 객체 접근
@@ -710,25 +709,22 @@ export function Player({
 
                 let vx = 0, vz = 0;
 
-                // 공중에 있을 경우 airControl 적용
-                const moveSpeed = isGrounded ? actualSpeed : actualSpeed * airControl;
-
                 // 키 입력에 따른 x, z 속도 계산
                 if (keys.forward) {
-                    vx += forwardVector.x * moveSpeed;
-                    vz += forwardVector.z * moveSpeed;
+                    vx += forwardVector.x * actualSpeed;
+                    vz += forwardVector.z * actualSpeed;
                 }
                 if (keys.backward) {
-                    vx -= forwardVector.x * moveSpeed;
-                    vz -= forwardVector.z * moveSpeed;
+                    vx -= forwardVector.x * actualSpeed;
+                    vz -= forwardVector.z * actualSpeed;
                 }
                 if (keys.left) {
-                    vx -= rightVector.x * moveSpeed;
-                    vz -= rightVector.z * moveSpeed;
+                    vx -= rightVector.x * actualSpeed;
+                    vz -= rightVector.z * actualSpeed;
                 }
                 if (keys.right) {
-                    vx += rightVector.x * moveSpeed;
-                    vz += rightVector.z * moveSpeed;
+                    vx += rightVector.x * actualSpeed;
+                    vz += rightVector.z * actualSpeed;
                 }
 
                 // 플레이어 선형 속도 설정
