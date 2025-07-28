@@ -671,13 +671,41 @@ export function GameCanvas({ playerNickname }) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(updatedObjects.map(updatedObj => ({
-            ...updatedObj,
-            type: updatedObj.itemType || updatedObj.objectType || 'sphere',
-            radius: updatedObj.radius || 1,
-            color: updatedObj.color || 'gray',
-            collider: updatedObj.collider || 'ball',
-        })));
+        setSceneObjects(updatedObjects.map(updatedObj => {
+            const baseObject = {
+                ...updatedObj,
+                type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+                radius: updatedObj.radius || 1,
+                color: updatedObj.color || 'gray',
+                collider: updatedObj.collider || 'ball',
+            };
+
+            // 오브젝트 타입에 따라 물리 속성 추가
+            switch (baseObject.type) {
+                case 'apple':
+                    baseObject.mass = 0.2;
+                    baseObject.friction = 5.5;
+                    baseObject.restitution = 0;
+                    break;
+                case 'ak-47':
+                    baseObject.mass = 10;
+                    baseObject.friction = 10;
+                    baseObject.restitution = 0;
+                    break;
+                case 'pipe':
+                    baseObject.mass = 10;
+                    baseObject.friction = 0.9;
+                    baseObject.restitution = 0.1;
+                    break;
+                default:
+                    baseObject.mass = 1;
+                    baseObject.friction = 10;
+                    baseObject.restitution = 0;
+                    break;
+            }
+
+            return baseObject;
+        }));
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트

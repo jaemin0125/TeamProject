@@ -44,11 +44,13 @@ export function SceneObject({ obj, objectRefs }) {
 
     return (
         <RigidBody
-            type={obj.type === 'pipe' ? 'fixed' : 'dynamic'} // 기본은 'fixed', 필요에 따라 변경 가능 (예: 'dynamic')
+            type={'dynamic'}
             ref={rigidBodyRef}
-            position={[obj.position.x, obj.position.y, obj.position.z]} // 초기 위치 설정
-            //colliders={'ball'} // 콜라이더 타입 설정
-            userData={obj} // **추가: 오브젝트 데이터를 RigidBody의 userData로 전달**
+            position={[obj.position.x, obj.position.y, obj.position.z]}
+            mass={obj.mass || 1} // 오브젝트의 질량
+            restitution={obj.restitution || 0} // 반발력
+            friction={obj.friction || 0.1} // 마찰력
+            userData={obj}
         >
             {/* 오브젝트의 3D 메쉬 */}
             <mesh castShadow receiveShadow>
