@@ -730,7 +730,7 @@ export function Player({
                 // 플레이어 선형 속도 설정
                 playerRef.current?.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
-                // 플레이어의 시야(yaw)에 맞춰 RigidBody의 회전을 업데이트합니다.
+                // // 플레이어의 시야(yaw)에 맞춰 RigidBody의 회전을 업데이트합니다.
                 if (playerRef.current) {
                     const rotation = new THREE.Quaternion();
                     rotation.setFromEuler(new THREE.Euler(0, yaw.current, 0));
@@ -951,6 +951,7 @@ export function Player({
                 ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
+                enabledRotations={[false, true, false]}
                 onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
                 onCollisionExit={handleCollisionExit}   // 충돌 종료 시
                 friction={0}
@@ -972,7 +973,7 @@ export function Player({
                     <CapsuleCollider args={[0.35, 0.4]} isSensor />
                 )}
                 {sitToggle && (
-                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15, 0]}  />
+                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15 , 0]}  />
                 )}
                 {lieToggle && (
                     <CuboidCollider args={[0.4, 0.2, 0.8]} isSensor   position={[0, -0.6, 0]}/>
