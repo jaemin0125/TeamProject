@@ -65,3 +65,4 @@
 2025-07-25 11:56:35,139 [Worker-3: Launching 3dTempPj - Application] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - Copying 1 resource from src\main\resources to target\classes
 2025-07-25 11:56:35,159 [Worker-3: Launching 3dTempPj - Application] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - Copying 0 resource from src\main\resources to target\classes
 2025-07-25 11:56:35,162 [Worker-3: Launching 3dTempPj - Application] INFO  o.a.m.s.f.DefaultMavenResourcesFiltering - skip non existing resourceDirectory D:\yyynn\tj\TeamProject\WorkSpace\3dTempPj\src\test\resources
+2025-07-28 08:57:51,389 [Worker-4: Loading available Gradle versions] INFO  o.e.b.c.i.u.g.PublishedGradleVersions - Gradle version information cache is out-of-date. Trying to update.

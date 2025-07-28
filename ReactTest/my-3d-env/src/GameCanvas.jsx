@@ -694,7 +694,7 @@ export function GameCanvas({ playerNickname }) {
                     break;
                 case 'pipe':
                     baseObject.mass = 10;
-                    baseObject.friction = 0.9;
+                    baseObject.friction = 10;
                     baseObject.restitution = 0.1;
                     break;
                 default:
@@ -961,7 +961,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}  debug> {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 

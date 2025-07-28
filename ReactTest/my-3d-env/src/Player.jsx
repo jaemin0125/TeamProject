@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
-import { RigidBody, CapsuleCollider, useRapier } from '@react-three/rapier';
+import { RigidBody, CapsuleCollider, useRapier, CuboidCollider } from '@react-three/rapier';
 import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
@@ -730,6 +730,13 @@ export function Player({
                 // 플레이어 선형 속도 설정
                 playerRef.current?.setLinvel({ x: vx, y: vel.y, z: vz }, true);
 
+                // 플레이어의 시야(yaw)에 맞춰 RigidBody의 회전을 업데이트합니다.
+                if (playerRef.current) {
+                    const rotation = new THREE.Quaternion();
+                    rotation.setFromEuler(new THREE.Euler(0, yaw.current, 0));
+                    playerRef.current.setRotation(rotation, true);
+                }
+
                 // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
                 // 점프 및 자세 변경 로직
                 if (jump && !lastJumpKeyStatus.current) { // 스페이스바가 새로 눌렸을 때
@@ -944,17 +951,32 @@ export function Player({
                 ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
-                enabledRotations={[false, false, false]} // 회전 비활성화 (캐릭터가 넘어지지 않도록)
                 onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
                 onCollisionExit={handleCollisionExit}   // 충돌 종료 시
                 friction={0}
                 restitution={0}
             >
-                {/* 플레이어의 캡슐 콜라이더 (실제 물리 충돌용) */}
-                <CapsuleCollider args={[0.35, 0.4]} />
-                {/* 추가: 아이템 줍기 감지를 위한 센서 콜라이더 */}
-                {/* 이 센서는 isSensor={true}로 설정되어 물리적 충돌을 일으키지 않고 겹침만 감지합니다. */}
-                <CapsuleCollider args={[0.35, 0.4]} /> {/* 플레이어 주변의 넓은 센서 (크기 증가) */}
+                {/* 플레이어의 캡슐 콜라이더 (자세에 따라 변경) */}
+                {!sitToggle && !lieToggle && (
+                    <CapsuleCollider args={[0.35, 0.4]} />
+                )}
+                {sitToggle && (
+                    <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
+                )}
+                {lieToggle && (
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} position={[0, -0.6, 0]}/>
+                )}
+
+                {/* 아이템 줍기 감지를 위한 센서 콜라이더 (자세에 따라 변경) */}
+                {!sitToggle && !lieToggle && (
+                    <CapsuleCollider args={[0.35, 0.4]} isSensor />
+                )}
+                {sitToggle && (
+                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15, 0]}  />
+                )}
+                {lieToggle && (
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} isSensor   position={[0, -0.6, 0]}/>
+                )}
             </RigidBody>
 
             {/* 플레이어 3D 모델 */}
