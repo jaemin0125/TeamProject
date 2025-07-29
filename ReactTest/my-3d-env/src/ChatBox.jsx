@@ -103,7 +103,7 @@ export default function ChatBox({
           }}
           style={styles.input}
         />
-        <button onClick={sendMessage} style={styles.button}>보내기</button>
+        
       </div>
     </div>
   );
@@ -123,7 +123,7 @@ const styles = {
     fontSize: '14px',
     zIndex: 100,
     border: '2px solid #003366',  //  테두리
-    boxShadow: '0 0 12px rgba(212, 175, 55, 0.4)',  // 금빛 그림자
+    
     backdropFilter: 'blur(3px)',
     fontFamily: 'Georgia, serif',  // 고딕 느낌
   },

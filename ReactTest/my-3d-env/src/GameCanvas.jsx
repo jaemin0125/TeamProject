@@ -17,7 +17,7 @@ import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
 import Npc from './Npc';
-import { vec2 } from 'three/tsl';
+import { debug, vec2 } from 'three/tsl';
 
 
 
@@ -140,8 +140,8 @@ export function GameCanvas({ playerNickname }) {
     const [stompClient, setStompClient] = useState(null);
 
     // isDead 상태를 직접 제어하는 함수를 HUD 업데이트 함수와 분리
-    const setIsDeadInGameCanvas = useCallback((deadState) => {
-        setHudState(prev => ({ ...prev, isDead: deadState }));
+    const setIsDeadInGameCanvas = useCallback(() => {
+        setHudState(prev => ({ ...prev, isDead: !prev.isDead }));
     }, []);
 
     const selectedItem = inventory[selectedInventorySlot];
@@ -150,7 +150,7 @@ export function GameCanvas({ playerNickname }) {
 
     function spawnBulletHole(hitPosition, hitNormal) {
         const scene = sceneRef.current;
-        const decalSize = 0.2;
+        const decalSize = 0.35;
         const geometry = new THREE.PlaneGeometry(decalSize, decalSize);
         const texture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
         const material = new THREE.MeshBasicMaterial({
@@ -362,7 +362,8 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [hudState.isDead, stompClient, setHudState]); // 의존성 배열
 
-     useEffect(() => {
+    // ✨ 새로 추가: 우클릭 컨텍스트 메뉴 방지 로직
+    useEffect(() => {
         const handleContextMenu = (event) => {
             event.preventDefault(); // 브라우저의 기본 우클릭 메뉴 동작을 막습니다.
         };
@@ -375,7 +376,6 @@ export function GameCanvas({ playerNickname }) {
             window.removeEventListener('contextmenu', handleContextMenu);
         };
     }, []); // 빈 배열을 전달하여 이 useEffect가 컴포넌트 마운트 시 한 번만 실행되도록 합니다.
-
 
     // 인벤토리 선택 로직 (키보드 1~8 및 마우스 휠)
     useEffect(() => {
@@ -671,13 +671,41 @@ export function GameCanvas({ playerNickname }) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(updatedObjects.map(updatedObj => ({
-            ...updatedObj,
-            type: updatedObj.itemType || updatedObj.objectType || 'sphere',
-            radius: updatedObj.radius || 1,
-            color: updatedObj.color || 'gray',
-            collider: updatedObj.collider || 'ball',
-        })));
+        setSceneObjects(updatedObjects.map(updatedObj => {
+            const baseObject = {
+                ...updatedObj,
+                type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+                radius: updatedObj.radius || 1,
+                color: updatedObj.color || 'gray',
+                collider: updatedObj.collider || 'ball',
+            };
+
+            // 오브젝트 타입에 따라 물리 속성 추가
+            switch (baseObject.type) {
+                case 'apple':
+                    baseObject.mass = 0.2;
+                    baseObject.friction = 5.5;
+                    baseObject.restitution = 0;
+                    break;
+                case 'ak-47':
+                    baseObject.mass = 10;
+                    baseObject.friction = 10;
+                    baseObject.restitution = 0;
+                    break;
+                case 'pipe':
+                    baseObject.mass = 10;
+                    baseObject.friction = 10;
+                    baseObject.restitution = 0.1;
+                    break;
+                default:
+                    baseObject.mass = 1;
+                    baseObject.friction = 10;
+                    baseObject.restitution = 0;
+                    break;
+            }
+
+            return baseObject;
+        }));
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트
@@ -933,7 +961,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}> {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 

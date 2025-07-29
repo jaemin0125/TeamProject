@@ -1,7 +1,7 @@
 // OtherPlayer.jsx
 import { useRef, useEffect, useMemo, useState } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { RigidBody, CapsuleCollider } from '@react-three/rapier';
+import { RigidBody, CapsuleCollider, CuboidCollider } from '@react-three/rapier';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -60,13 +60,13 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
     const isArmed = safeAnimationState.isArmed === true;
     const isUsingPipe = safeAnimationState.isUsingPipe === true;
     let characterModelPath = '';
-        if(isArmed){
-            characterModelPath = '/models/ArmedCharacter.glb';
-        } else if (isUsingPipe){
-            characterModelPath = '/models/PipeCharacter.glb';
-        } else {
-            characterModelPath = '/models/UnarmedCharacter.glb';
-        }
+    if (isArmed) {
+        characterModelPath = '/models/ArmedCharacter.glb';
+    } else if (isUsingPipe) {
+        characterModelPath = '/models/PipeCharacter.glb';
+    } else {
+        characterModelPath = '/models/UnarmedCharacter.glb';
+    }
 
     return (
         <RigidBody
@@ -74,11 +74,20 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
             position={[position.x, position.y, position.z]} // 초기 위치 설정
             colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
             type="kinematicPosition" // 물리 엔진에 의해 움직이지 않고, 직접 위치 설정
-            enabledRotations={[false, false, false]} // 회전 비활성화
+            enabledRotations={[false, true, false]} // 회전 비활성화
             userData={{ id }}
         >
             {/* 플레이어의 캡슐 콜라이더 */}
-            <CapsuleCollider args={[0.35, 0.4]} />
+            {!safeAnimationState.isSitted && !safeAnimationState.isLyingDown && (
+                <CapsuleCollider args={[0.35, 0.4]} />
+            )}
+            {safeAnimationState.isSitted && (
+                <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
+            )}
+            {safeAnimationState.isLyingDown && (
+                <CuboidCollider args={[0.4, 0.2, 0.8]} position={[0, -0.6, 0]} />
+            )}
+
 
             {/* 모델 그룹: 모델과 닉네임 텍스트를 함께 묶음 */}
             <group ref={modelGroupRef} position-y={-1.65}> {/* 모델의 중심을 조정 */}

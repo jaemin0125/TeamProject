@@ -1,8 +1,6 @@
 // PlayerHUD.jsx
 // PlayerHUD 컴포넌트: 플레이어의 현재 상태를 표시하는 UI (Head-Up Display)
 
-import { div } from "three/tsl";
-
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
 export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress }) {
     // state 객체에서 필요한 정보들을 구조 분해 할당
@@ -220,7 +218,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
-                {!isDead && !isAiming && !isScoped && (
+                {!isDead && !isAiming && !isScoped && selectedItem?.name === 'ak-47' && (
                     <div
                         style={{
                             position: 'absolute',
@@ -285,7 +283,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
 
                 {/* 크로스헤어 (사망 중이 아닐 때만) */}
-                {!isDead && isAiming && !isScoped && (
+                {!isDead && isAiming && !isScoped && selectedItem?.name === 'ak-47' && (
                     <div
                         style={{
                             position: 'absolute',
@@ -329,7 +327,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
-                {isScoped && !isDead && (
+                {isScoped && !isDead && selectedItem?.name === 'ak-47' && (
                     <>
                         {/* 2x 스코프 이미지 오버레이 */}
                         <img

@@ -2,7 +2,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { useKeyboardControls } from '@react-three/drei';
-import { RigidBody, CapsuleCollider, useRapier } from '@react-three/rapier';
+import { RigidBody, CapsuleCollider, useRapier, CuboidCollider } from '@react-three/rapier';
 import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
@@ -138,7 +138,14 @@ export function Player({
         // 3. 플레이어의 회전값을 기반으로 정면 방향을 계산합니다.
         const playerRotation = new THREE.Euler(0, playerRotationY, 0, 'YXZ');
         // 4. 총구의 상대적 위치 (플레이어 모델의 중심으로부터의 오프셋)를 정의합니다.
-        const gunMuzzleOffset = new THREE.Vector3(0, 0.875, 0.5); // X, Y를 0으로, Z를 -1.0으로 설정
+        let gunMuzzleOffset = new THREE.Vector3(0, 0.875, 0.5); // X, Y를 0으로, Z를 -1.0으로 설정
+
+        // 플레이어 자세에 따른 총구 오프셋 조정
+        if (sitToggle) {
+            gunMuzzleOffset = new THREE.Vector3(0, 0.4, 0.5); // 앉았을 때 총구 높이
+        } else if (lieToggle) {
+            gunMuzzleOffset = new THREE.Vector3(0, 0.05, 0.5); // 엎드렸을 때 총구 높이
+        }
         gunMuzzleOffset.applyEuler(playerRotation); // 플레이어의 회전을 오프셋에 적용
 
         // 5. 최종 레이저 시작 위치를 계산합니다.
@@ -224,31 +231,6 @@ export function Player({
                         }
                     })
                 });
-
-                const decalSize = 0.5;
-                const decalGeometry = new THREE.PlaneGeometry(decalSize, decalSize);
-                const decalTexture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
-                const decalMaterial = new THREE.MeshBasicMaterial({
-                    map: decalTexture,
-                    transparent: true,
-                    depthWrite: false
-                });
-
-                const decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-                decalMesh.position.copy(hitPoint);
-                decalMesh.position.addScaledVector(hitNormal, 0.001); // 표면에 살짝 띄움
-
-                const quat = new THREE.Quaternion();
-                quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hitNormal);
-                decalMesh.quaternion.copy(quat);
-
-                scene.add(decalMesh);
-
-                setTimeout(() => {
-                    scene.remove(decalMesh);
-                    decalMesh.geometry.dispose();
-                    decalMesh.material.dispose();
-                }, 15000);
             } catch (e) {
                 console.warn('피탄 자국 생성 실패:', e);
             }
@@ -550,7 +532,7 @@ export function Player({
             setCurrentViewMode('thirdPerson'); // 리스폰 후에도 1인칭 시점 유지
             roll.current = 0; // 리스폰 시 roll 각도 초기화
         }
-    }, [isDead]); // 의존성 배열
+    }, [isDead, wasDead, clearInventory, onObjectProximityChange]); // 의존성 배열
 
 
 
@@ -690,7 +672,7 @@ export function Player({
         if (!isDead) { // isDead일 때만 완전히 멈춤
             if (isChatting) {
                 // 채팅 중일 때는 수평 움직임만 멈추고, 수직 속도는 유지하여 중력 적용
-                playerRef.current.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
+                playerRef.current?.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
             } else {
                 // 앉거나 누웠을 때, 또는 달릴 때 속도 조절
                 if (sitToggle && (keys.forward || keys.backward || keys.left || keys.right)) {
@@ -728,7 +710,14 @@ export function Player({
                 }
 
                 // 플레이어 선형 속도 설정
-                playerRef.current.setLinvel({ x: vx, y: vel.y, z: vz }, true);
+                playerRef.current?.setLinvel({ x: vx, y: vel.y, z: vz }, true);
+
+                // // 플레이어의 시야(yaw)에 맞춰 RigidBody의 회전을 업데이트합니다.
+                if (playerRef.current) {
+                    const rotation = new THREE.Quaternion();
+                    rotation.setFromEuler(new THREE.Euler(0, yaw.current, 0));
+                    playerRef.current.setRotation(rotation, true);
+                }
 
                 // 점프 로직: 키가 새로 눌렸고, 땅에 닿아 있으며, 현재 점프 중이 아닐 때만 점프 실행
                 // 점프 및 자세 변경 로직
@@ -742,7 +731,7 @@ export function Player({
                         setSitToggle(false);
                     } else if (isGrounded && !isAiming && vel.y <= 0.1) {
                         // 3. 서 있는 상태 -> 점프
-                        playerRef.current.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
+                        playerRef.current?.applyImpulse({ x: 0, y: jumpImpulse, z: 0 }, true);
                         setIsGrounded(false); // 점프했으므로 땅에 닿지 않음
                         setIsJumping(true); // 점프 애니메이션 시작
                     }
@@ -766,15 +755,22 @@ export function Player({
             }
         } else {
             // 플레이어가 죽었을 때 움직임 멈춤
-            playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        }
+            playerRef.current?.setLinvel({ x: 0, y: 0, z: 0 }, true);
+        } ""
 
         // 현재 점프 키 상태를 기록하여 다음 프레임에서 이전 상태와 비교
         lastJumpKeyStatus.current = jump;
 
 
         const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z); // 플레이어 RigidBody 위치
-        const headOffset = new THREE.Vector3(0, 0.875, 0); // 기본 카메라 오프셋 (플레이어 머리 위)
+        let headOffset = new THREE.Vector3(0, 0.875, 0); // 기본 카메라 오프셋 (플레이어 머리 위)
+
+        // 플레이어 자세에 따른 카메라 오프셋 조정
+        if (sitToggle) {
+            headOffset = new THREE.Vector3(0, 0.3, 0); // 앉았을 때 카메라 높이
+        } else if (lieToggle) {
+            headOffset = new THREE.Vector3(0, 0.05, 0); // 엎드렸을 때 카메라 높이
+        }
 
         // 플레이어 모델 위치 및 가시성 업데이트
         if (modelRef.current) {
@@ -837,7 +833,7 @@ export function Player({
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
             // 3인칭 시점: 플레이어 뒤에서 카메라가 따라다니도록 설정
-            const dist = 3.5; // 카메라와 플레이어 간의 거리
+            const dist = 8; // 카메라와 플레이어 간의 거리
             const phi = Math.PI / 2 + pitch.current; // 구면 좌표계의 phi (수직 각도)
             const theta = yaw.current + Math.PI; // 구면 좌표계의 theta (수평 각도)
 
@@ -914,7 +910,7 @@ export function Player({
     }, [onObjectProximityChange]);
 
 
-     const handleCollisionExit = useCallback((payload) => {
+    const handleCollisionExit = useCallback((payload) => {
         setIsGrounded(false); // 바닥 접지 여부 업데이트
 
         const rigidBody = payload.other.rigidBodyObject;
@@ -944,15 +940,33 @@ export function Player({
                 ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
-                enabledRotations={[false, false, false]} // 회전 비활성화 (캐릭터가 넘어지지 않도록)
-            onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
-            onCollisionExit={handleCollisionExit}   // 충돌 종료 시
+                enabledRotations={[false, true, false]}
+                onCollisionEnter={handleCollisionEnter} // 충돌 시작 시
+                onCollisionExit={handleCollisionExit}   // 충돌 종료 시
+                friction={0}
+                restitution={0}
             >
-                {/* 플레이어의 캡슐 콜라이더 (실제 물리 충돌용) */}
-                <CapsuleCollider args={[0.35, 0.4]} />
-                {/* 추가: 아이템 줍기 감지를 위한 센서 콜라이더 */}
-                {/* 이 센서는 isSensor={true}로 설정되어 물리적 충돌을 일으키지 않고 겹침만 감지합니다. */}
-                <CapsuleCollider args={[0.35, 0.4]} /> {/* 플레이어 주변의 넓은 센서 (크기 증가) */}
+                {/* 플레이어의 캡슐 콜라이더 (자세에 따라 변경) */}
+                {!sitToggle && !lieToggle && (
+                    <CapsuleCollider args={[0.35, 0.4]} />
+                )}
+                {sitToggle && (
+                    <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
+                )}
+                {lieToggle && (
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} position={[0, -0.6, 0]} />
+                )}
+
+                {/* 아이템 줍기 감지를 위한 센서 콜라이더 (자세에 따라 변경) */}
+                {!sitToggle && !lieToggle && (
+                    <CapsuleCollider args={[0.35, 0.4]} isSensor />
+                )}
+                {sitToggle && (
+                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15, 0]} />
+                )}
+                {lieToggle && (
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} isSensor position={[0, -0.6, 0]} />
+                )}
             </RigidBody>
 
             {/* 플레이어 3D 모델 */}

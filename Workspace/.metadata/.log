@@ -6831,3 +6831,1539 @@ END
 
 !ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-21 11:30:15.680
 !MESSAGE Classpath changed for project: 3dTempPj
+!SESSION 2025-07-22 09:06:22.266 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-22 09:06:24.325
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-22 09:06:24.470
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-22 09:06:24.470
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-22 09:06:24.486
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-22 09:06:26.792
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-22 09:06:27.209
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-22 09:06:27.209
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-22 09:06:27.421
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-22 09:06:27.421
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-22 09:06:30.457
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-22 09:06:30.514
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-22 09:06:30.514
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-22 09:06:30.552
+!MESSAGE Started Boot LS process
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-22 09:06:30.576
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753142790575
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-22 09:06:30.577
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-22 09:06:30.587
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 3328
+
+!ENTRY org.eclipse.jface 2 0 2025-07-22 15:20:42.954
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-22 15:20:42.954
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+!SESSION 2025-07-23 09:57:28.875 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-23 09:57:31.234
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-23 09:57:31.386
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-23 09:57:31.393
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-23 09:57:31.403
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-23 09:57:33.932
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-23 09:57:34.294
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-23 09:57:34.294
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-23 09:57:34.538
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-23 09:57:34.538
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-23 09:57:38.219
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753232258218
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 09:57:38.219
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-23 09:57:38.225
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 11192
+
+!ENTRY org.eclipse.jface 2 0 2025-07-23 09:57:38.653
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-23 09:57:38.653
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-23 09:57:39.184
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 09:57:39.222
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 09:57:39.223
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 09:57:39.225
+!MESSAGE Started Boot LS process
+!SESSION 2025-07-23 15:42:37.666 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-23 15:42:38.950
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-23 15:42:39.081
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-23 15:42:39.081
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-23 15:42:39.097
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-23 15:42:49.116
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-23 15:42:49.414
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-23 15:42:49.414
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-23 15:42:49.625
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-23 15:42:49.625
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-23 15:42:52.983
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753252972983
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 15:42:52.983
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-23 15:42:52.983
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 12444
+
+!ENTRY org.eclipse.jface 2 0 2025-07-23 15:42:53.477
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-23 15:42:53.477
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-23 15:42:53.951
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 15:42:53.982
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 15:42:53.983
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-23 15:42:53.985
+!MESSAGE Started Boot LS process
+!SESSION 2025-07-24 09:17:18.195 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-24 09:17:20.555
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-24 09:17:20.712
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-24 09:17:20.712
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-24 09:17:20.743
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-24 09:17:23.138
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-24 09:17:23.551
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-24 09:17:23.551
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-24 09:17:23.879
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-24 09:17:23.879
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-24 09:17:27.523
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753316247522
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 09:17:27.524
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-24 09:17:27.529
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 3488
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 09:17:28.114
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 09:17:28.115
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 09:17:28.116
+!MESSAGE Started Boot LS process
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-24 09:17:28.250
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.eclipse.jface 2 0 2025-07-24 11:52:21.000
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-24 11:52:21.000
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+!SESSION 2025-07-24 15:54:13.831 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-24 15:54:15.649
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-24 15:54:15.796
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-24 15:54:15.796
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-24 15:54:15.815
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-24 15:56:52.262
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-24 15:56:52.606
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-24 15:56:52.606
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-24 15:56:52.794
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-24 15:56:52.794
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-24 15:56:56.505
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753340216500
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 15:56:56.505
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-24 15:56:56.505
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 7008
+
+!ENTRY org.eclipse.jface 2 0 2025-07-24 15:56:56.886
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-24 15:56:56.886
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-24 15:56:57.343
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 15:56:57.378
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 15:56:57.379
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-24 15:56:57.381
+!MESSAGE Started Boot LS process
+!SESSION 2025-07-25 12:32:31.450 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-25 12:32:33.838
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-25 12:32:33.995
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-25 12:32:34.004
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-25 12:32:34.004
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-25 12:32:36.432
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-25 12:32:36.836
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-25 12:32:36.836
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-25 12:32:37.164
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-25 12:32:37.164
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-25 12:32:40.918
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753414360918
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-25 12:32:40.918
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-25 12:32:40.918
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 11520
+
+!ENTRY org.eclipse.jface 2 0 2025-07-25 12:32:41.679
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-25 12:32:41.679
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-25 12:32:42.021
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-25 12:32:42.055
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-25 12:32:42.055
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-25 12:32:42.057
+!MESSAGE Started Boot LS process
+!SESSION 2025-07-28 08:58:21.189 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-28 08:58:23.248
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-28 08:58:23.391
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-28 08:58:23.391
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-28 08:58:23.391
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-28 08:58:25.721
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-28 08:58:26.092
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-28 08:58:26.092
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-28 08:58:26.383
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-28 08:58:26.383
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-28 08:58:30.129
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753660710129
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-28 08:58:30.129
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-28 08:58:30.135
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 1364
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-28 08:58:30.625
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-28 08:58:30.625
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-28 08:58:30.627
+!MESSAGE Started Boot LS process
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-28 08:58:30.717
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
+
+!ENTRY org.eclipse.jface 2 0 2025-07-28 11:52:32.966
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-28 11:52:32.966
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+!SESSION 2025-07-29 08:56:51.706 -----------------------------------------------
+eclipse.buildId=4.34.0.202502032007
+java.version=21.0.6
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=win32, ARCH=x86_64, WS=win32, NL=ko_KR
+Framework arguments:  -product org.springframework.boot.ide.branding.sts4
+Command-line arguments:  -os win32 -ws win32 -arch x86_64 -product org.springframework.boot.ide.branding.sts4
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-29 08:56:54.130
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY org.eclipse.epp.mpc.core 4 0 2025-07-29 08:56:54.286
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core [196]
+  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.core.win32 4 0 2025-07-29 08:56:54.286
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.core.win32 [197]
+  Unresolved requirement: Import-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-version="1.11.0"
+    -> Export-Package: org.eclipse.epp.internal.mpc.core.transport.httpclient; bundle-symbolic-name="org.eclipse.epp.mpc.core"; bundle-version="1.11.0.v20240709-1650"; version="0.0.0"; x-friends:="org.eclipse.epp.mpc.core.win32"; uses:="org.apache.http.auth,  org.apache.http.protocol,  org.apache.http.impl.client,  org.apache.http,  org.eclipse.epp.mpc.core.service,  org.apache.http.client,  org.eclipse.core.runtime,  org.apache.http.client.fluent,  org.apache.http.client.protocol"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"] because it is exposed to package 'org.apache.hc.client5.http.auth' from resources org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] and org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core.win32 [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-0639"; osgi.identity="org.eclipse.epp.mpc.core.win32"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.impl.win)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http.impl.win; uses:=org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5-win [osgi.identity; type="osgi.bundle"; version:Version="5.2.3.v20231203-1619"; osgi.identity="org.apache.httpcomponents.client5.httpclient5-win"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http.auth)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.client5.http.auth
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.4.1.v20241029-1100"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY org.eclipse.epp.mpc.ui 4 0 2025-07-29 08:56:54.302
+!MESSAGE FrameworkEvent ERROR
+!STACK 0
+org.osgi.framework.BundleException: Could not resolve module: org.eclipse.epp.mpc.ui [199]
+  Unresolved requirement: Require-Bundle: org.eclipse.epp.mpc.core; bundle-version="[1.11.0,2.0.0)"
+    -> Bundle-SymbolicName: org.eclipse.epp.mpc.core; bundle-version="1.11.0.v20240709-1650"; singleton:="true"
+       org.eclipse.epp.mpc.core [196]
+         No resolution report for the bundle.  Bundle was not resolved because of a uses constraint violation.
+  org.apache.felix.resolver.reason.ReasonException: Uses constraint violation. Unable to resolve resource org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"] because it is exposed to package 'org.apache.hc.core5.http' from resources org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] and org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"] via two dependency chains.
+
+Chain 1:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.1.0)(!(version>=5.3.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.2.5.v20240703-1000"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+
+Chain 2:
+  org.eclipse.epp.mpc.core [osgi.identity; type="osgi.bundle"; version:Version="1.11.0.v20240709-1650"; osgi.identity="org.eclipse.epp.mpc.core"; singleton:="true"]
+    import: (&(osgi.wiring.package=org.apache.hc.client5.http)(&(version>=5.1.0)(!(version>=5.4.0))))
+     |
+    export: osgi.wiring.package=org.apache.hc.client5.http; uses:=org.apache.hc.core5.http
+  org.apache.httpcomponents.client5.httpclient5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.1.v20240126-0900"; osgi.identity="org.apache.httpcomponents.client5.httpclient5"]
+    import: (&(osgi.wiring.package=org.apache.hc.core5.http)(&(version>=5.2.0)(!(version>=6.0.0))))
+     |
+    export: osgi.wiring.package: org.apache.hc.core5.http
+  org.apache.httpcomponents.core5.httpcore5 [osgi.identity; type="osgi.bundle"; version:Version="5.3.2.v20250110-0800"; osgi.identity="org.apache.httpcomponents.core5.httpcore5"]
+	at org.eclipse.osgi.container.Module.start(Module.java:493)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel$2.run(ModuleContainer.java:2102)
+	at org.eclipse.osgi.internal.framework.EquinoxContainerAdaptor$1$1.execute(EquinoxContainerAdaptor.java:143)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2093)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.incStartLevel(ModuleContainer.java:2033)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.doContainerStartLevel(ModuleContainer.java:1996)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1912)
+	at org.eclipse.osgi.container.ModuleContainer$ContainerStartLevel.dispatchEvent(ModuleContainer.java:1)
+	at org.eclipse.osgi.framework.eventmgr.EventManager.dispatchEvent(EventManager.java:230)
+	at org.eclipse.osgi.framework.eventmgr.EventManager$EventThread.run(EventManager.java:341)
+
+!ENTRY ch.qos.logback.classic 1 0 2025-07-29 08:56:56.415
+!MESSAGE Logback config file: D:\kjm\tj\TeamProject\Workspace\.metadata\.plugins\org.eclipse.m2e.logback\logback.2.7.0.20241001-1350.xml
+
+!ENTRY org.eclipse.ui 2 0 2025-07-29 08:56:56.764
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-29 08:56:56.764
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.eclipse.ui 2 0 2025-07-29 08:56:56.995
+!MESSAGE Warnings while parsing the commands from the 'org.eclipse.ui.commands' and 'org.eclipse.ui.actionDefinitions' extension points.
+!SUBENTRY 1 org.eclipse.ui 2 0 2025-07-29 08:56:56.995
+!MESSAGE Commands should really have a category: plug-in='org.springframework.tooling.boot.ls', id='spring.initializr.addStarters', categoryId='org.eclipse.lsp4e.commandCategory'
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-29 08:57:00.693
+!MESSAGE Command list starting LS: org.springframework.tooling.boot.ls
+START:
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.eclipse.justj.openjdk.hotspot.jre.full.win32.x86_64_21.0.6.v20250130-0529\jre\bin\javaw.exe
+-Dsts.lsp.client=eclipse
+-Xmx1024m
+-XX:TieredStopAtLevel=1
+-Dspring.config.location=classpath:/application.properties
+-Xlog:jni+resolve=off
+-XX:ErrorFile=D:/kjm/tj/TeamProject/Workspace/.metadata/.plugins/org.springframework.tooling.boot.ls/fatal-error-spring-boot_1753747020692
+-Dlanguageserver.hover-timeout=225
+-jar
+D:\kjm\sts-4.28.0.RELEASE\plugins\org.springframework.tooling.boot.ls_1.60.0.202502031607\servers\spring-boot-language-server\spring-boot-language-server-1.60.0-SNAPSHOT-exec.jar
+END
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-29 08:57:00.693
+!MESSAGE DelegatingStreamConnectionProvider - Starting Boot LS
+
+!ENTRY org.springframework.tooling.ls.eclipse.commons 1 0 2025-07-29 08:57:00.699
+!MESSAGE Started org.springframework.tooling.boot.ls LS process 11828
+
+!ENTRY org.eclipse.jface 2 0 2025-07-29 08:57:01.134
+!MESSAGE Keybinding conflicts occurred.  They may interfere with normal accelerator operation.
+!SUBENTRY 1 org.eclipse.jface 2 0 2025-07-29 08:57:01.134
+!MESSAGE A conflict occurred for CTRL+D:
+Binding(CTRL+D,
+	ParameterizedCommand(Command(org.eclipse.ui.edit.text.delete.line,Delete Line,
+		Delete a line of text,
+		Category(org.eclipse.ui.category.textEditor,Text Editing,Text Editing Commands,true),
+		WorkbenchHandlerServiceHandler("org.eclipse.ui.edit.text.delete.line"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+Binding(CTRL+D,
+	ParameterizedCommand(Command(io.emmet.eclipse.commands.match_pair_outward,Match Pair Outward,
+		,
+		Category(io.emmet.eclipse.commands.category,Emmet,null,true),
+		WorkbenchHandlerServiceHandler("io.emmet.eclipse.commands.match_pair_outward"),
+		,,true),null),
+	org.eclipse.ui.defaultAcceleratorConfiguration,
+	org.eclipse.ui.textEditorScope,,,system)
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-29 08:57:01.600
+!MESSAGE Boot project ADDED: 3dTempPj
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-29 08:57:01.600
+!MESSAGE Starting Boot LS...
+
+!ENTRY org.springframework.tooling.boot.ls 1 0 2025-07-29 08:57:01.603
+!MESSAGE Started Boot LS process
+
+!ENTRY org.eclipse.egit.ui 2 0 2025-07-29 08:57:01.723
+!MESSAGE Warning: The environment variable HOME is not set. The following directory will be used to store the Git
+user global configuration and to define the default location to store repositories: 'C:\Users\admin'. If this is
+not correct please set the HOME environment variable and restart Eclipse. Otherwise Git for Windows and
+EGit might behave differently since they see different configuration options.
+This warning can be switched off on the Team > Git > Confirmations and Warnings preference page.
