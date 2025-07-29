@@ -7,6 +7,7 @@ import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
 import { checkHit } from './utils/gameUtils'; // checkHit 임포트
+import { distance } from 'three/tsl';
 
 // Player 컴포넌트 (현재 플레이어의 로직)
 export function Player({
@@ -539,7 +540,8 @@ export function Player({
 
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
-        // 반동 오프셋을 pitch와 yaw에 적용하고 점진적으로 감소
+
+
         pitch.current += recoilPitchOffset.current;
         yaw.current += recoilYawOffset.current;
 
@@ -756,7 +758,7 @@ export function Player({
         } else {
             // 플레이어가 죽었을 때 움직임 멈춤
             playerRef.current?.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        } ""
+        }
 
         // 현재 점프 키 상태를 기록하여 다음 프레임에서 이전 상태와 비교
         lastJumpKeyStatus.current = jump;
@@ -829,7 +831,9 @@ export function Player({
             // 1인칭 시점: 카메라를 플레이어 머리 위에 위치시키고 플레이어 시선 방향으로 회전
             const cameraPosition = playerBodyPos.clone().add(headOffset);
             camera.position.copy(cameraPosition);
-            const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
+            const finalPitch = pitch.current + recoilPitchOffset.current;
+            const finalYaw = yaw.current + recoilYawOffset.current;
+            const cameraRotation = new THREE.Euler(finalPitch, finalYaw + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
             // 3인칭 시점: 플레이어 뒤에서 카메라가 따라다니도록 설정
@@ -837,17 +841,63 @@ export function Player({
             const phi = Math.PI / 2 + pitch.current; // 구면 좌표계의 phi (수직 각도)
             const theta = yaw.current + Math.PI; // 구면 좌표계의 theta (수평 각도)
 
-            // 구면 좌표계를 이용한 카메라 위치 계산
-            const camX = dist * Math.sin(phi) * Math.sin(theta);
-            const camY = dist * Math.cos(phi);
-            const camZ = dist * Math.sin(phi) * Math.cos(theta);
+            // 구면 좌표계를 이용한 이상적인 카메라 위치 계산
+            const idealCamX = dist * Math.sin(phi) * Math.sin(theta);
+            const idealCamY = dist * Math.cos(phi);
+            const idealCamZ = dist * Math.sin(phi) * Math.cos(theta);
 
-            const camPos = new THREE.Vector3(playerBodyPos.x + camX, playerBodyPos.y + 1 + camY, playerBodyPos.z + camZ);
-            camera.position.copy(camPos);
+            const idealCamPos = new THREE.Vector3(playerBodyPos.x + idealCamX, playerBodyPos.y + 1 + idealCamY, playerBodyPos.z + idealCamZ);
 
+            // 카메라 충돌 감지를 위한 레이캐스트: 이상적인 카메라 위치에서 플레이어 방향으로 쏨
+            const rayOrigin = idealCamPos.clone();
+
+            const tempRayDirection = playerBodyPos.clone().sub(idealCamPos); // Calculate the vector
+
+            const rayLengthSq = tempRayDirection.lengthSq(); // Get the squared length
+            const rayLength = Math.sqrt(rayLengthSq); // Get the actual length
+
+            let rayDirection;
+            if (rayLengthSq > Number.EPSILON) { // Check if length is not effectively zero
+                rayDirection = tempRayDirection.normalize();
+            } else {
+                // If the vector is zero, use a small non-zero vector to avoid NaN
+                rayDirection = new THREE.Vector3(0, 0, 0.001);
+            }
+
+
+            const ray = new rapier.Ray(rayOrigin, rayDirection);
+            const hit = world.castRay(ray, rayLength, true, undefined, undefined, undefined, playerRef.current);
+
+            let finalCamPos = idealCamPos; // 기본적으로 이상적인 위치로 설정
+            
+            if (hit && hit.collider) {
+                // 충돌이 발생하면, 충돌 지점 바로 앞에 카메라를 위치시킴
+                const distanceToHit = (typeof hit.toi === 'number' ? hit.toi : 1) * rayLength;
+                const safeDistance = Math.max(0, distanceToHit - 0.1); // 최소 거리는 0
+
+                finalCamPos = rayOrigin.clone().add(rayDirection.clone().multiplyScalar(safeDistance));
+
+                // 추가: 카메라가 플레이어 너무 가까이 붙는 것을 방지 (최소 거리 유지)
+                const minCamDistance = 0.5; // 플레이어로부터 최소 0.5m 거리 유지
+                const currentDistanceToPlayer = finalCamPos.distanceTo(playerBodyPos);
+
+                if (currentDistanceToPlayer < minCamDistance) {
+                    let dirFromPlayerToIdeal = idealCamPos.clone().sub(playerBodyPos);
+                    const dirLengthSq = dirFromPlayerToIdeal.lengthSq();
+                    if (dirLengthSq > Number.EPSILON) {
+                        dirFromPlayerToIdeal.normalize();
+                    } else {
+                        dirFromPlayerToIdeal = new THREE.Vector3(0, 0, 0.001); // Small non-zero vector
+                    }
+
+                    finalCamPos = playerBodyPos.clone().add(dirFromPlayerToIdeal.multiplyScalar(minCamDistance));
+                }
+            }
+
+            camera.position.lerp(finalCamPos, 0.1); // 0.1은 보간 속도 (조절 가능)
             camera.lookAt(playerBodyPos.x, playerBodyPos.y + 1, playerBodyPos.z); // 카메라가 플레이어를 바라보도록 설정
         }
-
+        // 최종 디버그 로깅
         // HUD 상태 업데이트
         onHudUpdate?.(prev => ({
             ...prev,
@@ -860,9 +910,9 @@ export function Player({
             isAiming: isAiming,
             isScoped: isScoped,
             keys, // 이 keys는 useFrame 스코프 내의 keys 임
+
         }));
     });
-
     // CharacterModel로 전달할 props는 useFrame에서 계산된 애니메이션 상태 변수들을 사용합니다.
     const keys = getKeys(); // Get keys for initial render of CharacterModel (before first useFrame)
     const isWalkingAnim = (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;

@@ -1,24 +1,24 @@
 // PlayerHUD.jsx
 // PlayerHUD 컴포넌트: 플레이어의 현재 상태를 표시하는 UI (Head-Up Display)
 
+import { div } from "three/tsl";
+
 // 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
 export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress }) {
     // state 객체에서 필요한 정보들을 구조 분해 할당
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
-
-  // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
-  const otherPlayersArray = state.otherPlayers
-    ? Array.from(state.otherPlayers.values())
-    : [];
-  const otherPlayersInfo = otherPlayersArray
-    .filter((p) => p.id !== state.currentPlayerId)
-    .map(
-      (p) =>
-        `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || "N/A"}, ${
-          p.position?.y?.toFixed(1) || "N/A"
-        }, ${p.position?.z?.toFixed(1) || "N/A"})`
-    )
-    .join("\n");
+    // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
+    const otherPlayersArray = state.otherPlayers
+        ? Array.from(state.otherPlayers.values())
+        : [];
+    const otherPlayersInfo = otherPlayersArray
+        .filter((p) => p.id !== state.currentPlayerId)
+        .map(
+            (p) =>
+                `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || "N/A"}, ${p.position?.y?.toFixed(1) || "N/A"
+                }, ${p.position?.z?.toFixed(1) || "N/A"})`
+        )
+        .join("\n");
 
     // 리스폰 프로그레스 바 너비 계산 (5초 기준)
     // 체력 바 색상 결정
@@ -170,9 +170,9 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                                 </div>
                             );
                         })}
-                        
+
                     </div>
-                    
+
                 )}
 
                 {isHit && !isDead && (
@@ -218,7 +218,43 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
-                {!isDead && !isAiming && !isScoped && selectedItem?.name === 'ak-47' && (
+                {isScoped && (
+                    <>
+                        {/* 2x 스코프 이미지 오버레이 */}
+                        <img
+                            src="/textures/2xScope.png" // 이 경로는 실제로 이미지가 위치한 public 폴더 기준으로 작성
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                pointerEvents: 'none',
+                                zIndex: 20000,
+                            }}
+                        />
+
+                        {/* 중앙 빨간 점 (옵션) */}
+                        <div
+                            style={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                width: '6px',
+                                height: '6px',
+                                backgroundColor: 'red',
+                                borderRadius: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                boxShadow: '0 0 6px red',
+                                pointerEvents: 'none',
+                                zIndex: 20000,
+                            }}
+                        />
+                    </>
+                )}
+
+                {!isDead && !isAiming && !isScoped && (
                     <div
                         style={{
                             position: 'absolute',
@@ -283,7 +319,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
 
                 {/* 크로스헤어 (사망 중이 아닐 때만) */}
-                {!isDead && isAiming && !isScoped && selectedItem?.name === 'ak-47' && (
+                {!isDead && isAiming && !isScoped && (
                     <div
                         style={{
                             position: 'absolute',
@@ -325,42 +361,6 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                             boxShadow: '0 0 6px black',
                         }}></div>
                     </div>
-                )}
-
-                {isScoped && !isDead && selectedItem?.name === 'ak-47' && (
-                    <>
-                        {/* 2x 스코프 이미지 오버레이 */}
-                        <img
-                            src="/textures/2xScope.png" // 이 경로는 실제로 이미지가 위치한 public 폴더 기준으로 작성
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
-                                pointerEvents: 'none',
-                                zIndex: 500,
-                            }}
-                        />
-
-                        {/* 중앙 빨간 점 (옵션) */}
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                width: '6px',
-                                height: '6px',
-                                backgroundColor: 'red',
-                                borderRadius: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                boxShadow: '0 0 6px red',
-                                pointerEvents: 'none',
-                                zIndex: 10000,
-                            }}
-                        />
-                    </>
                 )}
 
                 {/* F 키 상호작용 프롬프트 (크로스헤어 위에 보이도록 zIndex 높임) */}
