@@ -1,8 +1,9 @@
 // PlayerHUD.jsx
-import React from 'react';
+import React, { useState } from 'react';
 
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen }) {
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen, onInventoryDrop, isEating, eatProgress }) {
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, isGrounded, position } = state;
+    const [draggedItem, setDraggedItem] = useState(null);
 
     const healthBarColor = '#ff4d4d';
 
@@ -233,6 +234,14 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     </div>
                 )}
 
+                {/* Eating Progress Bar */}
+                {isEating && (
+                    <div style={{ position: 'absolute', bottom: '150px', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '20px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid #222', borderRadius: '5px', overflow: 'hidden' }}>
+                        <div style={{ width: `${eatProgress}%`, height: '100%', backgroundColor: '#4caf50', transition: 'width 0.1s linear' }}></div>
+                        <div className="hud-text-shadow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white' }}>Eating...</div>
+                    </div>
+                )}
+
                 {/* Hit Flash */}
                 {isHit && !isDead && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(255, 0, 0, 0.3)', animation: 'hitFlash 0.5s forwards' }}></div>}
 
@@ -257,11 +266,25 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         {/* Right Panel */}
                         <div style={{ flex: 2, padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: '15px' }}>
                             {inventory.map((item, index) => (
-                                <div key={index} style={{
+                                <div key={index} 
+                                draggable 
+                                onDragStart={(e) => {
+                                    e.dataTransfer.setData("draggedIndex", index);
+                                    setDraggedItem(index);
+                                }}
+                                onDragOver={(e) => e.preventDefault()}
+                                onDrop={(e) => {
+                                    const draggedIndex = e.dataTransfer.getData("draggedIndex");
+                                    if (draggedIndex !== "") {
+                                        onInventoryDrop(parseInt(draggedIndex), index);
+                                    }
+                                }}
+                                style={{
                                     border: `1px solid ${selectedInventorySlot === index ? 'gold' : 'rgba(128, 128, 128, 0.7)'}`,
                                     borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                                     backgroundColor: 'rgba(0, 0, 0, 0.3)', transition: 'all 0.2s ease-in-out',
-                                    transform: selectedInventorySlot === index ? 'scale(1.05)' : 'scale(1)', position: 'relative'
+                                    transform: selectedInventorySlot === index ? 'scale(1.05)' : 'scale(1)', position: 'relative',
+                                    opacity: draggedItem === index ? 0.5 : 1
                                 }}>
                                     {item ? (
                                         <>

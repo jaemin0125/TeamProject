@@ -111,3 +111,4 @@ export const CharacterModel = React.forwardRef(
         );
     }
 );
+

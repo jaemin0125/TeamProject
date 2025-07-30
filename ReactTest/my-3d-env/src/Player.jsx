@@ -27,7 +27,10 @@ export function Player({
     handleReload,
     setInventory,
     playerRef, // playerRef를 props로 받음
-    isReloading // isReloading prop 추가
+    isReloading, // isReloading prop 추가
+    isInventoryOpen,
+    startEating,
+    cancelEating
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -383,55 +386,49 @@ export function Player({
         const handleMouseDown = (e) => {
             if (isDead) return;
 
-            if (e.button === 2) { // 좌클릭
-                if (isItemSelected && typeof onUseItem === 'function') {
-                    if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
-                        onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
-                        return;
+            if (e.button === 2) { // 우클릭
+                if (isArmed) {
+                    setIsAiming(true);
+                    mouseDownTimeRef.current = performance.now();
+                } else if (selectedItem?.name === 'apple') {
+                    startEating();
+                }
+                return;
+            }
+
+            if (e.button === 0) { // 좌클릭
+                if (isArmed) {
+                    if (isReloadingRef.current) return;
+                    setIsFiring(true);
+                    fireBullet();
+                } else if (isUsingPipe) {
+                    if (canSlash) {
+                        setIsSlashing(true);
+                        setTimeout(() => setIsSlashing(false), 500);
+                    }
+                } else {
+                    if (canPunch) {
+                        setIsPunching(true);
+                        setTimeout(() => setIsPunching(false), 500);
                     }
                 }
             }
-            if (e.button === 0) {
-                if (canPunch && !isArmed) {
-                    setIsPunching(true);
-                    setTimeout(() => setIsPunching(false), 500);
-                } if (canSlash && isUsingPipe) {
-                    setIsSlashing(true);
-                    setTimeout(() => setIsSlashing(false), 500);
-                }
-                if (canPunch && !isArmed) {
-                    setIsPunching(true);
-                    setTimeout(() => setIsPunching(false), 500);
-                } if (canSlash && isUsingPipe) {
-                    setIsSlashing(true);
-                    setTimeout(() => setIsSlashing(false), 500);
-                }
-            }
-
-
-            if (e.button === 0 && isArmed) {
-                if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
-                setIsFiring(true);
-                fireBullet();
-
-            }
-            if (e.button === 2 && isArmed) {
-                setIsAiming(true); // 무조건 조준 상태 시작
-                mouseDownTimeRef.current = performance.now(); // 시간 기록
-
-            }
         };
+
         const handleMouseUp = (e) => {
             if (e.button === 0 && isArmed) {
                 setIsFiring(false);
             }
-            if (e.button === 2 && isArmed) {
-                const heldTime = performance.now() - mouseDownTimeRef.current;
-                setIsAiming(false); // 꾹 누르기 해제
-
-                if (heldTime < 200) { // 200ms 미만이면 '클릭'으로 간주
-                    setIsScoped(prev => !prev); // 스코프 토글
-
+            if (e.button === 2) {
+                if (isArmed) {
+                    const heldTime = performance.now() - mouseDownTimeRef.current;
+                    setIsAiming(false);
+                    if (heldTime < 200) {
+                        setIsScoped(prev => !prev);
+                    }
+                } else {
+                    // 'apple'을 들고 있을 때의 상태 의존성을 제거하고 직접 cancelEating 호출
+                    cancelEating();
                 }
             }
         };
@@ -471,16 +468,32 @@ export function Player({
         pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
     }, [currentViewMode, isDead]); // 의존성 배열
 
-    // 캔버스 클릭 시 포인터 락 요청 로직
+    // 포인터 락 로직
     useEffect(() => {
         const canvas = gl.domElement;
         const requestPointerLock = () => {
-            if (isDead) return; // 죽음 상태일 때 포인터 락 비활성화
+            // 클릭 핸들러용 함수
+            if (isDead || isInventoryOpen) return;
             canvas.requestPointerLock();
         };
-        canvas.addEventListener('click', requestPointerLock);
-        return () => { canvas.removeEventListener('click', requestPointerLock); };
-    }, [gl, isDead]); // 의존성 배열
+
+        if (isInventoryOpen) {
+            // 인벤토리가 열려 있으면 포인터 락 해제
+            document.exitPointerLock();
+        } else {
+            // 인벤토리가 닫혀 있으면 클릭 시 포인터 락 재요청 리스너 추가
+            canvas.addEventListener('click', requestPointerLock);
+            // 그리고 즉시 포인터 락 재요청 시도
+            if (!isDead) {
+                canvas.requestPointerLock();
+            }
+        }
+
+        return () => {
+            // 이펙트가 다시 실행되거나 컴포넌트가 언마운트될 때 리스너 정리
+            canvas.removeEventListener('click', requestPointerLock);
+        };
+    }, [gl, isDead, isInventoryOpen]); // 의존성 배열
 
     // 포인터 락 상태 변경 감지 및 마우스 이벤트 리스너 추가/제거 로직
     useEffect(() => {

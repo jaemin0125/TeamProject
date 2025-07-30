@@ -181,6 +181,10 @@ export function GameCanvas({ playerNickname }) {
     }
     const [isReloading, setIsReloading] = useState(false); // 재장전 상태 추가
     const [reloadProgress, setReloadProgress] = useState(0); // 재장전 진행도 상태 추가
+    const [isEating, setIsEating] = useState(false);
+    const [eatProgress, setEatProgress] = useState(0);
+    const eatTimerRef = useRef(null);
+    const eatIntervalRef = useRef(null);
 
     const handleReload = useCallback(() => {
         const currentGun = inventory[selectedInventorySlot];
@@ -247,6 +251,18 @@ export function GameCanvas({ playerNickname }) {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [isChatting]);
+
+    
+
+    const handleInventoryDrop = useCallback((draggedIndex, dropIndex) => {
+        setInventory(prevInventory => {
+            const newInventory = [...prevInventory];
+            const temp = newInventory[draggedIndex];
+            newInventory[draggedIndex] = newInventory[dropIndex];
+            newInventory[dropIndex] = temp;
+            return newInventory;
+        });
+    }, []);
 
     // 아이템 버리기 함수
     const handleDropItem = useCallback(() => {
@@ -935,6 +951,39 @@ export function GameCanvas({ playerNickname }) {
         }
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
 
+    const cancelEating = useCallback(() => {
+        clearTimeout(eatTimerRef.current);
+        clearInterval(eatIntervalRef.current);
+        eatTimerRef.current = null;
+        eatIntervalRef.current = null;
+        setIsEating(false);
+        setEatProgress(0);
+    }, []);
+
+    const startEating = useCallback(() => {
+        const selectedItem = inventoryRef.current[selectedInventorySlot];
+        // 이미 먹는 동작이 진행 중이거나, 선택된 아이템이 사과가 아니면 시작하지 않음
+        if (eatTimerRef.current || !selectedItem || selectedItem.name !== 'apple') {
+            return;
+        }
+
+        setIsEating(true);
+        setEatProgress(0);
+
+        const EAT_DURATION = 1500; // 2초
+        const INTERVAL_TIME = 50; // 50ms 마다 업데이트
+        const increment = (INTERVAL_TIME / EAT_DURATION) * 100;
+
+        eatIntervalRef.current = setInterval(() => {
+            setEatProgress(prev => Math.min(prev + increment, 100));
+        }, INTERVAL_TIME);
+
+        eatTimerRef.current = setTimeout(() => {
+            handleUseSelectedItem();
+            cancelEating(); // 먹기 완료 후 상태 정리
+        }, EAT_DURATION);
+    }, [selectedInventorySlot, handleUseSelectedItem, cancelEating]);
+
     return (
         <>
             {/* Leva 디버그 UI */}
@@ -951,6 +1000,9 @@ export function GameCanvas({ playerNickname }) {
                 isReloading={isReloading}
                 reloadProgress={reloadProgress}
                 isInventoryOpen={isInventoryOpen}
+                onInventoryDrop={handleInventoryDrop}
+                isEating={isEating}
+                eatProgress={eatProgress}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -1006,6 +1058,9 @@ export function GameCanvas({ playerNickname }) {
                                         handleReload={handleReload}
                                         playerRef={playerRef} // playerRef 전달
                                         isReloading={isReloading} // 재장전 상태 전달
+                                        isInventoryOpen={isInventoryOpen}
+                                        startEating={startEating}
+                                        cancelEating={cancelEating}
                                     />
                                 )}
                             </React.Suspense>
