@@ -476,14 +476,17 @@ export function Player({
     // 마우스 움직임으로 카메라 회전 로직
     const onMouseMove = useCallback((e) => {
         if (isDead) return; // 죽음 상태일 때 마우스 움직임 비활성화
-        yaw.current -= e.movementX * 0.002;
-        // yaw 값을 -PI에서 PI 사이로 정규화 (시점 깨짐 방지)
-        yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
 
-        pitch.current -= e.movementY * 0.002;
+        if (Number.isFinite(e.movementX) && Number.isFinite(e.movementY)) {
+            yaw.current -= e.movementX * 0.002;
+            // yaw 값을 -PI에서 PI 사이로 정규화 (시점 깨짐 방지)
+            yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
 
-        pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
-    }, [currentViewMode, isDead]); // 의존성 배열
+            pitch.current -= e.movementY * 0.002;
+            // pitch 값 제한
+            pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+        }
+    }, [isDead]);
 
     // 캔버스 클릭 시 포인터 락 요청 로직
     useEffect(() => {
@@ -843,20 +846,36 @@ export function Player({
             const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
-            // 3인칭 시점: 플레이어 뒤에서 카메라가 따라다니도록 설정
-            const dist = 8; // 카메라와 플레이어 간의 거리
+            const dist = 8; // 카메라와 플레이어 간의 최대 거리
             const phi = Math.PI / 2 + pitch.current; // 구면 좌표계의 phi (수직 각도)
             const theta = yaw.current + Math.PI; // 구면 좌표계의 theta (수평 각도)
 
-            // 구면 좌표계를 이용한 카메라 위치 계산
-            const camX = dist * Math.sin(phi) * Math.sin(theta);
-            const camY = dist * Math.cos(phi);
-            const camZ = dist * Math.sin(phi) * Math.cos(theta);
+            const playerHeadPos = playerBodyPos.clone();
+            playerHeadPos.y += 1; // 카메라가 바라볼 플레이어 머리 위치
 
-            const camPos = new THREE.Vector3(playerBodyPos.x + camX, playerBodyPos.y + 1 + camY, playerBodyPos.z + camZ);
-            camera.position.copy(camPos);
+            const cameraDirection = new THREE.Vector3(
+                Math.sin(phi) * Math.sin(theta),
+                Math.cos(phi),
+                Math.sin(phi) * Math.cos(theta)
+            );
 
-            camera.lookAt(playerBodyPos.x, playerBodyPos.y + 1, playerBodyPos.z); // 카메라가 플레이어를 바라보도록 설정
+            // 안정적인 toi 값을 위해 castRayAndGetNormal 사용
+            const ray = new rapier.Ray(playerHeadPos, cameraDirection);
+            const hit = world.castRayAndGetNormal(ray, dist, true, undefined, undefined, undefined, undefined, playerRef.current);
+
+            let finalDistance = dist;
+            // hit 객체가 존재하고, toi 또는 timeOfImpact가 유효한 숫자인지 확인
+            const toi = hit?.toi ?? hit?.timeOfImpact;
+            if (typeof toi === 'number') {
+                finalDistance = Math.max(toi - 0.5, 0);
+            }
+
+            const finalCameraPos = playerHeadPos.clone().add(cameraDirection.multiplyScalar(finalDistance));
+            camera.position.copy(finalCameraPos);
+            camera.lookAt(playerHeadPos);
+
+            // 디버깅 로그
+            // console.log(`P: ${pitch.current.toFixed(2)}, Y: ${yaw.current.toFixed(2)} | Hit: ${hit ? `toi: ${toi}` : 'null'} | Dist: ${finalDistance.toFixed(2)}`);
         }
 
         // HUD 상태 업데이트
