@@ -7,6 +7,7 @@ import { useControls } from 'leva'; // 'leva' 임포트 수정
 import * as THREE from 'three';
 import { CharacterModel } from './CharacterModel'; // CharacterModel 임포트
 import { checkHit } from './utils/gameUtils'; // checkHit 임포트
+import { distance } from 'three/tsl';
 
 // Player 컴포넌트 (현재 플레이어의 로직)
 export function Player({
@@ -26,7 +27,8 @@ export function Player({
     handleReload,
     setInventory,
     playerRef, // playerRef를 props로 받음
-    isReloading // isReloading prop 추가
+    isReloading, // isReloading prop 추가
+    isInventoryOpen
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -138,7 +140,14 @@ export function Player({
         // 3. 플레이어의 회전값을 기반으로 정면 방향을 계산합니다.
         const playerRotation = new THREE.Euler(0, playerRotationY, 0, 'YXZ');
         // 4. 총구의 상대적 위치 (플레이어 모델의 중심으로부터의 오프셋)를 정의합니다.
-        const gunMuzzleOffset = new THREE.Vector3(0, 0.875, 0.5); // X, Y를 0으로, Z를 -1.0으로 설정
+        let gunMuzzleOffset = new THREE.Vector3(0, 0.875, 0.5); // X, Y를 0으로, Z를 -1.0으로 설정
+
+        // 플레이어 자세에 따른 총구 오프셋 조정
+        if (sitToggle) {
+            gunMuzzleOffset = new THREE.Vector3(0, 0.4, 0.5); // 앉았을 때 총구 높이
+        } else if (lieToggle) {
+            gunMuzzleOffset = new THREE.Vector3(0, 0.05, 0.5); // 엎드렸을 때 총구 높이
+        }
         gunMuzzleOffset.applyEuler(playerRotation); // 플레이어의 회전을 오프셋에 적용
 
         // 5. 최종 레이저 시작 위치를 계산합니다.
@@ -224,31 +233,6 @@ export function Player({
                         }
                     })
                 });
-
-                const decalSize = 0.5;
-                const decalGeometry = new THREE.PlaneGeometry(decalSize, decalSize);
-                const decalTexture = new THREE.TextureLoader().load('/textures/bullet-hole.png');
-                const decalMaterial = new THREE.MeshBasicMaterial({
-                    map: decalTexture,
-                    transparent: true,
-                    depthWrite: false
-                });
-
-                const decalMesh = new THREE.Mesh(decalGeometry, decalMaterial);
-                decalMesh.position.copy(hitPoint);
-                decalMesh.position.addScaledVector(hitNormal, 0.001); // 표면에 살짝 띄움
-
-                const quat = new THREE.Quaternion();
-                quat.setFromUnitVectors(new THREE.Vector3(0, 0, 1), hitNormal);
-                decalMesh.quaternion.copy(quat);
-
-                scene.add(decalMesh);
-
-                setTimeout(() => {
-                    scene.remove(decalMesh);
-                    decalMesh.geometry.dispose();
-                    decalMesh.material.dispose();
-                }, 15000);
             } catch (e) {
                 console.warn('피탄 자국 생성 실패:', e);
             }
@@ -400,21 +384,23 @@ export function Player({
         const handleMouseDown = (e) => {
             if (isDead) return;
 
-            if (e.button === 0) { // 좌클릭
+            if (e.button === 2) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
                     if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
                         return;
-                    } else {
-                        if (canPunch && !isArmed) {
-                            setIsPunching(true);
-                            setTimeout(() => setIsPunching(false), 500);
-                        } if (canSlash && isUsingPipe) {
-                            setIsSlashing(true);
-                            setTimeout(() => setIsSlashing(false), 500);
-                        }
                     }
-                } if (canPunch && !isArmed) {
+                }
+            }
+            if (e.button === 0) {
+                if (canPunch && !isArmed) {
+                    setIsPunching(true);
+                    setTimeout(() => setIsPunching(false), 500);
+                } if (canSlash && isUsingPipe) {
+                    setIsSlashing(true);
+                    setTimeout(() => setIsSlashing(false), 500);
+                }
+                if (canPunch && !isArmed) {
                     setIsPunching(true);
                     setTimeout(() => setIsPunching(false), 500);
                 } if (canSlash && isUsingPipe) {
@@ -422,6 +408,7 @@ export function Player({
                     setTimeout(() => setIsSlashing(false), 500);
                 }
             }
+
 
             if (e.button === 0 && isArmed) {
                 if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
@@ -476,28 +463,41 @@ export function Player({
     // 마우스 움직임으로 카메라 회전 로직
     const onMouseMove = useCallback((e) => {
         if (isDead) return; // 죽음 상태일 때 마우스 움직임 비활성화
+        yaw.current -= e.movementX * 0.002;
+        // yaw 값을 -PI에서 PI 사이로 정규화 (시점 깨짐 방지)
+        yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
 
-        if (Number.isFinite(e.movementX) && Number.isFinite(e.movementY)) {
-            yaw.current -= e.movementX * 0.002;
-            // yaw 값을 -PI에서 PI 사이로 정규화 (시점 깨짐 방지)
-            yaw.current = (yaw.current + Math.PI) % (2 * Math.PI) - Math.PI;
+        pitch.current -= e.movementY * 0.002;
 
-            pitch.current -= e.movementY * 0.002;
-            // pitch 값 제한
-            pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
-        }
-    }, [isDead]);
+        pitch.current = THREE.MathUtils.clamp(pitch.current, -Math.PI / 2 + 0.1, Math.PI / 2 - 0.1);
+    }, [currentViewMode, isDead]); // 의존성 배열
 
-    // 캔버스 클릭 시 포인터 락 요청 로직
+    // 포인터 락 로직
     useEffect(() => {
         const canvas = gl.domElement;
         const requestPointerLock = () => {
-            if (isDead) return; // 죽음 상태일 때 포인터 락 비활성화
+            // 클릭 핸들러용 함수
+            if (isDead || isInventoryOpen) return;
             canvas.requestPointerLock();
         };
-        canvas.addEventListener('click', requestPointerLock);
-        return () => { canvas.removeEventListener('click', requestPointerLock); };
-    }, [gl, isDead]); // 의존성 배열
+
+        if (isInventoryOpen) {
+            // 인벤토리가 열려 있으면 포인터 락 해제
+            document.exitPointerLock();
+        } else {
+            // 인벤토리가 닫혀 있으면 클릭 시 포인터 락 재요청 리스너 추가
+            canvas.addEventListener('click', requestPointerLock);
+            // 그리고 즉시 포인터 락 재요청 시도
+            if (!isDead) {
+                canvas.requestPointerLock();
+            }
+        }
+
+        return () => {
+            // 이펙트가 다시 실행되거나 컴포넌트가 언마운트될 때 리스너 정리
+            canvas.removeEventListener('click', requestPointerLock);
+        };
+    }, [gl, isDead, isInventoryOpen]); // 의존성 배열
 
     // 포인터 락 상태 변경 감지 및 마우스 이벤트 리스너 추가/제거 로직
     useEffect(() => {
@@ -541,9 +541,7 @@ export function Player({
                 // 필요하다면 RigidBody의 type을 'dynamic'으로 변경하여 사망 애니메이션과 물리 효과를 줄 수 있습니다.
                 // playerRef.current.setType('dynamic');
             }
-        }
-        // isDead가 false로 바뀌면 (리스폰 시)
-        else if (wasDead && !isDead && playerRef.current) {
+        } else if (wasDead && !isDead && playerRef.current) {
             console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
             playerRef.current.setTranslation(new THREE.Vector3(0, -3.7, 0), true);
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -560,7 +558,8 @@ export function Player({
 
     // 매 프레임마다 플레이어 및 오브젝트 움직임과 서버 업데이트 로직
     useFrame(() => {
-        // 반동 오프셋을 pitch와 yaw에 적용하고 점진적으로 감소
+
+
         pitch.current += recoilPitchOffset.current;
         yaw.current += recoilYawOffset.current;
 
@@ -602,7 +601,7 @@ export function Player({
 
         // isGrounded 판정을 위한 레이캐스팅
         // CapsuleCollider의 args는 [halfHeight, radius] 순서입니다.
-        const capsuleHalfHeight = 0.35; // args[0]
+        const capsuleHalfHeight = 0.4; // args[0]
         const capsuleRadius = 0.4;    // args[1]
 
         // 레이 시작점을 캡슐 콜라이더의 가장 낮은 지점에서 약간 위로 설정합니다.
@@ -777,14 +776,21 @@ export function Player({
         } else {
             // 플레이어가 죽었을 때 움직임 멈춤
             playerRef.current?.setLinvel({ x: 0, y: 0, z: 0 }, true);
-        } ""
+        }
 
         // 현재 점프 키 상태를 기록하여 다음 프레임에서 이전 상태와 비교
         lastJumpKeyStatus.current = jump;
 
 
         const playerBodyPos = new THREE.Vector3(pos.x, pos.y, pos.z); // 플레이어 RigidBody 위치
-        const headOffset = new THREE.Vector3(0, 0.875, 0); // 기본 카메라 오프셋 (플레이어 머리 위)
+        let headOffset = new THREE.Vector3(0, 0.875, 0); // 기본 카메라 오프셋 (플레이어 머리 위)
+
+        // 플레이어 자세에 따른 카메라 오프셋 조정
+        if (sitToggle) {
+            headOffset = new THREE.Vector3(0, 0.3, 0); // 앉았을 때 카메라 높이
+        } else if (lieToggle) {
+            headOffset = new THREE.Vector3(0, 0.05, 0); // 엎드렸을 때 카메라 높이
+        }
 
         // 플레이어 모델 위치 및 가시성 업데이트
         if (modelRef.current) {
@@ -803,8 +809,8 @@ export function Player({
             }
         }
 
-
-        // if (modelRef.current) { ======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직) 상단의 조건문과 교체.
+        //======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직) 상단의 조건문과 교체.
+        // if (modelRef.current) { 
         //     modelRef.current.position.copy(playerBodyPos);
         //     modelRef.current.position.y += -0.725; // 모델 중심 정렬
         //     modelRef.current.visible = currentViewMode === 'thirdPerson'; // 3인칭 시에만 렌더링
@@ -843,7 +849,9 @@ export function Player({
             // 1인칭 시점: 카메라를 플레이어 머리 위에 위치시키고 플레이어 시선 방향으로 회전
             const cameraPosition = playerBodyPos.clone().add(headOffset);
             camera.position.copy(cameraPosition);
-            const cameraRotation = new THREE.Euler(pitch.current, yaw.current + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
+            const finalPitch = pitch.current + recoilPitchOffset.current;
+            const finalYaw = yaw.current + recoilYawOffset.current;
+            const cameraRotation = new THREE.Euler(finalPitch, finalYaw + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
             const dist = 8; // 카메라와 플레이어 간의 최대 거리
@@ -864,10 +872,10 @@ export function Player({
             const hit = world.castRayAndGetNormal(ray, dist, true, undefined, undefined, undefined, undefined, playerRef.current);
 
             let finalDistance = dist;
-            // hit 객체가 존재하고, toi 또는 timeOfImpact가 유효한 숫자인지 확인
+
             const toi = hit?.toi ?? hit?.timeOfImpact;
             if (typeof toi === 'number') {
-                finalDistance = Math.max(toi - 0.5, 0);
+                finalDistance = Math.max(toi - 0.3, 0.1);
             }
 
             const finalCameraPos = playerHeadPos.clone().add(cameraDirection.multiplyScalar(finalDistance));
@@ -877,22 +885,22 @@ export function Player({
             // 디버깅 로그
             // console.log(`P: ${pitch.current.toFixed(2)}, Y: ${yaw.current.toFixed(2)} | Hit: ${hit ? `toi: ${toi}` : 'null'} | Dist: ${finalDistance.toFixed(2)}`);
         }
-
+        // 최종 디버그 로깅
         // HUD 상태 업데이트
         onHudUpdate?.(prev => ({
             ...prev,
             viewMode: currentViewMode, // Player 내부 viewMode 전달
             isGrounded,
-            position: `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`,
+            position: pos, // pos 객체 직접 전달
             velocity: `(${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`,
             yaw: yaw.current,
             pitch: pitch.current,
             isAiming: isAiming,
             isScoped: isScoped,
             keys, // 이 keys는 useFrame 스코프 내의 keys 임
+
         }));
     });
-
     // CharacterModel로 전달할 props는 useFrame에서 계산된 애니메이션 상태 변수들을 사용합니다.
     const keys = getKeys(); // Get keys for initial render of CharacterModel (before first useFrame)
     const isWalkingAnim = (keys.forward || keys.left || keys.right || keys.backward) && !isDead && !isChatting;
@@ -978,24 +986,24 @@ export function Player({
             >
                 {/* 플레이어의 캡슐 콜라이더 (자세에 따라 변경) */}
                 {!sitToggle && !lieToggle && (
-                    <CapsuleCollider args={[0.35, 0.4]} />
+                    <CapsuleCollider args={[0.4, 0.4]} />
                 )}
                 {sitToggle && (
                     <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
                 )}
                 {lieToggle && (
-                    <CuboidCollider args={[0.4, 0.2, 0.8]} position={[0, -0.6, 0]}/>
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} position={[0, -0.6, 0]} />
                 )}
 
                 {/* 아이템 줍기 감지를 위한 센서 콜라이더 (자세에 따라 변경) */}
                 {!sitToggle && !lieToggle && (
-                    <CapsuleCollider args={[0.35, 0.4]} isSensor />
+                    <CapsuleCollider args={[0.4, 0.4]} isSensor />
                 )}
                 {sitToggle && (
-                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15 , 0]}  />
+                    <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15, 0]} />
                 )}
                 {lieToggle && (
-                    <CuboidCollider args={[0.4, 0.2, 0.8]} isSensor   position={[0, -0.6, 0]}/>
+                    <CuboidCollider args={[0.4, 0.2, 0.8]} isSensor position={[0, -0.6, 0]} />
                 )}
             </RigidBody>
 

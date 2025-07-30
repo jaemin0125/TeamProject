@@ -79,7 +79,7 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
         >
             {/* 플레이어의 캡슐 콜라이더 */}
             {!safeAnimationState.isSitted && !safeAnimationState.isLyingDown && (
-                <CapsuleCollider args={[0.35, 0.4]} />
+                <CapsuleCollider args={[0.4, 0.4]} />
             )}
             {safeAnimationState.isSitted && (
                 <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
@@ -89,15 +89,12 @@ export function OtherPlayer({ id, position, rotationY, animationState, nickname,
             )}
 
 
-            {/* 모델 그룹: 모델과 닉네임 텍스트를 함께 묶음 */}
-            <group ref={modelGroupRef} position-y={-1.65}> {/* 모델의 중심을 조정 */}
-                {/* 결정된 CharacterToRender 컴포넌트를 렌더링하고 애니메이션 상태 전달 */}
+            <group ref={modelGroupRef} position-y={-1.65}> 
                 <CharacterModel
                     {...safeAnimationState}
                     glbPath={characterModelPath}
                 />
 
-                {/* 플레이어 닉네임 표시 */}
                 <Text
                     position={[0, 2.6, 0]} // 모델 위쪽에 위치
                     fontSize={0.2}
