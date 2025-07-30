@@ -113,51 +113,36 @@ export default function ChatBox({
 const styles = {
   container: {
     position: 'absolute',
-    bottom: 20,
-    right: 20,
-    width: '320px',
-    backgroundColor: 'rgba(0, 0, 0, 0.65)',  // 더 진한 어둠
-    padding: '12px',
-    borderRadius: '12px',
-    color: '#f8f8f8',
+    bottom: '30px',
+    left: '30px',
+    width: '400px',
+    maxWidth: '40%',
+    backgroundColor: 'transparent',
+    padding: '15px',
+    color: '#cccccc', // 텍스트 색상 변경
     fontSize: '14px',
     zIndex: 100,
-    border: '2px solid #003366',  //  테두리
-    
-    backdropFilter: 'blur(3px)',
-    fontFamily: 'Georgia, serif',  // 고딕 느낌
+    fontFamily: '"Orbitron", sans-serif',
   },
   messages: {
-    height: '150px',
+    height: '180px',
     overflowY: 'auto',
     marginBottom: '10px',
-    padding: '6px',
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: '6px',
-    border: '1px solid rgba(255,255,255,0.1)',
+    paddingRight: '10px',
+    wordBreak: 'break-word',
+    textShadow: '1px 1px 2px rgba(0,0,0,1)', // 가독성을 위한 그림자 유지
   },
   inputWrapper: {
     display: 'flex',
-    gap: '8px',
   },
   input: {
     flex: 1,
-    padding: '6px',
-    borderRadius: '6px',
-    border: '1px solid #444',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    color: '#f8f8f8',
+    padding: '10px',
+    borderRadius: '5px',
+    border: '1px solid rgba(128, 128, 128, 0.5)', // 회색 테두리
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    color: '#cccccc',
     fontFamily: 'inherit',
     outline: 'none',
-  },
-  button: {
-    padding: '6px 12px',
-    backgroundColor: ' #003366', 
-    border: '1px solid #003366',
-    borderRadius: '6px',
-    color: '#fff',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    transition: 'background 0.2s ease-in-out',
   },
 };

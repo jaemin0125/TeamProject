@@ -383,21 +383,23 @@ export function Player({
         const handleMouseDown = (e) => {
             if (isDead) return;
 
-            if (e.button === 0) { // 좌클릭
+            if (e.button === 2) { // 좌클릭
                 if (isItemSelected && typeof onUseItem === 'function') {
                     if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
                         onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
                         return;
-                    } else {
-                        if (canPunch && !isArmed) {
-                            setIsPunching(true);
-                            setTimeout(() => setIsPunching(false), 500);
-                        } if (canSlash && isUsingPipe) {
-                            setIsSlashing(true);
-                            setTimeout(() => setIsSlashing(false), 500);
-                        }
                     }
-                } if (canPunch && !isArmed) {
+                }
+            }
+            if (e.button === 0) {
+                if (canPunch && !isArmed) {
+                    setIsPunching(true);
+                    setTimeout(() => setIsPunching(false), 500);
+                } if (canSlash && isUsingPipe) {
+                    setIsSlashing(true);
+                    setTimeout(() => setIsSlashing(false), 500);
+                }
+                if (canPunch && !isArmed) {
                     setIsPunching(true);
                     setTimeout(() => setIsPunching(false), 500);
                 } if (canSlash && isUsingPipe) {
@@ -405,6 +407,7 @@ export function Player({
                     setTimeout(() => setIsSlashing(false), 500);
                 }
             }
+
 
             if (e.button === 0 && isArmed) {
                 if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
@@ -521,9 +524,7 @@ export function Player({
                 // 필요하다면 RigidBody의 type을 'dynamic'으로 변경하여 사망 애니메이션과 물리 효과를 줄 수 있습니다.
                 // playerRef.current.setType('dynamic');
             }
-        }
-        // isDead가 false로 바뀌면 (리스폰 시)
-        else if (wasDead && !isDead && playerRef.current) {
+        } else if (wasDead && !isDead && playerRef.current) {
             console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
             playerRef.current.setTranslation(new THREE.Vector3(0, -3.7, 0), true);
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
@@ -583,7 +584,7 @@ export function Player({
 
         // isGrounded 판정을 위한 레이캐스팅
         // CapsuleCollider의 args는 [halfHeight, radius] 순서입니다.
-        const capsuleHalfHeight = 0.35; // args[0]
+        const capsuleHalfHeight = 0.4; // args[0]
         const capsuleRadius = 0.4;    // args[1]
 
         // 레이 시작점을 캡슐 콜라이더의 가장 낮은 지점에서 약간 위로 설정합니다.
@@ -791,8 +792,8 @@ export function Player({
             }
         }
 
-
-        // if (modelRef.current) { ======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직) 상단의 조건문과 교체.
+        //======>>>>>>>>>>>>>>>>>>>>>>>>>>> WASD 애니메이션 별도 생성 시 (카메라 방향 시점 고정 로직) 상단의 조건문과 교체.
+        // if (modelRef.current) { 
         //     modelRef.current.position.copy(playerBodyPos);
         //     modelRef.current.position.y += -0.725; // 모델 중심 정렬
         //     modelRef.current.visible = currentViewMode === 'thirdPerson'; // 3인칭 시에만 렌더링
@@ -836,66 +837,36 @@ export function Player({
             const cameraRotation = new THREE.Euler(finalPitch, finalYaw + Math.PI, 0, 'YXZ'); // 1인칭에서는 roll 0 유지
             camera.quaternion.setFromEuler(cameraRotation);
         } else { // thirdPerson
-            // 3인칭 시점: 플레이어 뒤에서 카메라가 따라다니도록 설정
-            const dist = 8; // 카메라와 플레이어 간의 거리
+            const dist = 8; // 카메라와 플레이어 간의 최대 거리
             const phi = Math.PI / 2 + pitch.current; // 구면 좌표계의 phi (수직 각도)
             const theta = yaw.current + Math.PI; // 구면 좌표계의 theta (수평 각도)
 
-            // 구면 좌표계를 이용한 이상적인 카메라 위치 계산
-            const idealCamX = dist * Math.sin(phi) * Math.sin(theta);
-            const idealCamY = dist * Math.cos(phi);
-            const idealCamZ = dist * Math.sin(phi) * Math.cos(theta);
+            const playerHeadPos = playerBodyPos.clone();
+            playerHeadPos.y += 1; // 카메라가 바라볼 플레이어 머리 위치
 
-            const idealCamPos = new THREE.Vector3(playerBodyPos.x + idealCamX, playerBodyPos.y + 1 + idealCamY, playerBodyPos.z + idealCamZ);
+            const cameraDirection = new THREE.Vector3(
+                Math.sin(phi) * Math.sin(theta),
+                Math.cos(phi),
+                Math.sin(phi) * Math.cos(theta)
+            );
 
-            // 카메라 충돌 감지를 위한 레이캐스트: 이상적인 카메라 위치에서 플레이어 방향으로 쏨
-            const rayOrigin = idealCamPos.clone();
+            // 안정적인 toi 값을 위해 castRayAndGetNormal 사용
+            const ray = new rapier.Ray(playerHeadPos, cameraDirection);
+            const hit = world.castRayAndGetNormal(ray, dist, true, undefined, undefined, undefined, undefined, playerRef.current);
 
-            const tempRayDirection = playerBodyPos.clone().sub(idealCamPos); // Calculate the vector
+            let finalDistance = dist;
 
-            const rayLengthSq = tempRayDirection.lengthSq(); // Get the squared length
-            const rayLength = Math.sqrt(rayLengthSq); // Get the actual length
-
-            let rayDirection;
-            if (rayLengthSq > Number.EPSILON) { // Check if length is not effectively zero
-                rayDirection = tempRayDirection.normalize();
-            } else {
-                // If the vector is zero, use a small non-zero vector to avoid NaN
-                rayDirection = new THREE.Vector3(0, 0, 0.001);
+            const toi = hit?.toi ?? hit?.timeOfImpact;
+            if (typeof toi === 'number') {
+                finalDistance = Math.max(toi - 0.3, 0.1);
             }
 
+            const finalCameraPos = playerHeadPos.clone().add(cameraDirection.multiplyScalar(finalDistance));
+            camera.position.copy(finalCameraPos);
+            camera.lookAt(playerHeadPos);
 
-            const ray = new rapier.Ray(rayOrigin, rayDirection);
-            const hit = world.castRay(ray, rayLength, true, undefined, undefined, undefined, playerRef.current);
-
-            let finalCamPos = idealCamPos; // 기본적으로 이상적인 위치로 설정
-            
-            if (hit && hit.collider) {
-                // 충돌이 발생하면, 충돌 지점 바로 앞에 카메라를 위치시킴
-                const distanceToHit = (typeof hit.toi === 'number' ? hit.toi : 1) * rayLength;
-                const safeDistance = Math.max(0, distanceToHit - 0.1); // 최소 거리는 0
-
-                finalCamPos = rayOrigin.clone().add(rayDirection.clone().multiplyScalar(safeDistance));
-
-                // 추가: 카메라가 플레이어 너무 가까이 붙는 것을 방지 (최소 거리 유지)
-                const minCamDistance = 0.5; // 플레이어로부터 최소 0.5m 거리 유지
-                const currentDistanceToPlayer = finalCamPos.distanceTo(playerBodyPos);
-
-                if (currentDistanceToPlayer < minCamDistance) {
-                    let dirFromPlayerToIdeal = idealCamPos.clone().sub(playerBodyPos);
-                    const dirLengthSq = dirFromPlayerToIdeal.lengthSq();
-                    if (dirLengthSq > Number.EPSILON) {
-                        dirFromPlayerToIdeal.normalize();
-                    } else {
-                        dirFromPlayerToIdeal = new THREE.Vector3(0, 0, 0.001); // Small non-zero vector
-                    }
-
-                    finalCamPos = playerBodyPos.clone().add(dirFromPlayerToIdeal.multiplyScalar(minCamDistance));
-                }
-            }
-
-            camera.position.lerp(finalCamPos, 0.1); // 0.1은 보간 속도 (조절 가능)
-            camera.lookAt(playerBodyPos.x, playerBodyPos.y + 1, playerBodyPos.z); // 카메라가 플레이어를 바라보도록 설정
+            // 디버깅 로그
+            // console.log(`P: ${pitch.current.toFixed(2)}, Y: ${yaw.current.toFixed(2)} | Hit: ${hit ? `toi: ${toi}` : 'null'} | Dist: ${finalDistance.toFixed(2)}`);
         }
         // 최종 디버그 로깅
         // HUD 상태 업데이트
@@ -903,7 +874,7 @@ export function Player({
             ...prev,
             viewMode: currentViewMode, // Player 내부 viewMode 전달
             isGrounded,
-            position: `(${pos.x.toFixed(2)}, ${pos.y.toFixed(2)}, ${pos.z.toFixed(2)})`,
+            position: pos, // pos 객체 직접 전달
             velocity: `(${vel.x.toFixed(2)}, ${vel.y.toFixed(2)}, ${vel.z.toFixed(2)})`,
             yaw: yaw.current,
             pitch: pitch.current,
@@ -998,7 +969,7 @@ export function Player({
             >
                 {/* 플레이어의 캡슐 콜라이더 (자세에 따라 변경) */}
                 {!sitToggle && !lieToggle && (
-                    <CapsuleCollider args={[0.35, 0.4]} />
+                    <CapsuleCollider args={[0.4, 0.4]} />
                 )}
                 {sitToggle && (
                     <CapsuleCollider args={[0.2, 0.4]} position={[0, -0.15, 0]} />
@@ -1009,7 +980,7 @@ export function Player({
 
                 {/* 아이템 줍기 감지를 위한 센서 콜라이더 (자세에 따라 변경) */}
                 {!sitToggle && !lieToggle && (
-                    <CapsuleCollider args={[0.35, 0.4]} isSensor />
+                    <CapsuleCollider args={[0.4, 0.4]} isSensor />
                 )}
                 {sitToggle && (
                     <CapsuleCollider args={[0.2, 0.4]} isSensor position={[0, -0.15, 0]} />

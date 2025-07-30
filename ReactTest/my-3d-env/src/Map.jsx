@@ -6,7 +6,7 @@ import { RigidBody } from '@react-three/rapier';
 export function GModMap() {
     // GLB 파일 로드
     // gmod_map.glb 파일이 public/models 폴더에 있다고 가정합니다.
-    const { scene } = useGLTF('/models/gm_construct.glb');
+    const { scene } = useGLTF('/models/free_fire.glb');
 
     // 맵 모델이 그림자를 드리우고 받을 수 있도록 설정
     scene.traverse((child) => {
@@ -27,7 +27,7 @@ export function GModMap() {
                 object={scene}
                 position={[0, 0, 0]} // 맵의 초기 위치를 조정합니다.
                 rotation={[0, Math.PI / 2, 0]} // 필요한 경우 맵의 회전을 조정합니다.
-                scale={[3, 3, 3]} // 맵의 스케일을 3배로 다시 조정합니다.
+                scale={[1.5, 1.5, 1.5]} // 맵의 스케일을 3배로 다시 조정합니다.
             />
         </RigidBody>
     );

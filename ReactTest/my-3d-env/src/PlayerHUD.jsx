@@ -1,260 +1,109 @@
 // PlayerHUD.jsx
-// PlayerHUD 컴포넌트: 플레이어의 현재 상태를 표시하는 UI (Head-Up Display)
+import React from 'react';
 
-import { div } from "three/tsl";
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen }) {
+    const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, isGrounded, position } = state;
 
-// 모든 JSX 요소는 하나의 부모 요소로 감싸져야 합니다. 여기서는 React Fragment (<>)를 사용합니다.
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress }) {
-    // state 객체에서 필요한 정보들을 구조 분해 할당
-    const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, interactableObjectId } = state;
-    // 다른 플레이어 정보를 배열로 변환하고 현재 플레이어는 필터링
-    const otherPlayersArray = state.otherPlayers
-        ? Array.from(state.otherPlayers.values())
-        : [];
-    const otherPlayersInfo = otherPlayersArray
-        .filter((p) => p.id !== state.currentPlayerId)
-        .map(
-            (p) =>
-                `ID: ${playerNickname}, Pos: (${p.position?.x?.toFixed(1) || "N/A"}, ${p.position?.y?.toFixed(1) || "N/A"
-                }, ${p.position?.z?.toFixed(1) || "N/A"})`
-        )
-        .join("\n");
+    const healthBarColor = '#ff4d4d';
 
-    // 리스폰 프로그레스 바 너비 계산 (5초 기준)
-    // 체력 바 색상 결정
-    const healthBarColor = health > 50 ? 'limegreen' : health > 20 ? 'orange' : 'red';
+    const [time, setTime] = React.useState(new Date());
+    React.useEffect(() => {
+        const timerId = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(timerId);
+    }, []);
+
+    const formatTime = (date) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
+
+    const hotbarItems = inventory.slice(0, 4);
 
     return (
         <>
-            {/* 메인 HUD 컨테이너 (이전에는 없었지만, 전체적인 스타일 관리를 위해 추가) */}
-            <div
-                style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: '100%',
-                    pointerEvents: 'none', // HUD 엘리먼트가 마우스 이벤트를 가로채지 않도록 설정
-                    zIndex: 999, // 다른 요소 위에 오도록 설정
-                    fontFamily: 'Arial, sans-serif',
-                    color: 'white',
-                    textShadow: '1px 1px 2px black',
-                }}
-            >
-                {/* 좌측 상단 HUD 정보 (디버그 정보 및 플레이어 정보) */}
-                <div style={{
-                    position: 'absolute',
-                    top: 20,
-                    left: 20,
-                    color: 'white',
-                    fontSize: 14,
-                    backgroundColor: 'rgba(0,0,0,0.8)',
-                    padding: 15,
-                    borderRadius: 10,
-                    zIndex: 40,
-                    maxHeight: 'calc(100% - 40px)', // 화면 높이에 따라 스크롤 가능하게
-                    overflowY: 'auto',
-                    boxShadow: '0 0 15px rgba(0,0,0,0.5)'
-                }}>
-                    <div><strong>ID:</strong> {state.id.substring(0, 5)}</div>
-                    <div><strong>닉네임:</strong> {playerNickname}</div>
-                    <div><strong>isGrounded:</strong> {state.isGrounded ? '✅' : '❌'}</div>
-                    <div><strong>Yaw:</strong> {state.yaw?.toFixed(2) ?? 'N/A'}</div>
-                    <div><strong>Pitch:</strong> {state.pitch?.toFixed(2) ?? 'N/A'}</div>
-                    <br />
-                    <div><strong>-- Other Players --</strong></div>
-                    {otherPlayersArray.filter(p => p.id !== state.currentPlayerId).length > 0 &&
-                        <div>Total Other Players: {otherPlayersArray.filter(p => p.id !== state.currentPlayerId).length}</div>
-                    }
-                    <pre style={{ whiteSpace: 'pre-wrap' }}>{otherPlayersInfo || "No other players"}</pre>
-                </div>
+            <style>
+                {`
+                @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+                .hud-text-shadow { text-shadow: 1px 1px 2px rgba(0,0,0,0.9); }
+                @keyframes hitFlash { from { opacity: 1; } to { opacity: 0; } }
+                @keyframes fadeInOut { 0% { opacity: 0.7; } 100% { opacity: 1; } }
+                @keyframes pulse { 0% { color: #cccccc; } 50% { color: white; } 100% { color: #cccccc; } }
+                `}
+            </style>
 
-                {/* 체력 바 (인벤토리 위에 위치하도록 수정) */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: 90, // 인벤토리 높이 (60px) + 인벤토리 하단 여백 (10px) + 체력바와 인벤토리 사이 간격 (20px) = 90px
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    width: '250px',
-                    height: '25px',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    border: '1px solid #333',
-                    boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-                    zIndex: 600, // 인벤토리보다 위에 보이도록
-                    pointerEvents: 'none',
-                }}>
-                    <div style={{
-                        width: `${health}%`,
-                        height: '100%',
-                        backgroundColor: healthBarColor, // 체력에 따라 색상 변화
-                        transition: 'width 0.2s ease-in-out',
-                    }}></div>
-                    <span style={{
-                        position: 'absolute',
-                        width: '100%',
-                        textAlign: 'center',
-                        lineHeight: '25px', // 체력바 높이와 동일
-                        color: 'white',
-                        fontWeight: 'bold',
-                        textShadow: '1px 1px 2px black',
-                    }}>
-                    </span>
-                </div>
+            <div style={{
+                position: 'absolute', top: 0, left: 0, width: '100%', height: '100%',
+                pointerEvents: 'none', zIndex: 999,
+                fontFamily: '"Orbitron", sans-serif', color: '#cccccc',
+                filter: isDead ? 'grayscale(100%)' : 'none',
+            }}>
 
-                <div></div>
-
-
-                {/* 인벤토리 핫바 (하단 중앙) - 주신 코드 그대로 유지하며 다른 요소들과 위치 조절 */}
-                {!isScoped && (
-
-                    <div style={{
-                        position: 'absolute',
-                        bottom: 10,
-                        left: '50%',
-                        transform: 'translateX(-50%)',
-                        display: 'flex',
-                        gap: '5px', // 슬롯 간 간격
-                        zIndex: 40
-                    }}>
-
-                        {inventory.map((item, index) => {
-                            return (
-                                <div
-                                    key={index}
-                                    style={{
-                                        width: '60px', // 슬롯 너비
-                                        height: '60px', // 슬롯 높이
-                                        border: `2px solid ${selectedInventorySlot === index ? 'gold' : 'gray'}`, // 선택된 슬롯 강조
-                                        borderRadius: '8px',
-                                        display: 'flex',
-                                        flexDirection: 'column', // 아이템 이름과 개수를 세로로 정렬
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'white', // 텍스트 색상
-                                        backgroundColor: 'rgba(0, 0, 0, 0.7)', // 슬롯 배경색 추가
-                                        boxShadow: '0 0 10px rgba(0,0,0,0.5)',
-                                        pointerEvents: 'none', // 마우스 이벤트 무시
-                                    }}
-                                >
-                                    {item ? (
-                                        <>
-                                            {/* 아이템 이미지가 있으면 렌더링 */}
-                                            {item.image && (
-                                                <img
-                                                    src={item.image}
-                                                    alt={item.name}
-                                                    style={{
-                                                        width: '40px', // 이미지 크기 조절
-                                                        height: '40px', // 이미지 크기 조절
-                                                        objectFit: 'contain', // 비율 유지하며 슬롯에 맞춤
-                                                        marginBottom: '2px', // 이미지와 텍스트 사이 간격
-                                                    }}
-                                                    onError={(e) => {
-                                                        console.error(`[PlayerHUD] Failed to load image for ${item.name} at ${item.image}:`, e);
-                                                        e.target.style.display = 'none'; // 오류 발생 시 이미지 숨기기
-                                                    }}
-                                                />
-                                            )}
-                                            <span style={{ fontSize: '0.7em', textShadow: '1px 1px 2px black' }}>{item.name}</span>
-                                            {item.count > 1 && (
-                                                <span style={{ fontSize: '0.7em', textShadow: '1px 1px 2px black' }}>
-                                                    x{item.count}
-                                                </span>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <span></span> // 빈 슬롯
-                                    )}
-                                </div>
-                            );
-                        })}
-
-                    </div>
-
-                )}
-
-                {isHit && !isDead && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(255, 0, 0, 0.3)',
-                            pointerEvents: 'none',
-                            animation: 'hitFlash 0.5s forwards', // 짧은 애니메이션으로 플래시 효과
-                        }}
-                    ></div>
-                )}
-
-                {/* 사망 시 오버레이 (요청하신 이전 스타일로 복구) */}
-                {isDead && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center',
-                            alignItems: 'center',
-                            color: 'white',
-                            fontSize: '2em',
-                            fontWeight: 'bold',
-                            pointerEvents: 'none',
-                            zIndex: 1000, // 다른 UI 위에 오도록
-                        }}
-                    >
-                        YOU ARE DEAD!
-                        <div style={{ fontSize: '0.6em', marginTop: '10px' }}>
-                            Respawning in {Math.ceil(5 - respawnProgress)} seconds...
+                {/* Top-Left Player Info */}
+                <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center' }}>
+                    <img src="/models/boss.png" alt="player" style={{ width: '60px', height: '60px', borderRadius: '5px', border: '1px solid rgba(128, 128, 128, 0.7)' }} />
+                    <div style={{ marginLeft: '15px' }}>
+                        <div className="hud-text-shadow" style={{ fontWeight: 'bold', fontSize: '1.2em', color: 'white' }}>{playerNickname}</div>
+                        <div style={{ width: '200px', height: '15px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid #222', borderRadius: '5px', marginTop: '5px', overflow: 'hidden' }}>
+                            <div style={{ width: `${health}%`, height: '100%', backgroundColor: healthBarColor, transition: 'width 0.5s' }}></div>
                         </div>
                     </div>
+                </div>
+
+                {/* Top-Center Timer */}
+                <div className="hud-text-shadow" style={{ position: 'absolute', top: '20px', left: '50%', transform: 'translateX(-50%)', fontSize: '2.5em', letterSpacing: '3px', color: '#cccccc' }}>
+                    {formatTime(time)}
+                </div>
+
+                {/* Right-Side Vertical Hotbar */}
+                <div style={{ position: 'absolute', right: '30px', top: '50%', transform: 'translateY(-50%)', display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'flex-end' }}>
+                    {hotbarItems.map((item, index) => {
+                        const isSelected = selectedInventorySlot === index;
+                        return (
+                            <div key={index} style={{
+                                width: isSelected ? '80px' : '70px',
+                                height: isSelected ? '80px' : '70px',
+                                border: `2px solid ${isSelected ? 'gold' : 'rgba(128, 128, 128, 0.5)'}`,
+                                borderRadius: '10px',
+                                backgroundColor: isSelected ? 'rgba(50, 50, 50, 0.8)' : 'rgba(0, 0, 0, 0.6)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                padding: '5px',
+                                boxSizing: 'border-box',
+                                transition: 'all 0.2s ease-in-out',
+                                position: 'relative', // For absolute positioning of the number
+                            }}>
+                                <span style={{ position: 'absolute', top: '5px', left: '7px', color: 'rgba(255,255,255,0.5)', fontSize: '0.8em' }}>{`0${index + 1}`}</span>
+                                {item ? <img src={item.image} alt={item.name} style={{
+                                    width: isSelected ? '60px' : '40px',
+                                    height: isSelected ? '60px' : '40px',
+                                    objectFit: 'contain',
+                                    transition: 'all 0.2s ease-in-out'
+                                }} /> : <div></div>}
+                            </div>
+                        )
+                    })}
+                </div>
+
+                {/* Bottom-Right Ammo Count */}
+                {!isDead && selectedItem?.name === 'ak-47' && (
+                    <div className="hud-text-shadow" style={{ position: 'absolute', bottom: '30px', right: '30px', backgroundColor: 'rgba(0, 0, 0, 0.6)', padding: '15px 25px', borderRadius: '10px', border: '1px solid rgba(128, 128, 128, 0.5)', textAlign: 'right' }}>
+                        {isReloading ? (
+                            <div style={{ fontSize: '1.5em', color: '#cccccc' }}>RELOADING...</div>
+                        ) : currentAmmo === 0 && maxAmmo > 0 ? (
+                            <div style={{ fontSize: '1.2em', animation: 'pulse 1.5s infinite' }}>PRESS [R] TO RELOAD</div>
+                        ) : (
+                            <div>
+                                <span style={{ fontSize: '2.5em', fontWeight: 'bold', color: 'white' }}>{currentAmmo}</span>
+                                <span style={{ fontSize: '1.5em', color: 'rgba(255,255,255,0.7)' }}> / {maxAmmo}</span>
+                            </div>
+                        )}
+                    </div>
                 )}
 
-                {isScoped && (
-                    <>
-                        {/* 2x 스코프 이미지 오버레이 */}
-                        <img
-                            src="/textures/2xScope.png" // 이 경로는 실제로 이미지가 위치한 public 폴더 기준으로 작성
-                            style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
-                                pointerEvents: 'none',
-                                zIndex: 20000,
-                            }}
-                        />
-
-                        {/* 중앙 빨간 점 (옵션) */}
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                width: '6px',
-                                height: '6px',
-                                backgroundColor: 'red',
-                                borderRadius: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                boxShadow: '0 0 6px red',
-                                pointerEvents: 'none',
-                                zIndex: 20000,
-                            }}
-                        />
-                    </>
-                )}
-
-                {!isDead && !isAiming && !isScoped && (
+                {!isDead && !isAiming && !isScoped && selectedItem?.name === 'ak-47' && !isInventoryOpen && (
                     <div
                         style={{
                             position: 'absolute',
@@ -319,7 +168,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
 
                 {/* 크로스헤어 (사망 중이 아닐 때만) */}
-                {!isDead && isAiming && !isScoped && (
+                {!isDead && isAiming && !isScoped && selectedItem?.name === 'ak-47' && !isInventoryOpen && (
                     <div
                         style={{
                             position: 'absolute',
@@ -362,111 +211,79 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         }}></div>
                     </div>
                 )}
+                {isScoped && (
+                    <>
+                        <img src="/textures/2xScope.png" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'contain', zIndex: 20000 }} />
+                        <div style={{ position: 'absolute', top: '50%', left: '50%', width: '6px', height: '6px', backgroundColor: 'red', borderRadius: '50%', transform: 'translate(-50%, -50%)', zIndex: 20000 }} />
+                    </>
+                )}
 
-                {/* F 키 상호작용 프롬프트 (크로스헤어 위에 보이도록 zIndex 높임) */}
-                {showInteractionPrompt && !isDead && !isScoped && !isAiming && (
-                    <div style={{
-                        position: 'absolute',
-                        top: 'calc(50% + 40px)', // 크로스헤어 아래에 위치 (크로스헤어 높이의 절반 + 여백)
-                        left: '50%',
-                        transform: 'translate(-50%, -50%)',
-                        color: 'white',
-                        fontFamily: 'Arial, sans-serif',
-                        fontSize: '1.5em',
-                        textShadow: '2px 2px 4px rgba(0,0,0,0.9)',
-                        zIndex: 10000, // 크로스헤어보다 위에 보이도록
-                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                        padding: '10px 20px',
-                        borderRadius: '10px',
-                        textAlign: 'center',
-                        whiteSpace: 'nowrap',
-                        animation: 'fadeInOut 1.5s ease-in-out infinite alternate', // 깜빡이는 애니메이션
-                        border: '2px solid rgba(255,255,255,0.5)'
-                    }}>
+                {/* Interaction Prompt */}
+                {showInteractionPrompt && !isDead && (
+                    <div className="hud-text-shadow" style={{ position: 'absolute', top: 'calc(50% + 40px)', left: '50%', transform: 'translate(-50%, -50%)', fontSize: '1.5em', backgroundColor: 'rgba(0, 0, 0, 0.7)', padding: '10px 20px', borderRadius: '10px', animation: 'fadeInOut 1.5s ease-in-out infinite alternate' }}>
                         Press <span style={{ color: 'gold', fontWeight: 'bold' }}>[F]</span>
                     </div>
                 )}
-                {!isDead && selectedItem?.name === 'ak-47' && (
-                    <div
-                        style={{
-                            position: 'absolute',
-                            bottom: '90px',
-                            left: '58%',
-                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                            padding: '10px 20px',
-                            borderRadius: '8px',
-                            color: 'white',
-                            fontSize: '1.2em',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            zIndex: 1000,
-                            border: '2px solid #444',
-                            pointerEvents: 'none',
-                            boxShadow: '0 0 10px rgba(0,0,0,0.7)',
-                        }}
-                    >
-                        {isReloading ? (
-                            <div style={{
-                                width: '150px',
-                                height: '20px',
-                                backgroundColor: '#333',
-                                borderRadius: '5px',
-                                overflow: 'hidden',
-                                border: '1px solid #555',
-                                position: 'relative',
-                            }}>
-                                <div style={{
-                                    width: `${reloadProgress}%`,
-                                    height: '100%',
-                                    backgroundColor: '#4CAF50',
-                                    transition: 'width 0.1s linear',
-                                }}></div>
-                                <span style={{
-                                    position: 'absolute',
-                                    top: '50%',
-                                    left: '50%',
-                                    transform: 'translate(-50%, -50%)',
-                                    color: 'white',
-                                    fontSize: '0.8em',
-                                    textShadow: '1px 1px 2px black',
-                                }}>
 
-                                </span>
-                            </div>
-                        ) : (
-                            currentAmmo === 0 && maxAmmo > 0
-                                ? 'R!'
-                                : `Bullet : ${currentAmmo}/${maxAmmo}`
-                        )}
+                {/* Death Screen */}
+                {isDead && (
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
+                        <div className="hud-text-shadow" style={{ color: '#ff4d4d', fontSize: '4em', fontWeight: 'bold' }}>YOU ARE DEAD</div>
+                        <div className="hud-text-shadow" style={{ fontSize: '1.5em', marginTop: '10px' }}>Respawning in {Math.ceil(5 - respawnProgress)} seconds...</div>
                     </div>
                 )}
 
-            </div>
+                {/* Hit Flash */}
+                {isHit && !isDead && <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(255, 0, 0, 0.3)', animation: 'hitFlash 0.5s forwards' }}></div>}
 
-            {/* CSS Keyframes for animations */}
-            <style>
-                {`
-                @keyframes wastedFadeIn {
-                    from { opacity: 0; }
-                    to { opacity: 1; }
-                }
-                @keyframes wastedShake {
-                    0% { transform: translateY(-50%) rotate(0deg); }
-                    25% { transform: translateY(-50.2%) rotate(0.05deg); }
-                    50% { transform: translateY(-49.8%) rotate(-0.05deg); }
-                    75% { transform: translateY(-50.2%) rotate(0.05deg); }
-                    100% { transform: translateY(-50%) rotate(0deg); }
-                }
-                @keyframes fadeInOut {
-                    0% { opacity: 0.7; }
-                    100% { opacity: 1; }
-                }
-                @keyframes hitFlash {
-                     from { opacity: 1; }
-                     to { opacity: 0; }
-                }   
-                `}
-            </style>
+                {/* Inventory Screen */}
+                {isInventoryOpen && (
+                    <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '60vw', height: '60vh', maxWidth: '800px', maxHeight: '500px', display: 'flex', backgroundColor: 'rgba(20, 20, 20, 0.85)', borderRadius: '10px', border: '1px solid rgba(128, 128, 128, 0.5)', zIndex: 1001, pointerEvents: 'auto' }}>
+                        {/* Left Panel */}
+                        <div style={{ flex: 1, padding: '20px', borderRight: '1px solid rgba(128, 128, 128, 0.5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                            {selectedItem ? (
+                                <>
+                                    <img src={selectedItem.image} alt={selectedItem.name} style={{ width: '150px', height: '150px', objectFit: 'contain' }} />
+                                    <h2 className="hud-text-shadow" style={{ color: 'white', marginTop: '20px', fontSize: '2em' }}>{selectedItem.name}</h2>
+                                    <p className="hud-text-shadow" style={{ color: '#cccccc', textAlign: 'center', marginTop: '10px' }}>
+                                        {selectedItem.name === 'ak-47' ? `A reliable assault rifle. Holds ${selectedItem.magazineSize} rounds.` : selectedItem.name === 'apple' ? 'Restores a small amount of health.' : 'A standard issue item.'}
+                                    </p>
+                                    {selectedItem.count > 1 && <span className="hud-text-shadow" style={{ fontSize: '1.2em', marginTop: '20px' }}>Quantity: {selectedItem.count}</span>}
+                                </> 
+                            ) : (
+                                <div className="hud-text-shadow" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.5em' }}>SELECT AN ITEM</div>
+                            )}
+                        </div>
+                        {/* Right Panel */}
+                        <div style={{ flex: 2, padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: '15px' }}>
+                            {inventory.map((item, index) => (
+                                <div key={index} style={{
+                                    border: `1px solid ${selectedInventorySlot === index ? 'gold' : 'rgba(128, 128, 128, 0.7)'}`,
+                                    borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                    backgroundColor: 'rgba(0, 0, 0, 0.3)', transition: 'all 0.2s ease-in-out',
+                                    transform: selectedInventorySlot === index ? 'scale(1.05)' : 'scale(1)', position: 'relative'
+                                }}>
+                                    {item ? (
+                                        <>
+                                            <img src={item.image} alt={item.name} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />
+                                            <span className="hud-text-shadow" style={{ fontSize: '0.8em', marginTop: '5px' }}>{item.name}</span>
+                                            {item.count > 1 && <span className="hud-text-shadow" style={{ position: 'absolute', bottom: '5px', right: '8px', fontSize: '0.9em' }}>x{item.count}</span>}
+                                        </>
+                                    ) : <span className="hud-text-shadow" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '2.5em' }}>{index + 1}</span>}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* Debug Info */}
+                <div style={{ position: 'absolute', bottom: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.5)', padding: '5px 10px', borderRadius: '5px', fontSize: '12px' }}>
+                    <div className="hud-text-shadow">Grounded: {isGrounded ? 'Yes' : 'No'}</div>
+                    {position && typeof position.x === 'number' && (
+                        <div className="hud-text-shadow">Pos: {position.x.toFixed(2)}, {position.y.toFixed(2)}, {position.z.toFixed(2)}</div>
+                    )}
+                </div>
+            </div>
         </>
     );
 }

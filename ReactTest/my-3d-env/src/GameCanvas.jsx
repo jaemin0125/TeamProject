@@ -118,6 +118,7 @@ export function GameCanvas({ playerNickname }) {
     // 추가 --> 인벤토리 상태 관리 (8칸 핫바) / 기존 인벤토리 방식 사용하면 Npc 아이템 수령이 제한되서 변경
     const MAX_SLOTS = 8;
     const [inventory, setInventory] = useState(() => new Array(MAX_SLOTS).fill(null));
+    const [isInventoryOpen, setIsInventoryOpen] = useState(false); // 인벤토리 UI 표시 상태
 
     const inventoryRef = useRef(inventory);
 
@@ -233,9 +234,23 @@ export function GameCanvas({ playerNickname }) {
 
     }, [selectedInventorySlot, isReloading, inventory]);
 
+    // 'Q' 키 입력 감지 (인벤토리 토글)
+    useEffect(() => {
+        const handleKeyDown = (event) => {
+            if (event.code === 'KeyQ' && !isChatting) {
+                setIsInventoryOpen(prev => !prev);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isChatting]);
+
     // 아이템 버리기 함수
     const handleDropItem = useCallback(() => {
-        if (isChatting) return; // 채팅 중에는 아이템 버리기 방지
+        if (isChatting || isInventoryOpen) return; // 채팅 중이거나 인벤토리가 열려있으면 아이템 버리기 방지
 
         const itemToDrop = inventoryRef.current[selectedInventorySlot];
         console.log(itemToDrop.id);
@@ -289,12 +304,12 @@ export function GameCanvas({ playerNickname }) {
                 }),
             });
         }
-    }, [selectedInventorySlot, isChatting, stompClient, currentPlayerId]);
+    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]);
 
-    // 'Q' 키 입력 감지
+    // 'G' 키 입력 감지
     useEffect(() => {
         const handleKeyDown = (event) => {
-            if (event.code === 'KeyQ' && !isChatting) {
+            if (event.code === 'KeyG' && !isChatting) {
                 handleDropItem();
             }
         };
@@ -926,15 +941,16 @@ export function GameCanvas({ playerNickname }) {
             <Leva collapsed={true} /> {/* 기본적으로 접힌 상태로 시작 */}
             {/* 플레이어 HUD 컴포넌트 */}
             <PlayerHUD
-                state={hudState}
+                state={hudState} // Pass the entire hudState
                 playerNickname={playerNickname}
-                inventory={inventory} // inventory prop 전달
-                selectedInventorySlot={selectedInventorySlot} // selectedInventorySlot prop 전달
+                inventory={inventory}
+                selectedInventorySlot={selectedInventorySlot}
                 selectedItem={inventory[selectedInventorySlot]}
                 currentAmmo={selectedItem?.ammo?.current}
                 maxAmmo={selectedItem?.ammo?.reserve}
-                isReloading={isReloading} // 재장전 상태 전달
-                reloadProgress={reloadProgress} // 재장전 진행도 전달
+                isReloading={isReloading}
+                reloadProgress={reloadProgress}
+                isInventoryOpen={isInventoryOpen}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -961,7 +977,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]} > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
