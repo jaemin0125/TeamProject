@@ -1,9 +1,8 @@
 // src/main/java/com/example/demo/service/PlayerService.java
 package com.example.demo.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,11 +16,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.dto.AnimationState;
-import com.example.demo.dto.InventoryItem;
-import com.example.demo.dto.Item;
-import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.Ammo;
+import com.example.demo.dto.AnimationState;
+import com.example.demo.dto.Item;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
@@ -468,33 +465,14 @@ public class PlayerService {
         }
     }
     
-    
- // 추가 - 유저별 인벤토리 관리 Map (이건 나중에 playerstate 인벤토리에 합칠 예정)
-    private final Map<String, List<InventoryItem>> playerInventories = new HashMap<>();// 유저별로 인벤토리(아이템목록) 따로 관리 
-
-    public void addItemToInventory(String playerId, Item item) {
-        List<InventoryItem> inventory = playerInventories.computeIfAbsent(playerId, k -> new ArrayList<>());//유저 인벤토리 초기화 또는 불러오기
-
-        Optional<InventoryItem> existing = inventory.stream()
-                .filter(i -> i.getName().equals(item.getName()))
-                .findFirst(); //  해당 이름의 아이템이 인벤토리에 이미 있는지 확인
-
-        if (existing.isPresent()) {
-            InventoryItem i = existing.get();
-            i.setCount(i.getCount() + item.getCount()); //이미 있다면 수량 증가(기존 사과 수량에 +1 (또는 item이 가진 수량만큼 누적))
-
-        } else {
-            inventory.add(new InventoryItem(item.getName(), item.getCount()));//  없다면 새로 추가/ 처음 받은 아이템이면 새로 리스트에 추가
+    public List<Item> getInventoryForPlayer(String playerId) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("❌ 존재하지 않는 playerId: {}", playerId);
+            return Collections.emptyList(); // 또는 null 대신 빈 리스트 반환
         }
-
-        // 최신 인벤토리 아이템을 클라이언트에 전송(STOMP WebSocket을 통해 해당 유저에게 인벤토리 변경 정보를 전송)
-        messagingTemplate.convertAndSend(
-            "/topic/inventory/" + playerId,
-            new InventoryItem(item.getName(),item.getCount())
-        );
+        return player.getInventory();
     }
     
+    
 }
-
-
-

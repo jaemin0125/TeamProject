@@ -24,13 +24,17 @@ public class Item {
    
     // 생성자 추가(npc 아이템 받기 위한)
     public Item(String id, String name, String type, int count, String imagePath) {
-        this.id = UUID.randomUUID().toString(); // 자동 UUID 부여
+        this.id = id; // 🔄 UUID 무시하지 말고 전달받은 걸 저장
         this.name = name;
         this.type = type;
         this.count = count;
         this.imagePath = imagePath;
- 
+
+        // ✅ 누락된 필드 기본값 설정
+        this.healthRestore = 0;
+        this.currentAmmo = 0;
+        this.reserveAmmo = 0;
+        this.stackable = true;
     }
-    
 
 }

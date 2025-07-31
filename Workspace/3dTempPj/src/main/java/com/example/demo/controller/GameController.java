@@ -15,6 +15,7 @@ import com.example.demo.dto.BulletImpactMessage;
 import com.example.demo.dto.ChatMessage;
 import com.example.demo.dto.Item;
 import com.example.demo.dto.ItemActionRequest;
+import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerHitMessage;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.service.PlayerService;
@@ -226,20 +227,43 @@ public class GameController {
     public void handleChat(@Payload ChatMessage message) {
         messagingTemplate.convertAndSend("/topic/chat", message);
     }
+
+    
     @MessageMapping("/npc/action")
     public void handleNpcAction(ItemActionRequest request) {
 
-    	if ("give".equals(request.getActionType())) {
-    		Item apple = new Item(UUID.randomUUID().toString(), // 아이템 고유 아이디 부여
-    				"apple", // 아이템 이름 (예: "사과")
-    				"food", // 아이템 타입 (예: "food", "weapon", "consumable")
-    				1, // 아이템 개수
-    				"/models/apple.png " // 프론트엔드에서 사용할 아이템 이미지 경로 (예: "/assets/apple.png")
-    		);
-    		playerService.addItemToInventory(request.getPlayerId(), apple);
-    	}
+        // ✅ "npc_apple" 같은 경우: objectManager 참조하지 않고 직접 생성
+        if ("give".equals(request.getActionType())) {
+
+            // 로그 확인용 (추후 제거 가능)
+            System.out.println("📦 NPC 지급 아이템: apple");
+
+            Item item = new Item(
+                UUID.randomUUID().toString(),
+                "apple",             // 아이템 이름 (itemType)
+                "food",              // 아이템 종류 (objectType)
+                1,
+                "/models/apple.png"  // 프론트에서 사용할 이미지 경로
+            );
+
+            boolean success = playerService.addItemToPlayerInventory(request.getPlayerId(), item);
+
+            if (success) {
+                messagingTemplate.convertAndSend(
+                    "/topic/inventory/" + request.getPlayerId(),
+                    playerService.getInventoryForPlayer(request.getPlayerId())
+                );
+            }
+
+            // ✅ 필드 상태 안 바뀌므로 이건 보내지 말 것
+            // messagingTemplate.convertAndSend("/topic/sceneObjects", objectManager.getAllObjects());
+        }
+
+        // 혹시 향후 다른 액션 타입도 생길 경우를 대비해 else if로 분기
     }
-    
+
+
+
 
 	/**
 	 * 웹소켓 연결이 끊어졌을 때 호출되는 메서드. 이 메서드는 WebSocketEventListener의
