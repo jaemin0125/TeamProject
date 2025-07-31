@@ -936,10 +936,6 @@ export function Player({
         const validTypes = ['apple', 'ak-47', 'pipe'];
 
         if (validTypes.includes(type)) {
-            if (exitTimeoutRef.current) {
-                clearTimeout(exitTimeoutRef.current);
-                exitTimeoutRef.current = null;
-            }
             if (interactableObjectIdRef.current !== id) {
                 interactableObjectIdRef.current = id;
                 onObjectProximityChange(id, true);
@@ -958,15 +954,10 @@ export function Player({
 
         const validTypes = ['apple', 'ak-47', 'pipe'];
 
-        if (validTypes.includes(type)) {
-            exitTimeoutRef.current = setTimeout(() => {
-                if (interactableObjectIdRef.current === id) {
-                    interactableObjectIdRef.current = null;
-                    onObjectProximityChange(id, false);
-                    console.log(`Player exited ${type} proximity (debounced):`, id, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-                }
-                exitTimeoutRef.current = null;
-            }, 200);
+        if (validTypes.includes(type) && interactableObjectIdRef.current === id) {
+            interactableObjectIdRef.current = null;
+            onObjectProximityChange(id, false);
+            console.log(`Player exited ${type} proximity:`, id);
         }
     }, [onObjectProximityChange]);
 

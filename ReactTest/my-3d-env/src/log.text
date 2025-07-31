@@ -1,0 +1,13 @@
+ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+GameCanvas.jsx:301 [GameCanvas] Publishing dropItem event for ak-47 (ID: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81)
+Player.jsx:960 Player exited ak-47 proximity: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+Player.jsx:942 Player entered ak-47 proximity: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+Player.jsx:768 [Player] 'F' key pressed. Current interactableObjectIdRef.current: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+GameCanvas.jsx:773 [GameCanvas] handlePlayerInteract called with objectId: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+GameCanvas.jsx:775 [GameCanvas] Found interactedObject: {id: 'ak-47-aa477d7f-0774-4a78-b739-19edae9abd81', position: {…}, objectType: 'ak-47', modelPath: '/models/ak-47.glb', itemType: 'ak-47', …}
+GameCanvas.jsx:776 [DEBUG] Interacted Object Structure: {"id":"ak-47-aa477d7f-0774-4a78-b739-19edae9abd81","position":{"x":7.921782970428467,"y":-0.12618201971054077,"z":-31.760103225708008},"objectType":"ak-47","modelPath":"/models/ak-47.glb","itemType":"ak-47","ammo":{"current":30,"reserve":120},"stackable":false,"type":"ak-47","radius":1,"color":"gray","collider":"ball","mass":10,"friction":10,"restitution":0}
+GameCanvas.jsx:823 [GameCanvas] Interacted object is an ak-47. Adding to inventory.
+GameCanvas.jsx:850 ak-47 collected! Prompt removed.
+GameCanvas.jsx:857 [GameCanvas] Publishing pickUpItem event for ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
+GameCanvas.jsx:841 [GameCanvas] Added new ak-47 to inventory. New inventory: (8) [{…}, null, null, null, null, null, null, null]
+Player.jsx:960 Player exited ak-47 proximity: ak-47-aa477d7f-0774-4a78-b739-19edae9abd81
