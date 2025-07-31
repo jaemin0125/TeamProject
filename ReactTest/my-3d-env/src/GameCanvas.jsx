@@ -702,41 +702,62 @@ export function GameCanvas({ playerNickname }) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(updatedObjects.map(updatedObj => {
-            const baseObject = {
-                ...updatedObj,
-                type: updatedObj.itemType || updatedObj.objectType || 'sphere',
-                radius: updatedObj.radius || 1,
-                color: updatedObj.color || 'gray',
-                collider: updatedObj.collider || 'ball',
-            };
+        setSceneObjects(prevSceneObjects => {
+            const prevObjectsMap = new Map(prevSceneObjects.map(obj => [obj.id, obj]));
 
-            // 오브젝트 타입에 따라 물리 속성 추가
-            switch (baseObject.type) {
-                case 'apple':
-                    baseObject.mass = 0.2;
-                    baseObject.friction = 5.5;
-                    baseObject.restitution = 0;
-                    break;
-                case 'ak-47':
-                    baseObject.mass = 10;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0;
-                    break;
-                case 'pipe':
-                    baseObject.mass = 10;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0.1;
-                    break;
-                default:
-                    baseObject.mass = 1;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0;
-                    break;
+            const newSceneObjects = updatedObjects.map(updatedObj => {
+                const prevObj = prevObjectsMap.get(updatedObj.id);
+
+                const baseObject = {
+                    ...updatedObj,
+                    type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+                    radius: updatedObj.radius || 1,
+                    color: updatedObj.color || 'gray',
+                    collider: updatedObj.collider || 'ball',
+                };
+
+                // 오브젝트 타입에 따라 물리 속성 추가
+                switch (baseObject.type) {
+                    case 'apple':
+                        baseObject.mass = 0.2;
+                        baseObject.friction = 5.5;
+                        baseObject.restitution = 0;
+                        break;
+                    case 'ak-47':
+                        baseObject.mass = 10;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0;
+                        break;
+                    case 'pipe':
+                        baseObject.mass = 10;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0.1;
+                        break;
+                    default:
+                        baseObject.mass = 1;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0;
+                        break;
+                }
+
+                // 이전 객체가 존재하고 내용도 새 객체와 동일하다면, 이전 객체 인스턴스를 재사용합니다.
+            if (prevObj && JSON.stringify(prevObj) === JSON.stringify(baseObject)) {
+                return prevObj;
             }
 
             return baseObject;
-        }));
+        });
+
+        // 만약 새로 만들어진 객체 배열이 이전 배열과 완전히 동일하다면, 이전 배열 인스턴스를 반환합니다.
+        if (
+            prevSceneObjects.length === newSceneObjects.length &&
+            prevSceneObjects.every((obj, index) => obj === newSceneObjects[index])
+            ) {
+                return prevSceneObjects;
+            }
+
+            return newSceneObjects;
+        });
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트

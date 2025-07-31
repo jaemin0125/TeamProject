@@ -384,18 +384,7 @@ export function Player({
     useEffect(() => {
         const canvas = gl.domElement; // 캔버스 요소 가져오기
         const handleMouseDown = (e) => {
-            if (isDead) return;
-
-            if (e.button === 2) { // 우클릭
-                if (isArmed) {
-                    setIsAiming(true);
-                    mouseDownTimeRef.current = performance.now();
-                } else if (selectedItem?.name === 'apple') {
-                    startEating();
-                }
-                return;
-            }
-
+            if (isDead || isChatting) return;
             if (e.button === 0) { // 좌클릭
                 if (isArmed) {
                     if (isReloadingRef.current) return;
@@ -413,6 +402,17 @@ export function Player({
                     }
                 }
             }
+
+            if (e.button === 2) { // 우클릭
+                if (isArmed) {
+                    setIsAiming(true);
+                    mouseDownTimeRef.current = performance.now();
+                } else if (selectedItem?.name === 'apple') {
+                    startEating();
+                }
+                return;
+            }
+
         };
 
         const handleMouseUp = (e) => {
@@ -440,7 +440,11 @@ export function Player({
             canvas.removeEventListener('mousedown', handleMouseDown);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [canPunch, canSlash, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
+    }, [
+        canPunch, canSlash, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring,
+        sitToggle, lieToggle, isArmed, isUsingPipe, selectedItem, isScoped, isChatting,
+        startEating, cancelEating, fireBullet
+    ]);
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
 
