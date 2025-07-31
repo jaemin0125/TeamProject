@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics } from '@react-three/rapier';
+import { Physics, RigidBody  } from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
@@ -181,6 +181,10 @@ export function GameCanvas({ playerNickname }) {
     }
     const [isReloading, setIsReloading] = useState(false); // 재장전 상태 추가
     const [reloadProgress, setReloadProgress] = useState(0); // 재장전 진행도 상태 추가
+    const [isEating, setIsEating] = useState(false);
+    const [eatProgress, setEatProgress] = useState(0);
+    const eatTimerRef = useRef(null);
+    const eatIntervalRef = useRef(null);
 
     const handleReload = useCallback(() => {
         const currentGun = inventory[selectedInventorySlot];
@@ -248,7 +252,7 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [isChatting]);
 
-    
+
 
     const handleInventoryDrop = useCallback((draggedIndex, dropIndex) => {
         setInventory(prevInventory => {
@@ -410,7 +414,7 @@ export function GameCanvas({ playerNickname }) {
             const key = event.key;
             //포인터락 상태에서 새로고침 방지
             if (document.pointerLockElement) {
-                if(event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+                if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
                     event.preventDefault();
                     return;
                 }
@@ -521,7 +525,7 @@ export function GameCanvas({ playerNickname }) {
             });
 
             // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
-          const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
+            const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
 
             client.subscribe(`/topic/inventory/${playerId}`, (message) => {
                 const receivedItem = JSON.parse(message.body);
@@ -698,41 +702,62 @@ export function GameCanvas({ playerNickname }) {
 
     // 씬 오브젝트 업데이트 핸들러
     const handleSceneObjectsUpdate = useCallback((updatedObjects) => {
-        setSceneObjects(updatedObjects.map(updatedObj => {
-            const baseObject = {
-                ...updatedObj,
-                type: updatedObj.itemType || updatedObj.objectType || 'sphere',
-                radius: updatedObj.radius || 1,
-                color: updatedObj.color || 'gray',
-                collider: updatedObj.collider || 'ball',
-            };
+        setSceneObjects(prevSceneObjects => {
+            const prevObjectsMap = new Map(prevSceneObjects.map(obj => [obj.id, obj]));
 
-            // 오브젝트 타입에 따라 물리 속성 추가
-            switch (baseObject.type) {
-                case 'apple':
-                    baseObject.mass = 0.2;
-                    baseObject.friction = 5.5;
-                    baseObject.restitution = 0;
-                    break;
-                case 'ak-47':
-                    baseObject.mass = 10;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0;
-                    break;
-                case 'pipe':
-                    baseObject.mass = 10;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0.1;
-                    break;
-                default:
-                    baseObject.mass = 1;
-                    baseObject.friction = 10;
-                    baseObject.restitution = 0;
-                    break;
+            const newSceneObjects = updatedObjects.map(updatedObj => {
+                const prevObj = prevObjectsMap.get(updatedObj.id);
+
+                const baseObject = {
+                    ...updatedObj,
+                    type: updatedObj.itemType || updatedObj.objectType || 'sphere',
+                    radius: updatedObj.radius || 1,
+                    color: updatedObj.color || 'gray',
+                    collider: updatedObj.collider || 'ball',
+                };
+
+                // 오브젝트 타입에 따라 물리 속성 추가
+                switch (baseObject.type) {
+                    case 'apple':
+                        baseObject.mass = 0.2;
+                        baseObject.friction = 5.5;
+                        baseObject.restitution = 0;
+                        break;
+                    case 'ak-47':
+                        baseObject.mass = 10;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0;
+                        break;
+                    case 'pipe':
+                        baseObject.mass = 10;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0.1;
+                        break;
+                    default:
+                        baseObject.mass = 1;
+                        baseObject.friction = 10;
+                        baseObject.restitution = 0;
+                        break;
+                }
+
+                // 이전 객체가 존재하고 내용도 새 객체와 동일하다면, 이전 객체 인스턴스를 재사용합니다.
+                if (prevObj && JSON.stringify(prevObj) === JSON.stringify(baseObject)) {
+                    return prevObj;
+                }
+
+                return baseObject;
+            });
+
+            // 만약 새로 만들어진 객체 배열이 이전 배열과 완전히 동일하다면, 이전 배열 인스턴스를 반환합니다.
+            if (
+                prevSceneObjects.length === newSceneObjects.length &&
+                prevSceneObjects.every((obj, index) => obj === newSceneObjects[index])
+            ) {
+                return prevSceneObjects;
             }
 
-            return baseObject;
-        }));
+            return newSceneObjects;
+        });
     }, []);
 
     // Player로부터 상호작용 가능한 오브젝트 ID를 받아 상태 업데이트
@@ -947,6 +972,39 @@ export function GameCanvas({ playerNickname }) {
         }
     }, [selectedInventorySlot, inventory, setHudState, stompClient, currentPlayerId]);
 
+    const cancelEating = useCallback(() => {
+        clearTimeout(eatTimerRef.current);
+        clearInterval(eatIntervalRef.current);
+        eatTimerRef.current = null;
+        eatIntervalRef.current = null;
+        setIsEating(false);
+        setEatProgress(0);
+    }, []);
+
+    const startEating = useCallback(() => {
+        const selectedItem = inventoryRef.current[selectedInventorySlot];
+        // 이미 먹는 동작이 진행 중이거나, 선택된 아이템이 사과가 아니면 시작하지 않음
+        if (eatTimerRef.current || !selectedItem || selectedItem.name !== 'apple') {
+            return;
+        }
+
+        setIsEating(true);
+        setEatProgress(0);
+
+        const EAT_DURATION = 1500; // 2초
+        const INTERVAL_TIME = 50; // 50ms 마다 업데이트
+        const increment = (INTERVAL_TIME / EAT_DURATION) * 100;
+
+        eatIntervalRef.current = setInterval(() => {
+            setEatProgress(prev => Math.min(prev + increment, 100));
+        }, INTERVAL_TIME);
+
+        eatTimerRef.current = setTimeout(() => {
+            handleUseSelectedItem();
+            cancelEating(); // 먹기 완료 후 상태 정리
+        }, EAT_DURATION);
+    }, [selectedInventorySlot, handleUseSelectedItem, cancelEating]);
+
     return (
         <>
             {/* Leva 디버그 UI */}
@@ -964,6 +1022,8 @@ export function GameCanvas({ playerNickname }) {
                 reloadProgress={reloadProgress}
                 isInventoryOpen={isInventoryOpen}
                 onInventoryDrop={handleInventoryDrop}
+                isEating={isEating}
+                eatProgress={eatProgress}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
@@ -990,9 +1050,37 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]} > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}   > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
+
+                        <RigidBody type="fixed" position={[0, 100, -200]} friction={0} >
+                            <mesh>
+                                <boxGeometry args={[400, 1000, 1]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[0, 100, 200]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[400, 1000, 1]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[200, 100, 0]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[1, 1000, 400]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[-200, 100, 0]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[1, 1000, 400]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+
+
+
 
                         {/* ErrorBoundary와 Suspense로 모델 로딩 오류 처리 및 로딩 중 대체 UI 제공 */}
                         <ErrorBoundary>
@@ -1020,6 +1108,8 @@ export function GameCanvas({ playerNickname }) {
                                         playerRef={playerRef} // playerRef 전달
                                         isReloading={isReloading} // 재장전 상태 전달
                                         isInventoryOpen={isInventoryOpen}
+                                        startEating={startEating}
+                                        cancelEating={cancelEating}
                                     />
                                 )}
                             </React.Suspense>
@@ -1056,10 +1146,10 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-   <Npc client={stompClient} /> 
+                        <Npc client={stompClient} />
                     </Physics>
                 </Canvas>
-                   {stompClient && (
+                {stompClient && (
                     <ChatBox
                         stompClient={stompClient}
                         currentPlayerId={currentPlayerId}
@@ -1068,7 +1158,7 @@ export function GameCanvas({ playerNickname }) {
                         chatInput={chatInput}
                         setChatInput={setChatInput}
                         setIsChatting={setIsChatting}
-                        playerNickname={playerNickname} 
+                        playerNickname={playerNickname}
                     />
                 )}
             </KeyboardControls>

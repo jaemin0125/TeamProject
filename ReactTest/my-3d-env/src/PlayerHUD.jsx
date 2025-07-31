@@ -1,7 +1,7 @@
 // PlayerHUD.jsx
 import React, { useState } from 'react';
 
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen, onInventoryDrop }) {
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen, onInventoryDrop, isEating, eatProgress }) {
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, isGrounded, position } = state;
     const [draggedItem, setDraggedItem] = useState(null);
 
@@ -231,6 +231,14 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                     <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0, 0, 0, 0.7)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }}>
                         <div className="hud-text-shadow" style={{ color: '#ff4d4d', fontSize: '4em', fontWeight: 'bold' }}>YOU ARE DEAD</div>
                         <div className="hud-text-shadow" style={{ fontSize: '1.5em', marginTop: '10px' }}>Respawning in {Math.ceil(5 - respawnProgress)} seconds...</div>
+                    </div>
+                )}
+
+                {/* Eating Progress Bar */}
+                {isEating && (
+                    <div style={{ position: 'absolute', bottom: '150px', left: '50%', transform: 'translateX(-50%)', width: '200px', height: '20px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid #222', borderRadius: '5px', overflow: 'hidden' }}>
+                        <div style={{ width: `${eatProgress}%`, height: '100%', backgroundColor: '#4caf50', transition: 'width 0.1s linear' }}></div>
+                        <div className="hud-text-shadow" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'white' }}>Eating...</div>
                     </div>
                 )}
 

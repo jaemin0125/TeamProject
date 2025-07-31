@@ -28,7 +28,9 @@ export function Player({
     setInventory,
     playerRef, // playerRef를 props로 받음
     isReloading, // isReloading prop 추가
-    isInventoryOpen
+    isInventoryOpen,
+    startEating,
+    cancelEating
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -382,57 +384,51 @@ export function Player({
     useEffect(() => {
         const canvas = gl.domElement; // 캔버스 요소 가져오기
         const handleMouseDown = (e) => {
-            if (isDead) return;
-
-            if (e.button === 2) { // 좌클릭
-                if (isItemSelected && typeof onUseItem === 'function') {
-                    if (typeof selectedInventorySlot === 'number' && selectedInventorySlot >= 0 && selectedItem.name == 'apple') { // 숫자인지, 유효한 인덱스인지 확인
-                        onUseItem(selectedInventorySlot); // <-- 인덱스를 인자로 전달
-                        return;
+            if (isDead || isChatting) return;
+            if (e.button === 0) { // 좌클릭
+                if (isArmed) {
+                    if (isReloadingRef.current) return;
+                    setIsFiring(true);
+                    fireBullet();
+                } else if (isUsingPipe) {
+                    if (canSlash) {
+                        setIsSlashing(true);
+                        setTimeout(() => setIsSlashing(false), 500);
+                    }
+                } else {
+                    if (canPunch) {
+                        setIsPunching(true);
+                        setTimeout(() => setIsPunching(false), 500);
                     }
                 }
             }
-            if (e.button === 0) {
-                if (canPunch && !isArmed) {
-                    setIsPunching(true);
-                    setTimeout(() => setIsPunching(false), 500);
-                } if (canSlash && isUsingPipe) {
-                    setIsSlashing(true);
-                    setTimeout(() => setIsSlashing(false), 500);
+
+            if (e.button === 2) { // 우클릭
+                if (isArmed) {
+                    setIsAiming(true);
+                    mouseDownTimeRef.current = performance.now();
+                } else if (selectedItem?.name === 'apple') {
+                    startEating();
                 }
-                if (canPunch && !isArmed) {
-                    setIsPunching(true);
-                    setTimeout(() => setIsPunching(false), 500);
-                } if (canSlash && isUsingPipe) {
-                    setIsSlashing(true);
-                    setTimeout(() => setIsSlashing(false), 500);
-                }
+                return;
             }
 
-
-            if (e.button === 0 && isArmed) {
-                if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
-                setIsFiring(true);
-                fireBullet();
-
-            }
-            if (e.button === 2 && isArmed) {
-                setIsAiming(true); // 무조건 조준 상태 시작
-                mouseDownTimeRef.current = performance.now(); // 시간 기록
-
-            }
         };
+
         const handleMouseUp = (e) => {
             if (e.button === 0 && isArmed) {
                 setIsFiring(false);
             }
-            if (e.button === 2 && isArmed) {
-                const heldTime = performance.now() - mouseDownTimeRef.current;
-                setIsAiming(false); // 꾹 누르기 해제
-
-                if (heldTime < 200) { // 200ms 미만이면 '클릭'으로 간주
-                    setIsScoped(prev => !prev); // 스코프 토글
-
+            if (e.button === 2) {
+                if (isArmed) {
+                    const heldTime = performance.now() - mouseDownTimeRef.current;
+                    setIsAiming(false);
+                    if (heldTime < 200) {
+                        setIsScoped(prev => !prev);
+                    }
+                } else {
+                    // 'apple'을 들고 있을 때의 상태 의존성을 제거하고 직접 cancelEating 호출
+                    cancelEating();
                 }
             }
         };
@@ -444,7 +440,11 @@ export function Player({
             canvas.removeEventListener('mousedown', handleMouseDown);
             window.removeEventListener('mouseup', handleMouseUp);
         };
-    }, [canPunch, canSlash, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring]); // gl을 의존성 배열에 추가
+    }, [
+        canPunch, canSlash, isDead, onUseItem, isItemSelected, gl, selectedInventorySlot, isFiring,
+        sitToggle, lieToggle, isArmed, isUsingPipe, selectedItem, isScoped, isChatting,
+        startEating, cancelEating, fireBullet
+    ]);
 
     // 뷰 모드 전환 (1인칭/3인칭) 로직
 
@@ -543,13 +543,14 @@ export function Player({
             }
         } else if (wasDead && !isDead && playerRef.current) {
             console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
-            playerRef.current.setTranslation(new THREE.Vector3(0, -3.7, 0), true);
+            playerRef.current.setTranslation(new THREE.Vector3(0, 2, 0), true);
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
             playerRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
             // 필요하다면 RigidBody의 type을 다시 'kinematicPosition'으로 변경
             // playerRef.current.setType('kinematicPosition');
             setCurrentViewMode('thirdPerson'); // 리스폰 후에도 1인칭 시점 유지
             roll.current = 0; // 리스폰 시 roll 각도 초기화
+            setWasDead(false); // <--- 이 줄을 추가하여 wasDead를 false로 재설정
         }
     }, [isDead, wasDead, clearInventory, onObjectProximityChange]); // 의존성 배열
 
