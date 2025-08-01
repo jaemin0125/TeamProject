@@ -786,7 +786,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/objects/apple.png' }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -827,7 +827,7 @@ export function GameCanvas({ playerNickname }) {
                 name: 'ak-47',
                 count: 1,
                 id: interactedObject.id,
-                image: '/models/ak-47.png',
+                image: '/objects/ak-47.png',
                 ammo: tempData?.ammo || interactedObject.ammo || { current: 30, reserve: 120 },
                 magazineSize: tempData?.magazineSize || interactedObject.magazineSize || 30
             };
@@ -886,7 +886,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png', }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/objects/pipe.png', }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }

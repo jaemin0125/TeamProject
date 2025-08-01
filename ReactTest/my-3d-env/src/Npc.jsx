@@ -14,7 +14,7 @@ export default function Npc({
   onFacePlayer,
    currentPlayerId
 }) {
-  const gltf = useGLTF('/models/npc.glb');
+  const gltf = useGLTF('/objects/npc.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
   const npcRef = useRef();
 
@@ -78,8 +78,8 @@ const handleOpenShop = () => {
       npcName: '구매', // ✅ 여기에 명시
     shopOpen: true,
     items: [
-      { icon: '/models/apple.png', name: '사과', price: 10 },
-      { icon: '/models/pipe.png', name: '파이프', price: 30 }
+      { icon: '/objects/apple.png', name: '사과', price: 10 },
+      { icon: '/objects/pipe.png', name: '파이프', price: 30 }
     ],
     npcDescription: '상점에서 아이템 구매하세요',
 

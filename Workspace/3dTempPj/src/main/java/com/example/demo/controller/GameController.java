@@ -243,7 +243,7 @@ public class GameController {
                 "apple",             // 아이템 이름 (itemType)
                 "food",              // 아이템 종류 (objectType)
                 1,
-                "/models/apple.png"  // 프론트에서 사용할 이미지 경로
+                "/objects/apple.png"  // 프론트에서 사용할 이미지 경로
                 
             );
 
