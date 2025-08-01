@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics } from '@react-three/rapier';
+import { Physics, RigidBody  } from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
@@ -252,7 +252,7 @@ export function GameCanvas({ playerNickname }) {
         };
     }, [isChatting]);
 
-    
+
 
     const handleInventoryDrop = useCallback((draggedIndex, dropIndex) => {
         setInventory(prevInventory => {
@@ -414,7 +414,7 @@ export function GameCanvas({ playerNickname }) {
             const key = event.key;
             //포인터락 상태에서 새로고침 방지
             if (document.pointerLockElement) {
-                if(event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
+                if (event.key === 'F5' || (event.ctrlKey && event.key === 'r') || (event.ctrlKey && event.key === 'R') || (event.ctrlKey && event.shiftKey && event.key === 'r') || (event.ctrlKey && event.shiftKey && event.key === 'R')) {
                     event.preventDefault();
                     return;
                 }
@@ -525,7 +525,7 @@ export function GameCanvas({ playerNickname }) {
             });
 
             // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
-          const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
+            const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
 
             client.subscribe(`/topic/inventory/${playerId}`, (message) => {
                 const receivedItem = JSON.parse(message.body);
@@ -533,7 +533,7 @@ export function GameCanvas({ playerNickname }) {
                 // 받은 아이템에 이미지 경로 붙이기
                 const itemWithImage = {
                     ...receivedItem,
-                    image: `/models/${receivedItem.name}.png`, // 
+                    image: `/objects/${receivedItem.name}.png`, // 
                 }; // 서버가 보낸 인벤토리 변경 알림을 받아서, 클라 화면을 실시간으로 갱신(서버 -> 클라)
 
                 setInventory((prevInventory) => {
@@ -722,16 +722,19 @@ export function GameCanvas({ playerNickname }) {
                         baseObject.mass = 0.2;
                         baseObject.friction = 5.5;
                         baseObject.restitution = 0;
+                        baseObject.modelPath = '/objects/apple.glb';
                         break;
                     case 'ak-47':
                         baseObject.mass = 10;
                         baseObject.friction = 10;
                         baseObject.restitution = 0;
+                        baseObject.modelPath = '/objects/ak-47.glb';
                         break;
                     case 'pipe':
                         baseObject.mass = 10;
                         baseObject.friction = 10;
                         baseObject.restitution = 0.1;
+                        baseObject.modelPath = '/objects/pipe.glb';
                         break;
                     default:
                         baseObject.mass = 1;
@@ -741,17 +744,17 @@ export function GameCanvas({ playerNickname }) {
                 }
 
                 // 이전 객체가 존재하고 내용도 새 객체와 동일하다면, 이전 객체 인스턴스를 재사용합니다.
-            if (prevObj && JSON.stringify(prevObj) === JSON.stringify(baseObject)) {
-                return prevObj;
-            }
+                if (prevObj && JSON.stringify(prevObj) === JSON.stringify(baseObject)) {
+                    return prevObj;
+                }
 
-            return baseObject;
-        });
+                return baseObject;
+            });
 
-        // 만약 새로 만들어진 객체 배열이 이전 배열과 완전히 동일하다면, 이전 배열 인스턴스를 반환합니다.
-        if (
-            prevSceneObjects.length === newSceneObjects.length &&
-            prevSceneObjects.every((obj, index) => obj === newSceneObjects[index])
+            // 만약 새로 만들어진 객체 배열이 이전 배열과 완전히 동일하다면, 이전 배열 인스턴스를 반환합니다.
+            if (
+                prevSceneObjects.length === newSceneObjects.length &&
+                prevSceneObjects.every((obj, index) => obj === newSceneObjects[index])
             ) {
                 return prevSceneObjects;
             }
@@ -788,7 +791,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/objects/apple.png' }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -833,7 +836,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/models/ak-47.png', ammo: { current: 30, reserve: 120 }, magazineSize: 30 }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/objects/ak-47.png', ammo: { current: 30, reserve: 120 }, magazineSize: 30 }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new ak-47 to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -881,7 +884,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png', }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/objects/pipe.png', }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -986,7 +989,7 @@ export function GameCanvas({ playerNickname }) {
         // 이미 먹는 동작이 진행 중이거나, 선택된 아이템이 사과가 아니면 시작하지 않음
         if (eatTimerRef.current || !selectedItem || selectedItem.name !== 'apple') {
             return;
-        }
+        }ㅋ``
 
         setIsEating(true);
         setEatProgress(0);
@@ -1050,9 +1053,37 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]} > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}   > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
+
+                        <RigidBody type="fixed" position={[0, 100, -200]} friction={0} >
+                            <mesh>
+                                <boxGeometry args={[400, 1000, 1]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[0, 100, 200]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[400, 1000, 1]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[200, 100, 0]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[1, 1000, 400]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+                        <RigidBody type="fixed" position={[-200, 100, 0]} friction={0}>
+                            <mesh>
+                                <boxGeometry args={[1, 1000, 400]} />
+                                <meshStandardMaterial transparent opacity={0} />
+                            </mesh>
+                        </RigidBody>
+
+
+
 
                         {/* ErrorBoundary와 Suspense로 모델 로딩 오류 처리 및 로딩 중 대체 UI 제공 */}
                         <ErrorBoundary>
@@ -1118,10 +1149,10 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-   <Npc client={stompClient} /> 
+                        <Npc client={stompClient} />
                     </Physics>
                 </Canvas>
-                   {stompClient && (
+                {stompClient && (
                     <ChatBox
                         stompClient={stompClient}
                         currentPlayerId={currentPlayerId}
@@ -1130,7 +1161,7 @@ export function GameCanvas({ playerNickname }) {
                         chatInput={chatInput}
                         setChatInput={setChatInput}
                         setIsChatting={setIsChatting}
-                        playerNickname={playerNickname} 
+                        playerNickname={playerNickname}
                     />
                 )}
             </KeyboardControls>

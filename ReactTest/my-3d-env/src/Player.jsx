@@ -105,6 +105,12 @@ export function Player({
         }
     }, [isArmed]);
 
+    useEffect(() => {
+        if (selectedItem?.ammo && selectedItem.ammo.current > 0) {
+            setCanFire(true);
+        }
+    }, [selectedItem]);
+
     const fireBullet = () => {
         if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
         // 1. 플레이어의 현재 위치를 가져옵니다.
@@ -543,13 +549,14 @@ export function Player({
             }
         } else if (wasDead && !isDead && playerRef.current) {
             console.log("Player 컴포넌트: 리스폰! 위치 초기화 및 1인칭 시점 유지.");
-            playerRef.current.setTranslation(new THREE.Vector3(0, -3.7, 0), true);
+            playerRef.current.setTranslation(new THREE.Vector3(0, 2, 0), true);
             playerRef.current.setLinvel({ x: 0, y: 0, z: 0 }, true);
             playerRef.current.setAngvel({ x: 0, y: 0, z: 0 }, true);
             // 필요하다면 RigidBody의 type을 다시 'kinematicPosition'으로 변경
             // playerRef.current.setType('kinematicPosition');
             setCurrentViewMode('thirdPerson'); // 리스폰 후에도 1인칭 시점 유지
             roll.current = 0; // 리스폰 시 roll 각도 초기화
+            setWasDead(false); // <--- 이 줄을 추가하여 wasDead를 false로 재설정
         }
     }, [isDead, wasDead, clearInventory, onObjectProximityChange]); // 의존성 배열
 

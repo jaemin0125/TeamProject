@@ -42,7 +42,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
                 {/* Top-Left Player Info */}
                 <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center' }}>
-                    <img src="/models/boss.png" alt="player" style={{ width: '60px', height: '60px', borderRadius: '5px', border: '1px solid rgba(128, 128, 128, 0.7)' }} />
+                    <img src="/textures/boss.png" alt="player" style={{ width: '60px', height: '60px', borderRadius: '5px', border: '1px solid rgba(128, 128, 128, 0.7)' }} />
                     <div style={{ marginLeft: '15px' }}>
                         <div className="hud-text-shadow" style={{ fontWeight: 'bold', fontSize: '1.2em', color: 'white' }}>{playerNickname}</div>
                         <div style={{ width: '200px', height: '15px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid #222', borderRadius: '5px', marginTop: '5px', overflow: 'hidden' }}>

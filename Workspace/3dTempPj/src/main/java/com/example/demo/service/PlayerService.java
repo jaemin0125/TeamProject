@@ -57,7 +57,7 @@ public class PlayerService {
                 .count();
 
         if (currentAppleCount < MAX_APPLES) {
-            spawnNewItem("apple", "/models/apple.glb", "apple", 0.4, true); // y좌표 -4.5, stackable: true
+            spawnNewItem("apple", "/objects/apple.glb", "apple", 0.4, true); // y좌표 -4.5, stackable: true
             logger.info("Spawning new apple. Current apples: {}/{}", currentAppleCount + 1, MAX_APPLES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -73,7 +73,7 @@ public class PlayerService {
                 .count();
 
         if (currentGunCount < MAX_GUNS) {
-            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", 0.8, false); // y좌표 -4.4, stackable: false
+            spawnNewItem("ak-47", "/objects/ak-47.glb", "ak-47", 0.8, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -89,7 +89,7 @@ public class PlayerService {
                 .count();
 
         if (currentPipeCount < MAX_PIPES) {
-            spawnNewItem("pipe", "/models/pipe.glb", "pipe", 0.54, false); // y좌표 -4.4, stackable: false
+            spawnNewItem("pipe", "/objects/pipe.glb", "pipe", 0.54, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new pipe. Current pipes: {}/{}", currentPipeCount + 1, MAX_PIPES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }

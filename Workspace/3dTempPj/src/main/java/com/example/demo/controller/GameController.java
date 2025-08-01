@@ -29,6 +29,7 @@ public class GameController {
 	public GameController(SimpMessagingTemplate messagingTemplate, PlayerService playerService) {
 		this.messagingTemplate = messagingTemplate;
 		this.playerService = playerService;
+		
 	}
 
 	@GetMapping("/api/hello")
@@ -234,7 +235,7 @@ public class GameController {
     				"apple", // 아이템 이름 (예: "사과")
     				"food", // 아이템 타입 (예: "food", "weapon", "consumable")
     				1, // 아이템 개수
-    				"/models/apple.png " // 프론트엔드에서 사용할 아이템 이미지 경로 (예: "/assets/apple.png")
+    				"/objects/apple.png " // 프론트엔드에서 사용할 아이템 이미지 경로 (예: "/assets/apple.png")
     		);
     		playerService.addItemToInventory(request.getPlayerId(), apple);
     	}

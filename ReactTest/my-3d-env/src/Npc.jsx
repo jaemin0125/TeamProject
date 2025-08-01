@@ -8,7 +8,7 @@ import { getOrCreatePlayerInfo } from './utils/constants'; // // utils/constants
 import './Npc.css';
 
 export default function Npc({ position = [5, -4.3, -16], playerRef, onInteract, client }) {
-  const gltf = useGLTF('/models/npc.glb');
+  const gltf = useGLTF('/objects/npc.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene); 
   const npcRef = useRef();
 
@@ -66,7 +66,7 @@ useEffect(() => {
   };
 
   return (
-    <RigidBody type="dynamic" position={position} colliders={false}>
+    <RigidBody type="fixed" position={position} colliders={false}>
       <primitive
         object={gltf.scene}
         ref={npcRef}
