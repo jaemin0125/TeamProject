@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics, RigidBody  } from '@react-three/rapier';
+import { Physics, RigidBody } from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
@@ -17,6 +17,7 @@ import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
 import Npc from './Npc';
+import NpcHUD from './NpcHUD';
 import { debug, vec2 } from 'three/tsl';
 
 
@@ -100,9 +101,16 @@ export function GameCanvas({ playerNickname }) {
 
     const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
 
+
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
-    const [isChatting, setIsChatting] = useState(false);
+    const [isChatting, setIsChatting] = useState(false); // 채팅 중인지 확인
+    const [dialogueState, setDialogueState] = useState(null); // NPC 대사 텍스트와 버튼 목록
+    const [isNpcNear, setIsNpcNear] = useState(false); // 플레이어가 NPC 근처에 있는지 여부를 추적
+    const [isShopOpen, setIsShopOpen] = useState(false);
+    const handleCloseShop = () => {
+        setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
+    };
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -114,6 +122,7 @@ export function GameCanvas({ playerNickname }) {
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,
         interactableObjectId: null,
+        coin: 50,
     });
     // 추가 --> 인벤토리 상태 관리 (8칸 핫바) / 기존 인벤토리 방식 사용하면 Npc 아이템 수령이 제한되서 변경
     const MAX_SLOTS = 8;
@@ -139,6 +148,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP 클라이언트 상태
     const [stompClient, setStompClient] = useState(null);
+    const [droppedItemData, setDroppedItemData] = useState({}); // ✨ 아이템 임시 저장 상태
 
     // isDead 상태를 직접 제어하는 함수를 HUD 업데이트 함수와 분리
     const setIsDeadInGameCanvas = useCallback(() => {
@@ -276,7 +286,7 @@ export function GameCanvas({ playerNickname }) {
         }
 
         // 플레이어의 현재 위치 가져오기
-        const playerPosition = playerRef.current?.translation();
+        const playerPosition = playerRef?.current?.translation();
         if (!playerPosition) {
             console.warn("플레이어 위치를 가져올 수 없습니다.");
             return;
@@ -298,6 +308,16 @@ export function GameCanvas({ playerNickname }) {
 
         // 서버에 아이템 버리기 요청 전송
         if (stompClient && stompClient.connected) {
+            const itemData = {
+                name: itemToDrop.name,
+                image: itemToDrop.image,
+                ammo: itemToDrop.ammo ? { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve } : undefined,
+                magazineSize: itemToDrop.magazineSize,
+            };
+
+            // ✨ 아이템 데이터를 임시 상태에 저장 (ID를 키로 사용)
+            setDroppedItemData(prev => ({ ...prev, [itemToDrop.id]: itemData }));
+
             console.log(`[GameCanvas] Publishing dropItem event for ${itemToDrop.name} (ID: ${itemToDrop.id})`);
             stompClient.publish({
                 destination: '/app/dropItem',
@@ -305,12 +325,7 @@ export function GameCanvas({ playerNickname }) {
                     playerId: currentPlayerId,
                     itemId: itemToDrop.id,
                     actionType: 'DROP',
-                    itemData: {
-                        name: itemToDrop.name,
-                        image: itemToDrop.image,
-                        ammo: itemToDrop.ammo ? { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve } : undefined,
-                        magazineSize: itemToDrop.magazineSize,
-                    },
+                    itemData: itemData, // 전송할 데이터
                     quantity: 1, // 항상 1개만 버리도록 설정
                     position: {
                         x: playerPosition.x,
@@ -356,6 +371,7 @@ export function GameCanvas({ playerNickname }) {
                     clearInterval(progressInterval); // 인터벌 종료
                 }
                 setHudState(prev => ({ ...prev, respawnProgress: currentProgress }));
+                
             }, 100); // 100ms마다 업데이트
 
             // 실제 리스폰 타이머
@@ -524,49 +540,6 @@ export function GameCanvas({ playerNickname }) {
                 spawnBulletHole(hitPosition, hitNormal);
             });
 
-            // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
-            const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
-
-            client.subscribe(`/topic/inventory/${playerId}`, (message) => {
-                const receivedItem = JSON.parse(message.body);
-
-                // 받은 아이템에 이미지 경로 붙이기
-                const itemWithImage = {
-                    ...receivedItem,
-                    image: `/objects/${receivedItem.name}.png`, // 
-                }; // 서버가 보낸 인벤토리 변경 알림을 받아서, 클라 화면을 실시간으로 갱신(서버 -> 클라)
-
-                setInventory((prevInventory) => {
-                    // 기존에 같은 아이템이 있는지 확인
-                    const existingIndex = prevInventory.findIndex(
-                        (item) => item && item.name === itemWithImage.name
-                    );
-
-                    if (existingIndex !== -1) {
-                        // 수량만 증가
-                        const updated = [...prevInventory];
-                        updated[existingIndex] = {
-                            ...updated[existingIndex],
-                            count: updated[existingIndex].count + itemWithImage.count,
-                        };
-                        return updated;
-                    }
-
-                    // 빈 슬롯 찾기
-                    const emptyIndex = prevInventory.findIndex((item) => item === null);
-                    if (emptyIndex !== -1) {
-                        const updated = [...prevInventory];
-                        updated[emptyIndex] = itemWithImage;
-                        return updated;
-                    }
-
-                    console.warn("빈 인벤토리 슬롯 없음");
-                    return prevInventory; // 그대로 유지
-                });
-            });
-            //////////////////////////////////
-
-
             // 씬 오브젝트 정보 구독
             client.subscribe('/topic/sceneObjects', (message) => {
                 try {
@@ -577,6 +550,21 @@ export function GameCanvas({ playerNickname }) {
                     console.error("[STOMP Subscribe] Failed to parse scene objects message:", e, message.body);
                 }
             });
+
+            // 신규 추가 인벤토리 구독 + 인벤토리 1개로 초기화 방지
+            client.subscribe(`/topic/inventory/${currentPlayerId}`, (message) => {
+                const received = JSON.parse(message.body);
+
+                // ✨ 항상 8칸 유지하도록 보정
+                const fixedInventory = Array(MAX_SLOTS).fill(null);
+                for (let i = 0; i < Math.min(received.length, MAX_SLOTS); i++) {
+                    fixedInventory[i] = received[i];
+                }
+
+                console.log('📦 인벤토리 업데이트 수신:', fixedInventory);
+                setInventory(fixedInventory);
+            });
+
 
             // 플레이어 피격 정보 구독
             client.subscribe('/topic/playerHit', (message) => {
@@ -649,6 +637,8 @@ export function GameCanvas({ playerNickname }) {
                 }
             });
 
+
+
             // 오브젝트 수집 이벤트 구독
             client.subscribe('/topic/collectObject', (message) => {
                 try {
@@ -665,6 +655,13 @@ export function GameCanvas({ playerNickname }) {
                 }
             });
 
+            // 신규 추가 플레이어 코인 구독
+            client.subscribe('/topic/hud/' + currentPlayerId, (message) => {
+                const data = JSON.parse(message.body);
+                if (data.type === 'COIN_UPDATE') {
+                    setHudState(prev => ({ ...prev, coin: data.coin }));
+                }
+            });
 
         };
 
@@ -722,19 +719,16 @@ export function GameCanvas({ playerNickname }) {
                         baseObject.mass = 0.2;
                         baseObject.friction = 5.5;
                         baseObject.restitution = 0;
-                        baseObject.modelPath = '/objects/apple.glb';
                         break;
                     case 'ak-47':
                         baseObject.mass = 10;
                         baseObject.friction = 10;
                         baseObject.restitution = 0;
-                        baseObject.modelPath = '/objects/ak-47.glb';
                         break;
                     case 'pipe':
                         baseObject.mass = 10;
                         baseObject.friction = 10;
                         baseObject.restitution = 0.1;
-                        baseObject.modelPath = '/objects/pipe.glb';
                         break;
                     default:
                         baseObject.mass = 1;
@@ -776,6 +770,7 @@ export function GameCanvas({ playerNickname }) {
         console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
         const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
         console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
+        console.log(`[DEBUG] Interacted Object Structure: ${JSON.stringify(interactedObject)}`);
 
         if (interactedObject && interactedObject.type === 'apple') {
             console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
@@ -791,7 +786,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/objects/apple.png' }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'apple', count: 1, id: interactedObject.id, image: '/models/apple.png' }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new apple to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -822,35 +817,42 @@ export function GameCanvas({ playerNickname }) {
                 console.log('인벤토리에 이미 총기가 존재함.');
                 return;
             }
-            console.log('실행됨');
-            console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`); // 추가된 로그
+            console.log(`[GameCanvas] Interacted object is an ak-47. Adding to inventory.`);
+
+            // ✨ 임시 저장된 데이터 확인
+            const tempData = droppedItemData[interactedObject.id];
+
+            // 주운 총의 정보를 구성합니다. 임시 데이터가 있으면 그것을 우선 사용합니다.
+            const newGunItem = {
+                name: 'ak-47',
+                count: 1,
+                id: interactedObject.id,
+                image: '/models/ak-47.png',
+                ammo: tempData?.ammo || interactedObject.ammo || { current: 30, reserve: 120 },
+                magazineSize: tempData?.magazineSize || interactedObject.magazineSize || 30
+            };
+
+            // 인벤토리에 새로운 총을 추가합니다.
             setInventory(prevInventory => {
-                const existingItemIndex = prevInventory.findIndex(item => item && item.name === 'ak-47');
-                if (existingItemIndex !== -1) {
-                    const newInventory = [...prevInventory];
-                    newInventory[existingItemIndex].count += 1;
-                    console.log(`[GameCanvas] Updated existing apple count. New inventory:`, newInventory); // 추가된 로그
+                const newInventory = [...prevInventory];
+                const firstEmptySlotIndex = newInventory.findIndex(item => item === null);
+                if (firstEmptySlotIndex !== -1) {
+                    newInventory[firstEmptySlotIndex] = newGunItem;
+                    console.log(`[GameCanvas] Added new ak-47 to inventory. New inventory:`, newInventory);
                     return newInventory;
-                } else {
-                    const firstEmptySlotIndex = prevInventory.findIndex(item => item === null);
-                    if (firstEmptySlotIndex !== -1) {
-                        const newInventory = [...prevInventory];
-                        // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'ak-47', count: 1, id: interactedObject.id, image: '/objects/ak-47.png', ammo: { current: 30, reserve: 120 }, magazineSize: 30 }; // 이미지 경로 수정
-                        console.log(`[GameCanvas] Added new ak-47 to inventory. New inventory:`, newInventory); // 추가된 로그
-                        return newInventory;
-                    }
-                    console.log(`[GameCanvas] Inventory full, could not add ak-47.`); // 추가된 로그
-                    return prevInventory;
                 }
+                console.log(`[GameCanvas] Inventory full, could not add ak-47.`);
+                return prevInventory;
             });
+
+            // HUD 상태를 업데이트하고 상호작용 프롬프트를 숨깁니다.
             setHudState(prev => ({ ...prev, interactableObjectId: null, showInteractionPrompt: false }));
-            console.log("ak-47 collected! Prompt removed."); // 추가된 로그
+            console.log("ak-47 collected! Prompt removed.");
 
-            // 이 부분이 사과를 맵에서 사라지게 하는 핵심 로직입니다.
-            console.log(`[GameCanvas] Removing ak-47 with ID: ${interactedObject.id} from sceneObjects.`); // 사과 제거 로그 추가
-            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id)); // interactedObject.id 사용
+            // 씬에서 주운 총 오브젝트를 제거합니다.
+            setSceneObjects(prevObjects => prevObjects.filter(obj => obj.id !== interactedObject.id));
 
+            // 서버에 아이템을 주웠다고 알립니다.
             if (stompClient && stompClient.connected) {
                 console.log(`[GameCanvas] Publishing pickUpItem event for ${interactedObject.id}`);
                 stompClient.publish({
@@ -859,10 +861,10 @@ export function GameCanvas({ playerNickname }) {
                         playerId: currentPlayerId,
                         itemId: interactedObject.id,
                         actionType: 'PICKUP',
-                        itemData: {
-                            name: 'ak-47',
-                            ammo: { current: 30, reserve: 120 },
-                            magazineSize: 30
+                        itemData: { // 서버에 보낼 때도 실제 탄약 정보를 보냅니다.
+                            name: newGunItem.name,
+                            ammo: newGunItem.ammo,
+                            magazineSize: newGunItem.magazineSize
                         }
                     }),
                 });
@@ -884,7 +886,7 @@ export function GameCanvas({ playerNickname }) {
                     if (firstEmptySlotIndex !== -1) {
                         const newInventory = [...prevInventory];
                         // 이미지 경로 수정: 업로드된 image_52a5e6.png가 public/models에 있으므로 경로 수정
-                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/objects/pipe.png', }; // 이미지 경로 수정
+                        newInventory[firstEmptySlotIndex] = { name: 'pipe', count: 1, id: interactedObject.id, image: '/models/pipe.png', }; // 이미지 경로 수정
                         console.log(`[GameCanvas] Added new pipe to inventory. New inventory:`, newInventory); // 추가된 로그
                         return newInventory;
                     }
@@ -989,7 +991,7 @@ export function GameCanvas({ playerNickname }) {
         // 이미 먹는 동작이 진행 중이거나, 선택된 아이템이 사과가 아니면 시작하지 않음
         if (eatTimerRef.current || !selectedItem || selectedItem.name !== 'apple') {
             return;
-        }ㅋ``
+        }
 
         setIsEating(true);
         setEatProgress(0);
@@ -1027,10 +1029,22 @@ export function GameCanvas({ playerNickname }) {
                 onInventoryDrop={handleInventoryDrop}
                 isEating={isEating}
                 eatProgress={eatProgress}
+                hudState={hudState}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
+
+                {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
+                {isNpcNear && (
+                    <NpcHUD
+                        dialogueState={dialogueState}
+                        showPrompt={!dialogueState}
+                        isShopOpen={isShopOpen}
+                        onCloseShop={handleCloseShop}
+                    />
+                )}
+
                 {/* Three.js 캔버스 설정 */}
                 <Canvas
                     gl={{ outputColorSpace: THREE.SRGBColorSpace }}
@@ -1053,7 +1067,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}   > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
@@ -1149,7 +1163,15 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-                        <Npc client={stompClient} />
+
+                        <Npc
+                            playerRef={playerRef}
+                            client={stompClient}
+                            onDialogueChange={setDialogueState} // ✅ 상태 전달 받음
+                            onProximityChange={setIsNpcNear} // 👈 proximity 상태 받음
+                            onShopOpen={() => setIsShopOpen(true)}
+                            currentPlayerId={currentPlayerId}
+                        />
                     </Physics>
                 </Canvas>
                 {stompClient && (

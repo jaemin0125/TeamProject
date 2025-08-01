@@ -19,6 +19,7 @@ public class PlayerState {
     private Position position;
     private double rotationY;
     private AnimationState animationState;
+    private int coin = 50; // ✅ 초깃값 20
 
     private int health = 100; // ✨ 새로 추가: 플레이어 체력 (기본값 100)
     private List<Item> inventory = new ArrayList<>(); // ✨ 새로 추가: 플레이어 인벤토리 (초기값 빈 리스트)
@@ -31,4 +32,13 @@ public class PlayerState {
         private double y;
         private double z;
     }
+    
+    public void setCoin(int coin) {
+        this.coin = coin;
+    }
+
+    public int getCoin() {
+        return coin;
+    }
+    
 }

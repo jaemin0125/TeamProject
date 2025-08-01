@@ -11,15 +11,15 @@ export function SceneObject({ obj, objectRefs }) {
     // GLB 모델 로드 (사과를 위한 모델)
     // obj.type이 'apple'일 때만 로드하도록 조건부로 호출합니다.
     
-    const appleModel = obj.type === 'apple' ? useGLTF(obj.modelPath || '/objects/apple.glb') : null; // Use obj.modelPath
-    const ak_47Model = obj.type === 'ak-47' ? useGLTF(obj.modelPath || '/objects/ak-47.glb') : null; // Use obj.modelPath
-    const pipeModel = obj.type === 'pipe' ? useGLTF(obj.modelPath || '/objects/pipe.glb') : null; // Use obj.modelPath
+    const appleModel = obj.type === 'apple' ? useGLTF(obj.modelPath || '/models/apple.glb') : null; // Use obj.modelPath
+    const ak_47Model = obj.type === 'ak-47' ? useGLTF(obj.modelPath || '/models/ak-47.glb') : null; // Use obj.modelPath
+    const pipeModel = obj.type === 'pipe' ? useGLTF(obj.modelPath || '/models/pipe.glb') : null; // Use obj.modelPath
     if (obj.type === 'apple' && !appleModel) {
-        console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/objects/apple.glb'}`);
+        console.error(`[SceneObject] Failed to load apple model for ${obj.id}. Check model path: ${obj.modelPath || '/models/apple.glb'}`);
     } else if (obj.type === 'ak-47' && !ak_47Model) {
-        console.error(`[SceneObject] Failed to load ak-47 model for ${obj.id}. Check model path: ${obj.modelPath || '/objects/ak-47.glb'}`);
+        console.error(`[SceneObject] Failed to load ak-47 model for ${obj.id}. Check model path: ${obj.modelPath || '/models/ak-47.glb'}`);
     } else if (obj.type === 'pipe' && !pipeModel) {
-        console.error(`[SceneObject] Failed to load ak-47 model for ${obj.id}. Check model path: ${obj.modelPath || '/objects/pipe.glb'}`);
+        console.error(`[SceneObject] Failed to load ak-47 model for ${obj.id}. Check model path: ${obj.modelPath || '/models/pipe.glb'}`);
     }
 
     // 컴포넌트 마운트 시 objectRefs에 RigidBody 참조를 추가하고, 언마운트 시 제거합니다.

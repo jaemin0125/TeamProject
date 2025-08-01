@@ -56,6 +56,8 @@ export function Player({
     const [canFire, setCanFire] = useState(true);
 
     const isReloadingRef = useRef(isReloading); // isReloading prop의 최신 값을 추적하기 위한 ref
+    
+
 
     useEffect(() => {
         isReloadingRef.current = isReloading;
@@ -104,12 +106,6 @@ export function Player({
             setIsScoped(false);
         }
     }, [isArmed]);
-
-    useEffect(() => {
-        if (selectedItem?.ammo && selectedItem.ammo.current > 0) {
-            setCanFire(true);
-        }
-    }, [selectedItem]);
 
     const fireBullet = () => {
         if (isReloadingRef.current) return; // 재장전 중이면 발사 불가
@@ -257,11 +253,13 @@ export function Player({
             //     laserMat.dispose();
             // }, 200);
         };
-
-
     }
 
-
+    useEffect(() => {
+        if (selectedItem?.ammo && selectedItem.ammo.current > 0) {
+            setCanFire(true);
+        }
+    }, [selectedItem]);
 
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
@@ -536,6 +534,8 @@ export function Player({
             setWasDead(true);
             setIsScoped(false);
             setIsAiming(false);
+            setSitToggle(false);
+            setLieToggle(false);
             clearInventory();
             onObjectProximityChange(interactableObjectIdRef.current, false);
             interactableObjectIdRef.current = null;
@@ -942,10 +942,6 @@ export function Player({
         const validTypes = ['apple', 'ak-47', 'pipe'];
 
         if (validTypes.includes(type)) {
-            if (exitTimeoutRef.current) {
-                clearTimeout(exitTimeoutRef.current);
-                exitTimeoutRef.current = null;
-            }
             if (interactableObjectIdRef.current !== id) {
                 interactableObjectIdRef.current = id;
                 onObjectProximityChange(id, true);
@@ -964,15 +960,10 @@ export function Player({
 
         const validTypes = ['apple', 'ak-47', 'pipe'];
 
-        if (validTypes.includes(type)) {
-            exitTimeoutRef.current = setTimeout(() => {
-                if (interactableObjectIdRef.current === id) {
-                    interactableObjectIdRef.current = null;
-                    onObjectProximityChange(id, false);
-                    console.log(`Player exited ${type} proximity (debounced):`, id, "interactableObjectIdRef.current:", interactableObjectIdRef.current);
-                }
-                exitTimeoutRef.current = null;
-            }, 200);
+        if (validTypes.includes(type) && interactableObjectIdRef.current === id) {
+            interactableObjectIdRef.current = null;
+            onObjectProximityChange(id, false);
+            console.log(`Player exited ${type} proximity:`, id);
         }
     }, [onObjectProximityChange]);
 
@@ -982,6 +973,7 @@ export function Player({
         <>
             {/* 플레이어 RigidBody (물리 적용) */}
             <RigidBody
+                 name="player" 
                 ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의

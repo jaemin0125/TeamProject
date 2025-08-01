@@ -6,7 +6,7 @@ import { RigidBody } from '@react-three/rapier';
 export function GModMap() {
     // GLB 파일 로드
     // gmod_map.glb 파일이 public/models 폴더에 있다고 가정합니다.
-    const { scene } = useGLTF('/maps/free_fire.glb');
+    const { scene } = useGLTF('/models/free_fire.glb');
 
     // 맵 모델이 그림자를 드리우고 받을 수 있도록 설정
     scene.traverse((child) => {

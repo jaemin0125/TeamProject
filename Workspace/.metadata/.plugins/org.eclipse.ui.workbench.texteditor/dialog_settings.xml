@@ -4,7 +4,6 @@
 	<section name="java.lang.Class">
 		<item key="replaceBarOpen" value="false"/>
 		<list key="findhistory">
-			<item value="models"/>
 			<item value="update"/>
 			<item value="playerState"/>
 			<item value="playermove"/>
@@ -19,6 +18,7 @@
 			<item value="pickupti"/>
 			<item value="itemtodrop"/>
 			<item value="dropItem"/>
+			<item value="objectState newitem"/>
 		</list>
 	</section>
 </section>

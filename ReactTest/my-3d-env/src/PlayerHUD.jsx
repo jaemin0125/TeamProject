@@ -1,7 +1,7 @@
 // PlayerHUD.jsx
 import React, { useState } from 'react';
 
-export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen, onInventoryDrop, isEating, eatProgress }) {
+export function PlayerHUD({ state, playerNickname, inventory, selectedInventorySlot, selectedItem, currentAmmo, maxAmmo, isReloading, reloadProgress, isInventoryOpen, onInventoryDrop, isEating, eatProgress, hudState }) {
     const { health = 100, isHit, isDead, isAiming, isScoped, respawnProgress = 0, showInteractionPrompt, isGrounded, position } = state;
     const [draggedItem, setDraggedItem] = useState(null);
 
@@ -42,12 +42,17 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
 
                 {/* Top-Left Player Info */}
                 <div style={{ position: 'absolute', top: '20px', left: '20px', display: 'flex', alignItems: 'center' }}>
-                    <img src="/textures/boss.png" alt="player" style={{ width: '60px', height: '60px', borderRadius: '5px', border: '1px solid rgba(128, 128, 128, 0.7)' }} />
+                    <img src="/models/boss.png" alt="player" style={{ width: '60px', height: '60px', borderRadius: '5px', border: '1px solid rgba(128, 128, 128, 0.7)' }} />
                     <div style={{ marginLeft: '15px' }}>
                         <div className="hud-text-shadow" style={{ fontWeight: 'bold', fontSize: '1.2em', color: 'white' }}>{playerNickname}</div>
                         <div style={{ width: '200px', height: '15px', backgroundColor: 'rgba(0,0,0,0.5)', border: '1px solid #222', borderRadius: '5px', marginTop: '5px', overflow: 'hidden' }}>
                             <div style={{ width: `${health}%`, height: '100%', backgroundColor: healthBarColor, transition: 'width 0.5s' }}></div>
                         </div>
+                        <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center' }}>
+                            <img src="/models/coin.png" alt="coin" style={{ width: '18px', height: '18px', marginRight: '5px' }} />
+                            <span style={{ color: '#fff' }}>코인: {hudState.coin ?? 0}개</span>
+                        </div>
+
                     </div>
                 </div>
 
@@ -258,7 +263,7 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                                         {selectedItem.name === 'ak-47' ? `A reliable assault rifle. Holds ${selectedItem.magazineSize} rounds.` : selectedItem.name === 'apple' ? 'Restores a small amount of health.' : 'A standard issue item.'}
                                     </p>
                                     {selectedItem.count > 1 && <span className="hud-text-shadow" style={{ fontSize: '1.2em', marginTop: '20px' }}>Quantity: {selectedItem.count}</span>}
-                                </> 
+                                </>
                             ) : (
                                 <div className="hud-text-shadow" style={{ color: 'rgba(255,255,255,0.3)', fontSize: '1.5em' }}>SELECT AN ITEM</div>
                             )}
@@ -266,26 +271,26 @@ export function PlayerHUD({ state, playerNickname, inventory, selectedInventoryS
                         {/* Right Panel */}
                         <div style={{ flex: 2, padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gridTemplateRows: 'repeat(2, 1fr)', gap: '15px' }}>
                             {inventory.map((item, index) => (
-                                <div key={index} 
-                                draggable 
-                                onDragStart={(e) => {
-                                    e.dataTransfer.setData("draggedIndex", index);
-                                    setDraggedItem(index);
-                                }}
-                                onDragOver={(e) => e.preventDefault()}
-                                onDrop={(e) => {
-                                    const draggedIndex = e.dataTransfer.getData("draggedIndex");
-                                    if (draggedIndex !== "") {
-                                        onInventoryDrop(parseInt(draggedIndex), index);
-                                    }
-                                }}
-                                style={{
-                                    border: `1px solid ${selectedInventorySlot === index ? 'gold' : 'rgba(128, 128, 128, 0.7)'}`,
-                                    borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                                    backgroundColor: 'rgba(0, 0, 0, 0.3)', transition: 'all 0.2s ease-in-out',
-                                    transform: selectedInventorySlot === index ? 'scale(1.05)' : 'scale(1)', position: 'relative',
-                                    opacity: draggedItem === index ? 0.5 : 1
-                                }}>
+                                <div key={index}
+                                    draggable
+                                    onDragStart={(e) => {
+                                        e.dataTransfer.setData("draggedIndex", index);
+                                        setDraggedItem(index);
+                                    }}
+                                    onDragOver={(e) => e.preventDefault()}
+                                    onDrop={(e) => {
+                                        const draggedIndex = e.dataTransfer.getData("draggedIndex");
+                                        if (draggedIndex !== "") {
+                                            onInventoryDrop(parseInt(draggedIndex), index);
+                                        }
+                                    }}
+                                    style={{
+                                        border: `1px solid ${selectedInventorySlot === index ? 'gold' : 'rgba(128, 128, 128, 0.7)'}`,
+                                        borderRadius: '10px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.3)', transition: 'all 0.2s ease-in-out',
+                                        transform: selectedInventorySlot === index ? 'scale(1.05)' : 'scale(1)', position: 'relative',
+                                        opacity: draggedItem === index ? 0.5 : 1
+                                    }}>
                                     {item ? (
                                         <>
                                             <img src={item.image} alt={item.name} style={{ width: '60px', height: '60px', objectFit: 'contain' }} />

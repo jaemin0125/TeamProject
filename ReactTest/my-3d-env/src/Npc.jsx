@@ -1,96 +1,192 @@
-// Npc.jsx
 import React, { useRef, useState, useEffect } from 'react';
-import { useGLTF, Html ,  useAnimations} from '@react-three/drei';
+import { useGLTF, useAnimations } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import * as THREE from 'three';
-import { Client } from '@stomp/stompjs';
-import { getOrCreatePlayerInfo } from './utils/constants'; // // utils/constants.js의 플레이어 id 가져오기
 import './Npc.css';
 
-export default function Npc({ position = [5, -4.3, -16], playerRef, onInteract, client }) {
-  const gltf = useGLTF('/objects/npc.glb');
-  const { actions, names } = useAnimations(gltf.animations, gltf.scene); 
+export default function Npc({
+  position = [-16, -0.1, -5],
+  playerRef,
+  client,
+  onDialogueChange,
+  onProximityChange,
+  onShopOpen,
+  onFacePlayer,
+   currentPlayerId
+}) {
+  const gltf = useGLTF('/models/npc.glb');
+  const { actions, names } = useAnimations(gltf.animations, gltf.scene);
   const npcRef = useRef();
 
-  const [showMessage, setShowMessage] = useState(false);
-  const [conversationStep, setConversationStep] = useState(0);
+  const [isNear, setIsNear] = useState(false);
+  const [dialogueState, setDialogueState] = useState(null);
+  const [isShopOpen, setIsShopOpen] = useState(false);
 
-  const dialogue = [
-    '이 맵에 처음 오셨습니까?',
-    '언제든 물어보세요.',
-    '여기서 아이템도 얻을 수 있습니다.',
-  ];
-
-  const handleTalk = () => {
-    setConversationStep((prev) =>
-      prev < dialogue.length - 1 ? prev + 1 : 0
-    );
+  
+  // ✅ 대화 흐름
+  const triggerDialogueStage1 = () => {
+    const state = {
+      text: "테스트 NPC.",
+      buttons: [
+        { label: "더 대화하기", onClick: triggerDialogueStage2 },
+        { label: "아이템 받기", onClick: handleGiveItem },
+        { label: "구매하기", onClick: handleOpenShop },
+        { label: "닫기", onClick: () => {
+            setDialogueState(null);
+            onDialogueChange?.(null);
+          }   
+        } 
+      ]
+    };
+    setDialogueState(state);
+    onDialogueChange?.(state); // 외부에도 전달
   };
 
-  //Npc 애니메이션 동작
-useEffect(() => {
-  if (actions && names.length > 0) {
-    actions[names[0]]?.reset().fadeIn(0.5).play(); //  첫 애니메이션 자동 재생
-  }
-}, [actions, names]);
+  const triggerDialogueStage2 = () => {
+    const state = {
+      text: "사과 아이템 받기",
+      buttons: [
+        { label: "아이템 받기", onClick: handleGiveItem },
+        { label: "닫기", onClick: () => {
+            setDialogueState(null);
+            onDialogueChange?.(null);
+          }   
+        } 
+      ]
+    };
+    setDialogueState(state);
+    onDialogueChange?.(state);
+  };
 
 
-  // Npc 아이템 수령 기믹
-
-  const { id: currentPlayerId } = getOrCreatePlayerInfo();// currentPlayerid 가져오기
-  
-// 플레이어가 NPC와 상호작용할 때 아이템 달라는 요청을 서버에 보냄(클라 -> 서버)
+  // 서버로 아이템 받기 요청
   const handleGiveItem = () => {
-    if (client && client.connected) {
+    const objectId = 'npc_apple';
+    if (client?.connected && currentPlayerId) {
       client.publish({
-        destination: "/app/npc/action",
-        body: JSON.stringify({
-          playerId: currentPlayerId,
-          actionType: "give"
-        }),
+        destination: '/app/npc/action',
+        body: JSON.stringify({ playerId: currentPlayerId, objectId, actionType: 'give' }),
       });
     }
-  }; 
-
-  const handleClose = () => {
-    setShowMessage(false);
-    setConversationStep(0);
   };
 
-  //  우클릭 시 대화창 오픈
-  const handlePointerDown = (e) => {
-    if (e.button === 2) {
-      e.stopPropagation();
-      setShowMessage(true);
+
+
+// 구매하기 클릭 시
+const handleOpenShop = () => {
+  onDialogueChange?.({
+      npcName: '구매', // ✅ 여기에 명시
+    shopOpen: true,
+    items: [
+      { icon: '/models/apple.png', name: '사과', price: 10 },
+      { icon: '/models/pipe.png', name: '파이프', price: 30 }
+    ],
+    npcDescription: '상점에서 아이템 구매하세요',
+
+    onClose: () => onDialogueChange(null)
+  });
+};
+
+  // ✅ 충돌 감지
+  const handleIntersection = ({ other }) => {
+    if (other.rigidBodyObject?.name === 'player') {
+      setIsNear(true);
+      onProximityChange?.(true);
     }
   };
 
-  return (
-    <RigidBody type="fixed" position={position} colliders={false}>
-      <primitive
-        object={gltf.scene}
-        ref={npcRef}
-        scale={1.9}
-        onPointerDown={handlePointerDown}
-      />
-      <CapsuleCollider args={[0.4, 1.0]} position={[0, 1.2, 0]} />
+  const handleExit = ({ other }) => {
+    if (other.rigidBodyObject?.name === 'player') {
+      setIsNear(false);
+      setDialogueState(null);
+      setIsShopOpen(false);
+      onProximityChange?.(false);
+          setIsShopOpen(false); // ✅ 상점도 닫기
+      onDialogueChange?.(null);
+    }
+  };
 
-      {showMessage && (
-        <Html distanceFactor={25} position={[0, 3.5, 0]}>
-          <div className="npc-speech-bubble">
-            <div className="npc-bubble-text">{dialogue[conversationStep]}</div>
-            <div className="npc-option-button" onClick={handleTalk}>
-              [1] 대화 계속
+  // 임시) 플레이어가 npc 쪽으로 회전
+  const handleFaceToNpc = () => {
+    if (onFacePlayer && npcRef.current) {
+      const npcPos = new THREE.Vector3();
+      npcRef.current.getWorldPosition(npcPos);
+      onFacePlayer(npcPos); // ✅ NPC 위치 전달
+    }
+  };
+
+
+// NPC가 현재 바라보는 방향을 플레이어 쪽으로 회전
+const handleNpcLookToPlayer = () => {
+  if (!playerRef?.current || !npcRef?.current) return;
+
+  // ✅ RigidBody의 위치는 translation()으로 가져옴
+  const playerPosRaw = playerRef.current.translation();
+  const playerPos = new THREE.Vector3(playerPosRaw.x, playerPosRaw.y, playerPosRaw.z);
+
+  const npcPos = new THREE.Vector3();
+  npcRef.current.getWorldPosition(npcPos);
+
+  const dir = new THREE.Vector3().subVectors(playerPos, npcPos).normalize();
+  const targetAngle = Math.atan2(dir.x, dir.z);
+
+  const quat = new THREE.Quaternion();
+  quat.setFromAxisAngle(new THREE.Vector3(0, 1, 0), targetAngle);
+
+  npcRef.current.quaternion.copy(quat);
+};
+
+
+
+  // ✅ F 키로 대화 시작
+  useEffect(() => {
+    if (!isNear) return;
+    const handleKeyDown = (e) => {
+      if (e.code === 'KeyF') {
+             handleFaceToNpc();         
+             handleNpcLookToPlayer();    // ✅ 회전 요청
+        triggerDialogueStage1();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isNear]);
+
+  // ✅ 애니메이션
+  useEffect(() => {
+    if (actions && names.length > 0) {
+      actions[names[0]]?.reset().fadeIn(0.5).play();
+    }
+  }, [actions, names]);
+
+  return (
+    <>
+      <RigidBody
+        type="fixed"
+        name="npc"
+        position={position}
+        colliders={false}
+        onIntersectionEnter={handleIntersection}
+        onIntersectionExit={handleExit}
+      >
+        <primitive object={gltf.scene} ref={npcRef} scale={1.9} />
+        <CapsuleCollider args={[0.4, 1.0]} position={[0, 0.5, 0]} sensor={true} />
+        <CapsuleCollider args={[0.4, 1.0]} position={[0, 1.2, 0]} sensor={false} />
+      </RigidBody>
+
+      {/* ✅ 내부 대화창 */}
+      {dialogueState && (
+        <div className="npc-hud-ui">
+          <div className="npc-bubble-text">{dialogueState.text}</div>
+          {dialogueState.buttons.map((btn, idx) => (
+            <div key={idx} className="npc-option-button" onClick={btn.onClick}>
+              {btn.label}
             </div>
-            <div className="npc-option-button" onClick={handleGiveItem}>
-              [2] 아이템 받기
-            </div>
-            <div className="npc-option-button" onClick={handleClose}>
-              [3] 닫기
-            </div>
-          </div>
-        </Html>
+          ))}
+        </div>
       )}
-    </RigidBody>
+
+
+    </>
   );
-}
+}  

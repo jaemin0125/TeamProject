@@ -1,9 +1,8 @@
 // src/main/java/com/example/demo/service/PlayerService.java
 package com.example.demo.service;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -17,11 +16,9 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import com.example.demo.dto.AnimationState;
-import com.example.demo.dto.InventoryItem;
-import com.example.demo.dto.Item;
-import com.example.demo.dto.ItemActionRequest;
 import com.example.demo.dto.Ammo;
+import com.example.demo.dto.AnimationState;
+import com.example.demo.dto.Item;
 import com.example.demo.dto.ObjectState;
 import com.example.demo.dto.PlayerState;
 import com.example.demo.dto.PlayerState.Position;
@@ -57,7 +54,7 @@ public class PlayerService {
                 .count();
 
         if (currentAppleCount < MAX_APPLES) {
-            spawnNewItem("apple", "/objects/apple.glb", "apple", 0.4, true); // y좌표 -4.5, stackable: true
+            spawnNewItem("apple", "/models/apple.glb", "apple", 0.4, true); // y좌표 -4.5, stackable: true
             logger.info("Spawning new apple. Current apples: {}/{}", currentAppleCount + 1, MAX_APPLES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -73,7 +70,7 @@ public class PlayerService {
                 .count();
 
         if (currentGunCount < MAX_GUNS) {
-            spawnNewItem("ak-47", "/objects/ak-47.glb", "ak-47", 0.8, false); // y좌표 -4.4, stackable: false
+            spawnNewItem("ak-47", "/models/ak-47.glb", "ak-47", 0.8, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new gun. Current guns: {}/{}", currentGunCount + 1, MAX_GUNS);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -89,7 +86,7 @@ public class PlayerService {
                 .count();
 
         if (currentPipeCount < MAX_PIPES) {
-            spawnNewItem("pipe", "/objects/pipe.glb", "pipe", 0.54, false); // y좌표 -4.4, stackable: false
+            spawnNewItem("pipe", "/models/pipe.glb", "pipe", 0.54, false); // y좌표 -4.4, stackable: false
             logger.info("Spawning new pipe. Current pipes: {}/{}", currentPipeCount + 1, MAX_PIPES);
             messagingTemplate.convertAndSend("/topic/sceneObjects", getAllSceneObjects());
         }
@@ -303,7 +300,19 @@ public class PlayerService {
         logger.info("Player {} added new item {} (ID: {}, Count: {}).", playerId, itemToAdd.getName(), itemToAdd.getId(), itemToAdd.getCount());
         return true;
     }
-
+    
+     // 신규 : 플레이어가 존재하면 플레이어 인벤토리(list(item)) 반환 , 
+    //        플레이어가 존재 x , 에러를 내지 않고 '빈 리스트'를 대신 돌려줌
+    public List<Item> getInventoryForPlayer(String playerId) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("❌ 존재하지 않는 playerId: {}", playerId);
+            return Collections.emptyList(); // 또는 null 대신 빈 리스트 반환
+        }
+        return player.getInventory();
+    }
+    
+    
     /**
      * 플레이어 인벤토리에서 아이템을 사용하고, 개수를 줄입니다.
      * @param playerId 아이템을 사용할 플레이어의 ID
@@ -411,7 +420,7 @@ public class PlayerService {
             newObjectId,
             dropPosition,
             itemToDrop.getName(), // objectType
-            itemToDrop.getImagePath().replace(".png", ".glb"), // modelPath (png -> glb)
+            itemToDrop.getImage().replace(".png", ".glb"), // modelPath (png -> glb)
             itemToDrop.getName(), // itemType
             itemToDrop.getCurrentAmmo() > 0 || itemToDrop.getReserveAmmo() > 0 ? new Ammo(itemToDrop.getCurrentAmmo(), itemToDrop.getReserveAmmo()) : null, // 탄약 정보
             isStackable // 중첩 가능 여부 설정
@@ -439,6 +448,34 @@ public class PlayerService {
         return false;
     }
 
+    
+	/**
+	 * 플레이어의 코인을 설정합니다.
+	 * 
+	 * @param playerId 코인을 설정할 플레이어의 ID
+	 * @param newCoin  설정할 코인 값
+	 * @return 코인 설정 성공 여부
+	 */
+    public boolean setPlayerCoin(String playerId, int newAmount) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) {
+            logger.warn("존재하지 않는 플레이어 ID: {}", playerId);
+            return false;
+        }
+
+        player.setCoin(newAmount);
+        
+        // 동기화 메시지 전송
+        messagingTemplate.convertAndSend("/topic/hud/" + playerId, Map.of(
+            "type", "COIN_UPDATE",
+            "coin", newAmount
+        ));
+
+        return true;
+    }
+
+    
+   
     /**
      * 플레이어를 사망 상태로 설정하고 리스폰 타이머를 시작합니다.
      * @param playerId 사망 처리할 플레이어의 ID
@@ -448,8 +485,12 @@ public class PlayerService {
         if (player != null) {
             player.setHealth(0); // 체력을 0으로 설정
             player.getAnimationState().setIsDead(true); // 사망 애니메이션 상태 활성화
+            
+            setPlayerCoin(playerId, 0); // 플레이어 골드 모두 잃음 처리
+            logger.info("Player {} died and lost all coins.", playerId);
             logger.info("Player {} is now dead.", playerId);
             // 리스폰 로직 (예: 별도의 스케줄러에서 N초 후 리스폰)은 GameController 또는 다른 매니저에서 처리
+            
         }
     }
 
@@ -469,32 +510,5 @@ public class PlayerService {
     }
     
     
- // 추가 - 유저별 인벤토리 관리 Map (이건 나중에 playerstate 인벤토리에 합칠 예정)
-    private final Map<String, List<InventoryItem>> playerInventories = new HashMap<>();// 유저별로 인벤토리(아이템목록) 따로 관리 
-
-    public void addItemToInventory(String playerId, Item item) {
-        List<InventoryItem> inventory = playerInventories.computeIfAbsent(playerId, k -> new ArrayList<>());//유저 인벤토리 초기화 또는 불러오기
-
-        Optional<InventoryItem> existing = inventory.stream()
-                .filter(i -> i.getName().equals(item.getName()))
-                .findFirst(); //  해당 이름의 아이템이 인벤토리에 이미 있는지 확인
-
-        if (existing.isPresent()) {
-            InventoryItem i = existing.get();
-            i.setCount(i.getCount() + item.getCount()); //이미 있다면 수량 증가(기존 사과 수량에 +1 (또는 item이 가진 수량만큼 누적))
-
-        } else {
-            inventory.add(new InventoryItem(item.getName(), item.getCount()));//  없다면 새로 추가/ 처음 받은 아이템이면 새로 리스트에 추가
-        }
-
-        // 최신 인벤토리 아이템을 클라이언트에 전송(STOMP WebSocket을 통해 해당 유저에게 인벤토리 변경 정보를 전송)
-        messagingTemplate.convertAndSend(
-            "/topic/inventory/" + playerId,
-            new InventoryItem(item.getName(),item.getCount())
-        );
-    }
     
 }
-
-
-
