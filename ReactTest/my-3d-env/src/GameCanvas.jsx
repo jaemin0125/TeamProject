@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { Canvas, extend, useThree } from '@react-three/fiber';
 import { KeyboardControls, Text } from '@react-three/drei';
-import { Physics, RigidBody  } from '@react-three/rapier';
+import { Physics, RigidBody } from '@react-three/rapier';
 import { Leva } from 'leva';
 import * as THREE from 'three';
 import { Client } from '@stomp/stompjs';
@@ -17,6 +17,7 @@ import { PlayerHUD } from './PlayerHUD';
 import { controlsMap, getOrCreatePlayerInfo } from './utils/constants'; // utils 폴더에서 임포트
 import ChatBox from './ChatBox';
 import Npc from './Npc';
+import NpcHUD from './NpcHUD';
 import { debug, vec2 } from 'three/tsl';
 
 
@@ -100,9 +101,16 @@ export function GameCanvas({ playerNickname }) {
 
     const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
 
+
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
-    const [isChatting, setIsChatting] = useState(false);
+    const [isChatting, setIsChatting] = useState(false); // 채팅 중인지 확인
+    const [dialogueState, setDialogueState] = useState(null); // NPC 대사 텍스트와 버튼 목록
+    const [isNpcNear, setIsNpcNear] = useState(false); // 플레이어가 NPC 근처에 있는지 여부를 추적
+    const [isShopOpen, setIsShopOpen] = useState(false);
+    const handleCloseShop = () => {
+        setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
+    };
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -114,6 +122,7 @@ export function GameCanvas({ playerNickname }) {
         // PlayerHUD로 전달될 추가 상태
         showInteractionPrompt: false,
         interactableObjectId: null,
+        coin: 50,
     });
     // 추가 --> 인벤토리 상태 관리 (8칸 핫바) / 기존 인벤토리 방식 사용하면 Npc 아이템 수령이 제한되서 변경
     const MAX_SLOTS = 8;
@@ -277,7 +286,7 @@ export function GameCanvas({ playerNickname }) {
         }
 
         // 플레이어의 현재 위치 가져오기
-        const playerPosition = playerRef.current?.translation();
+        const playerPosition = playerRef?.current?.translation();
         if (!playerPosition) {
             console.warn("플레이어 위치를 가져올 수 없습니다.");
             return;
@@ -496,7 +505,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://localhost:8080/ws';
+        const WS_URL = 'https://4b64d4728e5b.ngrok-free.app/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -530,49 +539,6 @@ export function GameCanvas({ playerNickname }) {
                 spawnBulletHole(hitPosition, hitNormal);
             });
 
-            // 신규 추가(Npc 대화창에서 아이템 수령 기믹) -> 
-            const playerId = currentPlayerId;// 이미 있는 currentPlayerid 사용
-
-            client.subscribe(`/topic/inventory/${playerId}`, (message) => {
-                const receivedItem = JSON.parse(message.body);
-
-                // 받은 아이템에 이미지 경로 붙이기
-                const itemWithImage = {
-                    ...receivedItem,
-                    image: `/models/${receivedItem.name}.png`, // 
-                }; // 서버가 보낸 인벤토리 변경 알림을 받아서, 클라 화면을 실시간으로 갱신(서버 -> 클라)
-
-                setInventory((prevInventory) => {
-                    // 기존에 같은 아이템이 있는지 확인
-                    const existingIndex = prevInventory.findIndex(
-                        (item) => item && item.name === itemWithImage.name
-                    );
-
-                    if (existingIndex !== -1) {
-                        // 수량만 증가
-                        const updated = [...prevInventory];
-                        updated[existingIndex] = {
-                            ...updated[existingIndex],
-                            count: updated[existingIndex].count + itemWithImage.count,
-                        };
-                        return updated;
-                    }
-
-                    // 빈 슬롯 찾기
-                    const emptyIndex = prevInventory.findIndex((item) => item === null);
-                    if (emptyIndex !== -1) {
-                        const updated = [...prevInventory];
-                        updated[emptyIndex] = itemWithImage;
-                        return updated;
-                    }
-
-                    console.warn("빈 인벤토리 슬롯 없음");
-                    return prevInventory; // 그대로 유지
-                });
-            });
-            //////////////////////////////////
-
-
             // 씬 오브젝트 정보 구독
             client.subscribe('/topic/sceneObjects', (message) => {
                 try {
@@ -583,6 +549,21 @@ export function GameCanvas({ playerNickname }) {
                     console.error("[STOMP Subscribe] Failed to parse scene objects message:", e, message.body);
                 }
             });
+
+            // 신규 추가 인벤토리 구독 + 인벤토리 1개로 초기화 방지
+            client.subscribe(`/topic/inventory/${currentPlayerId}`, (message) => {
+                const received = JSON.parse(message.body);
+
+                // ✨ 항상 8칸 유지하도록 보정
+                const fixedInventory = Array(MAX_SLOTS).fill(null);
+                for (let i = 0; i < Math.min(received.length, MAX_SLOTS); i++) {
+                    fixedInventory[i] = received[i];
+                }
+
+                console.log('📦 인벤토리 업데이트 수신:', fixedInventory);
+                setInventory(fixedInventory);
+            });
+
 
             // 플레이어 피격 정보 구독
             client.subscribe('/topic/playerHit', (message) => {
@@ -655,6 +636,8 @@ export function GameCanvas({ playerNickname }) {
                 }
             });
 
+
+
             // 오브젝트 수집 이벤트 구독
             client.subscribe('/topic/collectObject', (message) => {
                 try {
@@ -671,6 +654,13 @@ export function GameCanvas({ playerNickname }) {
                 }
             });
 
+            // 신규 추가 플레이어 코인 구독
+            client.subscribe('/topic/hud/' + currentPlayerId, (message) => {
+                const data = JSON.parse(message.body);
+                if (data.type === 'COIN_UPDATE') {
+                    setHudState(prev => ({ ...prev, coin: data.coin }));
+                }
+            });
 
         };
 
@@ -778,8 +768,8 @@ export function GameCanvas({ playerNickname }) {
     const handlePlayerInteract = useCallback((interactedObjectId) => {
         console.log(`[GameCanvas] handlePlayerInteract called with objectId: ${interactedObjectId}`); // 추가된 로그
         const interactedObject = sceneObjects.find(obj => obj.id === interactedObjectId);
-    console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
-    console.log(`[DEBUG] Interacted Object Structure: ${JSON.stringify(interactedObject)}`);
+        console.log(`[GameCanvas] Found interactedObject:`, interactedObject); // 추가된 로그
+        console.log(`[DEBUG] Interacted Object Structure: ${JSON.stringify(interactedObject)}`);
 
         if (interactedObject && interactedObject.type === 'apple') {
             console.log(`[GameCanvas] Interacted object is an apple. Adding to inventory.`); // 추가된 로그
@@ -1030,18 +1020,30 @@ export function GameCanvas({ playerNickname }) {
                 inventory={inventory}
                 selectedInventorySlot={selectedInventorySlot}
                 selectedItem={inventory[selectedInventorySlot]}
-                currentAmmo={selectedItem?.ammo?.current}
-                maxAmmo={selectedItem?.ammo?.reserve}
+                currentAmmo={selectedItem?.ammo?.current || 0}
+                maxAmmo={selectedItem?.ammo?.reserve || 0}
                 isReloading={isReloading}
                 reloadProgress={reloadProgress}
                 isInventoryOpen={isInventoryOpen}
                 onInventoryDrop={handleInventoryDrop}
                 isEating={isEating}
                 eatProgress={eatProgress}
+                hudState={hudState}
             />
 
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
+
+                {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
+                {isNpcNear && (
+                    <NpcHUD
+                        dialogueState={dialogueState}
+                        showPrompt={!dialogueState}
+                        isShopOpen={isShopOpen}
+                        onCloseShop={handleCloseShop}
+                    />
+                )}
+
                 {/* Three.js 캔버스 설정 */}
                 <Canvas
                     gl={{ outputColorSpace: THREE.SRGBColorSpace }}
@@ -1064,7 +1066,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}   > {/* 중력 설정 */}
+                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
@@ -1160,7 +1162,15 @@ export function GameCanvas({ playerNickname }) {
                                 objectRefs={objectRefs}
                             />
                         ))}
-                        <Npc client={stompClient} />
+
+                        <Npc
+                            playerRef={playerRef}
+                            client={stompClient}
+                            onDialogueChange={setDialogueState} // ✅ 상태 전달 받음
+                            onProximityChange={setIsNpcNear} // 👈 proximity 상태 받음
+                            onShopOpen={() => setIsShopOpen(true)}
+                            currentPlayerId={currentPlayerId}
+                        />
                     </Physics>
                 </Canvas>
                 {stompClient && (

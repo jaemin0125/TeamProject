@@ -967,6 +967,7 @@ export function Player({
         <>
             {/* 플레이어 RigidBody (물리 적용) */}
             <RigidBody
+                 name="player" 
                 ref={playerRef} // props로 받은 playerRef를 할당
                 position={[0, 1.1, 0]} // 초기 위치
                 colliders={false} // 콜라이더는 CapsuleCollider로 별도 정의
