@@ -255,6 +255,12 @@ export function Player({
 
     }
 
+    useEffect(() => {
+        if (selectedItem?.ammo && selectedItem.ammo.current > 0) {
+            setCanFire(true);
+        }
+    }, [selectedItem]);
+
 
 
     // 펀치 시 타격 감지 및 서버 전송 로직

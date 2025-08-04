@@ -88,7 +88,7 @@ public class GameController {
         PlayerState.Position targetPos = targetPlayer.getPosition();
         
         
-        double tolerance = 0.2;
+        double tolerance = 0.6;
 
         double checkAttackerPosition = Math.sqrt(  // 프론트 <-> 서버 간 공격자 좌표의 오차임
     		Math.pow(attackerPos.getX() - message.getFromPosition().getX(), 2) +

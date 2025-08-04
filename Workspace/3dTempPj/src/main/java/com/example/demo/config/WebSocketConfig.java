@@ -35,7 +35,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // 허용할 출처(Origin) 목록
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://4b64d4728e5b.ngrok-free.app", "http://192.168.5.16:5173"));
+        configuration.setAllowedOrigins(Arrays.asList("http://localhost:5173", "https://d7b4f2e1e2e0.ngrok-free.app", "http://192.168.5.16:5173"));
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         // 허용할 헤더
