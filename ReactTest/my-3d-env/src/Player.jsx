@@ -56,6 +56,8 @@ export function Player({
     const [canFire, setCanFire] = useState(true);
 
     const isReloadingRef = useRef(isReloading); // isReloading prop의 최신 값을 추적하기 위한 ref
+    
+
 
     useEffect(() => {
         isReloadingRef.current = isReloading;
@@ -251,8 +253,6 @@ export function Player({
             //     laserMat.dispose();
             // }, 200);
         };
-
-
     }
 
     useEffect(() => {
@@ -260,8 +260,6 @@ export function Player({
             setCanFire(true);
         }
     }, [selectedItem]);
-
-
 
     // 펀치 시 타격 감지 및 서버 전송 로직
     useEffect(() => {
@@ -536,6 +534,8 @@ export function Player({
             setWasDead(true);
             setIsScoped(false);
             setIsAiming(false);
+            setSitToggle(false);
+            setLieToggle(false);
             clearInventory();
             onObjectProximityChange(interactableObjectIdRef.current, false);
             interactableObjectIdRef.current = null;

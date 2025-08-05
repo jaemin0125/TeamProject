@@ -19,20 +19,33 @@ public class Item {
     private int currentAmmo; // 현재 탄약 수
     private int reserveAmmo; // 보유 탄약 수
     private boolean stackable; // 아이템 중첩 가능 여부
+    private Ammo ammo;
     // 필요한 경우 다른 아이템 속성(예: 공격력, 방어력)을 추가할 수 있습니다.
     
    
-    // 생성자 추가(npc 아이템 받기 위한)
+    // 기존 생성자
+    public Item(String id, String name, String type, int count, String image,
+            double healthRestore, int currentAmmo, int reserveAmmo,
+            boolean stackable) {
+    this.id = id;
+    this.name = name;
+    this.type = type;
+    this.count = count;
+    this.image = image;
+    this.healthRestore = healthRestore;
+    this.currentAmmo = currentAmmo;
+    this.reserveAmmo = reserveAmmo;
+    this.stackable = stackable;
+}
+    
+    
+    // 간단한 아이템 생성용 (NPC 보상...)
     public Item(String id, String name, String type, int count, String image) {
         this.id = id; // 🔄 UUID 무시하지 말고 전달받은 걸 저장
         this.name = name;
         this.type = type;
         this.count = count;
         this.image = image;
-        this.healthRestore = 0;
-        this.currentAmmo = 0;
-        this.reserveAmmo = 0;
         this.stackable = true;
     }
-
 }
