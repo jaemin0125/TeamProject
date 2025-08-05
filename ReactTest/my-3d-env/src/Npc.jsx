@@ -12,7 +12,8 @@ export default function Npc({
   onProximityChange,
   onShopOpen,
   onFacePlayer,
-   currentPlayerId
+   currentPlayerId,
+   inventoryRef
 }) {
   const gltf = useGLTF('/objects/npc.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
@@ -59,7 +60,7 @@ export default function Npc({
   };
 
 
-  // 서버로 아이템 받기 요청
+  // 서버로 아이템 받기 요청(ex : 사과)
   const handleGiveItem = () => {
     const objectId = 'npc_apple';
     if (client?.connected && currentPlayerId) {
@@ -71,17 +72,47 @@ export default function Npc({
   };
 
 
-
 // 구매하기 클릭 시
 const handleOpenShop = () => {
   onDialogueChange?.({
-      npcName: '구매', // ✅ 여기에 명시
+    npcName: '구매',
     shopOpen: true,
     items: [
-      { icon: '/objects/apple.png', name: '사과', price: 10 },
-      { icon: '/objects/pipe.png', name: '파이프', price: 30 }
+      { icon: "/objects/apple.png", name: '사과', price: 20 },
+      { icon: "/objects/pipe.png", name: '파이프', price: 30 }
     ],
     npcDescription: '상점에서 아이템 구매하세요',
+
+onBuy: (item) => {  // ✅ item 전체 객체 받기
+  if (!client || !client.connected || !currentPlayerId) {
+    console.warn("❌ STOMP 연결 또는 playerId 누락");
+    return;
+  }
+
+
+  // 무기 종류는 이미 보유중이면 구매할 수 없게.
+  if(item.name == '파이프' && inventoryRef.current.some(item => item?.name === 'pipe')){ 
+    return;
+  }
+
+  client.publish({
+    destination: '/app/npc/action',
+    body: JSON.stringify({
+      playerId: currentPlayerId,
+      actionType: 'buy',
+      itemData: {
+        name: item.name,     // ✅ 예: '사과'
+        type: item.type || 'food',  // 기본값도 설정 가능
+        icon: item.icon,
+        price: item.price
+      },
+      quantity: 1,
+    }),
+  });
+
+  console.log("✅ 구매 메시지 전송됨:", item);
+},
+
 
     onClose: () => onDialogueChange(null)
   });

@@ -1,5 +1,6 @@
 package com.example.demo.controller;
 
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -157,15 +158,23 @@ public class GameController {
         // 계산된 데미지 값을 메시지에 설정
         message.setDamage(damage);
 
-        // 체력이 0 이하가 되면 사망 처리
+        // 체력이 0 이하인 경우, 공격자 ID 포함하여 사망 처리(신규)
         if (newHealth <= 0) {
-            playerService.setPlayerDead(targetPlayer.getId());
+            playerService.setPlayerDead(targetPlayer.getId(), attacker.getId());
             logger.info("Player {} is dead.", targetPlayer.getNickname());
         }
-
         // 모든 클라이언트에게 유효한 공격이었음을 브로드캐스트
         messagingTemplate.convertAndSend("/topic/playerHit", message);
     }
+    
+    
+    // 8/4 추가 -->  누가 죽었는지(deadId), 누가 죽였는지(killerId)를 추출
+	@MessageMapping("/player/dead")
+	public void handlePlayerDeath(Map<String, String> payload) {
+	    String deadId = payload.get("deadPlayerId");
+	    String killerId = payload.get("killerPlayerId");
+	    playerService.setPlayerDead(deadId, killerId);
+	}
     
     @MessageMapping("/bulletImpact")
     public void broadcastImpact(BulletImpactMessage message) {
@@ -228,37 +237,56 @@ public class GameController {
         messagingTemplate.convertAndSend("/topic/chat", message);
     }
 
-    
-    @MessageMapping("/npc/action")
-    public void handleNpcAction(ItemActionRequest request) {
+    // 신규 추가 -->  8/4 추가 
+	@MessageMapping("/npc/action")
+	public void handleNpcAction(ItemActionRequest request) {
 
-        // ✅ "npc_apple" 같은 경우: objectManager 참조하지 않고 직접 생성
-        if ("give".equals(request.getActionType())) {
+		if ("give".equals(request.getActionType())) {
 
-            // 로그 확인용 (추후 제거 가능)
-            System.out.println("📦 NPC 지급 아이템: apple");
+			// 로그 확인용 (추후 제거 가능)
+			System.out.println("📦 NPC 지급 아이템: apple");
 
-            Item item = new Item(
-                UUID.randomUUID().toString(),
-                "apple",             // 아이템 이름 (itemType)
-                "food",              // 아이템 종류 (objectType)
-                1,
-                "/objects/apple.png"  // 프론트에서 사용할 이미지 경로
-                
-            );
+			Item item = new Item(UUID.randomUUID().toString(), "apple", // 아이템 이름 (itemType)
+					"food", // 아이템 종류 (objectType)
+					1, "/objects/apple.png" // 프론트에서 사용할 이미지 경로
 
-            boolean success = playerService.addItemToPlayerInventory(request.getPlayerId(), item);
+			);
 
-            if (success) {
-                messagingTemplate.convertAndSend(
-                    "/topic/inventory/" + request.getPlayerId(),
-                    playerService.getInventoryForPlayer(request.getPlayerId())
-                );
-            }
+			boolean success = playerService.addItemToPlayerInventory(request.getPlayerId(), item);
 
-        }	
+			if (success) {
+				messagingTemplate.convertAndSend("/topic/inventory/" + request.getPlayerId(),
+						playerService.getInventoryForPlayer(request.getPlayerId()));
+			} 
+			
+			
+		} else if ("buy".equalsIgnoreCase(request.getActionType())) {
+		    System.out.println("🛒 구매 요청 도착!");
 
-    }
+		    String playerId = request.getPlayerId(); // ✅ 선언 필요
+		    String itemName = request.getItemData().getName(); // 예: "apple"
+
+		    int price;
+		    switch (itemName.toLowerCase().trim()) {
+		    case "apple":
+		    case "사과":
+		        price = 20;
+		        break;
+		    case "pipe":
+		    case "파이프":
+		        price = 30;
+		        break;
+		    default:
+		        System.out.println("❌ 알 수 없는 아이템: " + itemName);
+		        return;
+		}
+
+		    playerService.buyItemForPlayer(playerId, itemName, price);
+		}
+
+
+		}
+
 
 
 	/**

@@ -28,7 +28,7 @@ body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, 
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
   font-family: 'Cafe24Ohsquare', sans-serif; /* ✅ 도트 느낌 유지 */
   color: #f0f0f0;
-  pointer-events: none;
+  pointer-events: auto;
   font-size: 2rem;
 }
 
@@ -93,17 +93,19 @@ body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, 
 
 .shop-container {
   display: flex;
+    min-width: 500px;
   flex-direction: column; /* 상하 정렬로 전환 */
   align-items: center; /* 수평 중앙 정렬 */
   background: rgba(20, 20, 20, 0.75);
   padding: 20px;
   border: 2px solid #ccc;
-  gap: 20px; /* 위아래 요소 간 간격 */
+  gap: 24px; /* 위아래 요소 간 간격 */
 }
 
 .shop-item {
   background: #222;
   padding: 10px 14px;
+  justify-content: space-between; /* ✨ 좌우 정렬 */
   border: 2px solid #fff;
   display: flex;
   align-items: center;
@@ -116,6 +118,29 @@ body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, 
   image-rendering: pixelated;
 }
 
+.shop-buy-button {
+  padding: 10px 20px;
+  background: linear-gradient(to bottom, #111, #333);
+  border: 2px solid #fff;;
+  border-radius: 6px;
+  color: #fff;
+  font-family: 'Cafe24Ohsquare', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  width: 80px;            /* ✅ 고정 너비 */
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.shop-buy-button:hover {
+  background-color: #444;
+  color:  #ffcc00;
+  transform: scale(1.05);
+}
 
 .shop-close-button {
   margin-top: 20px;
@@ -130,5 +155,3 @@ body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, 
   min-width: 120px;
   border-radius: 4px;
 }
-
-

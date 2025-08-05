@@ -474,23 +474,125 @@ public class PlayerService {
         return true;
     }
 
-    
+	/**
+	 * Npc에게 아이템 구매 로직
+	 */
+    public boolean buyItemForPlayer(String playerId, String itemName, int price) {
+        PlayerState player = connectedPlayers.get(playerId);
+        if (player == null) return false;
+
+        if (player.getCoin() < price) {
+            System.out.println("❌ 코인 부족: 구매 불가");
+            return false;
+        }
+        
+      // 파이프 중복 방지
+        if (itemName.equals("pipe")) {
+            List<Item> inventory = player.getInventory();
+            boolean alreadyOwned = inventory.stream()
+                .anyMatch(item -> item.getName().equals("pipe"));
+            if (alreadyOwned) {
+                logger.info("❌ {} 이미 pipe 보유 중 → 중복 구매 불가", playerId);
+                return false;
+            }
+        }
+
+
+        player.setCoin(player.getCoin() - price);
+
+        // 한글 → 영문 이름 매핑
+        String engItemName = switch (itemName) {
+            case "사과" -> "apple";
+            case "파이프" -> "pipe";
+            default -> null;
+        };
+
+        if (engItemName == null) {
+            System.out.println("❌ 알 수 없는 아이템: " + itemName);
+            return false;
+        }
+
+        // 해당 아이템 생성
+        Item item = null;
+        if ("apple".equals(engItemName)) {
+            item = new Item(
+                UUID.randomUUID().toString(),
+                "apple",
+                "food",
+                1,
+                "/objects/apple.png",
+                0.0,
+                0,
+                0,
+                true,
+                null
+            );
+        } else if ("pipe".equals(engItemName)) {
+            item = new Item(
+                UUID.randomUUID().toString(),
+                "pipe",
+                "tool",
+                1,
+                "/objects/pipe.png",
+                0.0,
+                0,
+                0,
+                true,
+                null
+            );
+        }
+
+        if (item == null) return false;
+
+        boolean success = addItemToPlayerInventory(playerId, item);
+
+        messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+            Map.of("type", "COIN_UPDATE", "coin", player.getCoin()));
+
+        if (success) {
+            messagingTemplate.convertAndSend("/topic/inventory/" + playerId,
+                getInventoryForPlayer(playerId));
+        }
+
+        return success;
+    }
+
    
     /**
      * 플레이어를 사망 상태로 설정하고 리스폰 타이머를 시작합니다.
      * @param playerId 사망 처리할 플레이어의 ID
+     * 신규 : 사망시 플레이어의 코인을 죽인 플레이어에게 모두 전송하고 업데이트합니다
      */
-    public void setPlayerDead(String playerId) {
+    public void setPlayerDead(String playerId, String killerId) {
         PlayerState player = connectedPlayers.get(playerId);
+        PlayerState killer = connectedPlayers.get(killerId);
+
         if (player != null) {
-            player.setHealth(0); // 체력을 0으로 설정
-            player.getAnimationState().setIsDead(true); // 사망 애니메이션 상태 활성화
-            
-            setPlayerCoin(playerId, 0); // 플레이어 골드 모두 잃음 처리
-            logger.info("Player {} died and lost all coins.", playerId);
-            logger.info("Player {} is now dead.", playerId);
-            // 리스폰 로직 (예: 별도의 스케줄러에서 N초 후 리스폰)은 GameController 또는 다른 매니저에서 처리
-            
+            player.setHealth(0);
+            player.getAnimationState().setIsDead(true);
+
+            // 기존 보유 코인 저장
+            int lostCoins = player.getCoin();
+
+            // 사망한 플레이어 코인 0으로 설정
+            player.setCoin(0);
+            logger.info("Player {} died and lost {} coins.", playerId, lostCoins);
+
+            // 죽인 플레이어에게 코인 전송
+            if (killer != null) {
+                killer.setCoin(killer.getCoin() + lostCoins);
+                logger.info("💰 Player {} received {} coins from {}.", killerId, lostCoins, playerId);
+
+                // killer HUD 업데이트
+                messagingTemplate.convertAndSend("/topic/hud/" + killerId,
+                    Map.of("type", "COIN_UPDATE", "coin", killer.getCoin()));
+            } else {
+                logger.info("🕳️ {} coins destroyed (no killer)", lostCoins);
+            }
+
+            // 죽은 플레이어 HUD 업데이트
+            messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                Map.of("type", "COIN_UPDATE", "coin", 0));
         }
     }
 

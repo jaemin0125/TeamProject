@@ -1,6 +1,8 @@
 // src/main/java/com/example/demo/dto/ObjectState.java
 package com.example.demo.dto;
 
+import java.util.UUID;
+
 import com.example.demo.dto.PlayerState.Position;
 
 import lombok.AllArgsConstructor;
@@ -18,4 +20,6 @@ public class ObjectState {
     private String itemType;   // ✨ 새로 추가: 이 오브젝트가 아이템일 경우 아이템 타입 (예: "APPLE")
     private Ammo ammo; // 총기류 아이템의 탄약 정보
     private boolean stackable; // 아이템 중첩 가능 여부
+    
+    
 }
