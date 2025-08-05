@@ -21,7 +21,6 @@ import NpcHUD from './NpcHUD';
 import { debug, vec2 } from 'three/tsl';
 
 
-
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
 extend({ H2: H2DummyObject });
@@ -108,9 +107,11 @@ export function GameCanvas({ playerNickname }) {
     const [dialogueState, setDialogueState] = useState(null); // NPC 대사 텍스트와 버튼 목록
     const [isNpcNear, setIsNpcNear] = useState(false); // 플레이어가 NPC 근처에 있는지 여부를 추적
     const [isShopOpen, setIsShopOpen] = useState(false);
+     const [npcActionMessage, setNpcActionMessage] = useState(null);
     const handleCloseShop = () => {
         setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
     };
+
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -248,6 +249,32 @@ export function GameCanvas({ playerNickname }) {
 
     }, [selectedInventorySlot, isReloading, inventory]);
 
+    useEffect(() => {
+        if (!stompClient || !currentPlayerId) return;
+
+        const sub = stompClient.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+            const data = JSON.parse(msg.body);
+
+            if (data.type === 'ITEM_GIVE_RESULT') {
+                setNpcActionMessage(data.message || "아이템 처리 실패");
+
+                // 3초 뒤 메시지 제거
+                setTimeout(() => setNpcActionMessage(null), 3000);
+            }
+
+            if (data.type === 'COIN_UPDATE') {
+                setHudState(prev => ({ ...prev, coin: data.coin }));
+            }
+        });
+
+        return () => sub.unsubscribe();
+    }, [stompClient, currentPlayerId]);
+
+
+
+
+
+
     // 'Q' 키 입력 감지 (인벤토리 토글)
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -338,7 +365,7 @@ export function GameCanvas({ playerNickname }) {
                 }),
             });
         }
-    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]);""
+    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]); ""
 
     // 'G' 키 입력 감지
     useEffect(() => {
@@ -374,7 +401,7 @@ export function GameCanvas({ playerNickname }) {
                     clearInterval(progressInterval); // 인터벌 종료
                 }
                 setHudState(prev => ({ ...prev, respawnProgress: currentProgress }));
-                
+
             }, 100); // 100ms마다 업데이트
 
             // 실제 리스폰 타이머
@@ -565,7 +592,7 @@ export function GameCanvas({ playerNickname }) {
                     });
 
                     const finalInventory = new Array(MAX_SLOTS).fill(null);
-                    
+
                     prevInventory.forEach((prevItem, index) => {
                         if (prevItem && receivedItemsMap.has(prevItem.id)) {
                             let newItem = receivedItemsMap.get(prevItem.id);
@@ -587,7 +614,7 @@ export function GameCanvas({ playerNickname }) {
                             finalInventory[emptySlotIndex] = newItem;
                         }
                     });
-                    
+
                     console.log('📦 인벤토리 업데이트 수신 (병합됨):', finalInventory);
                     return finalInventory;
                 });
@@ -677,7 +704,6 @@ export function GameCanvas({ playerNickname }) {
             });
 
 
-
             // 오브젝트 수집 이벤트 구독
             client.subscribe('/topic/collectObject', (message) => {
                 try {
@@ -695,14 +721,23 @@ export function GameCanvas({ playerNickname }) {
             });
 
             // 신규 추가 플레이어 코인 상태 구독
-            client.subscribe('/topic/hud/' + currentPlayerId, (message) => {
-                const data = JSON.parse(message.body);
+            // 코인 갱신 구독
+            client.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+                const data = JSON.parse(msg.body);
+
                 if (data.type === 'COIN_UPDATE') {
                     setHudState(prev => ({ ...prev, coin: data.coin }));
+                }
+
+                // 🔻 아이템 수령 실패 또는 코인 부족 메시지 처리
+                if (data.type === 'ITEM_GIVE_RESULT' && data.success === false) {
+                    setNpcActionMessage(data.message);
+                    setTimeout(() => setNpcActionMessage(null), 1000);
                 }
             });
 
         };
+
 
         // STOMP 오류 발생 시
         client.onStompError = (frame) => {
@@ -1074,7 +1109,7 @@ export function GameCanvas({ playerNickname }) {
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
 
-            {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
+                {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
                 {isNpcNear && (
                     <NpcHUD
                         dialogueState={dialogueState} // Npc 대화 상태 전달
@@ -1083,6 +1118,8 @@ export function GameCanvas({ playerNickname }) {
                         onCloseShop={handleCloseShop}
                         client={stompClient}
                         currentPlayerId={currentPlayerId}
+                        npcActionMessage={npcActionMessage}
+
                     />
                 )}
 

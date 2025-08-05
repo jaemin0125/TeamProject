@@ -155,3 +155,15 @@ body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, 
   min-width: 120px;
   border-radius: 4px;
 }
+
+.npc-warning-message {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background-color: rgba(0, 0, 0, 0.75);
+  border: 1px solid #ffffff;
+  border-radius: 6px;
+  color: #ffffff !important; /* ✅ 흰색 강제 적용 */
+  font-weight: bold;
+  font-size: 14px;
+  text-align: center;
+}
