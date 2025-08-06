@@ -99,8 +99,6 @@ export function GameCanvas({ playerNickname }) {
     }
 
     const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
-
-
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const [isChatting, setIsChatting] = useState(false); // 채팅 중인지 확인
@@ -111,6 +109,7 @@ export function GameCanvas({ playerNickname }) {
     const handleCloseShop = () => {
         setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
         setIsShopOpen(false); //상점 닫기
+
     };
 
 
@@ -1146,7 +1145,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
+                    <Physics gravity={[0, -25, 0]}  > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
@@ -1249,7 +1248,7 @@ export function GameCanvas({ playerNickname }) {
                             client={stompClient}
                             onDialogueChange={setDialogueState} // ✅ 상태 전달 받음
                             onProximityChange={setIsNpcNear} // 👈 proximity 상태 받음
-                            onShopOpen={() => setIsShopOpen(true)}
+                            setIsShopOpen={setIsShopOpen}
                             currentPlayerId={currentPlayerId}
                             inventoryRef={inventoryRef}
                         />

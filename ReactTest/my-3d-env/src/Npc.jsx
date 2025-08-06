@@ -14,7 +14,8 @@ export default function Npc({
   onShopOpen,
   onFacePlayer,
   currentPlayerId,
-  inventoryRef
+  inventoryRef,
+  setIsShopOpen
 }) {
   const gltf = useGLTF('/objects/npc.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
@@ -22,7 +23,6 @@ export default function Npc({
   const { gl } = useThree(); // Three.js 카메라와 WebGL 렌더러
   const [isNear, setIsNear] = useState(false);
   const [dialogueState, setDialogueState] = useState(null);
-  const [isShopOpen, setIsShopOpen] = useState(false);
   const [appleReceiveCount, setAppleReceiveCount] = useState(0);
   const MAX_APPLE_LIMIT = 5;
 
@@ -32,7 +32,7 @@ export default function Npc({
 
   const triggerDialogueStage1 = () => {
     const state = {
-      text: "테스트 NPC.",
+      text: "NPC.",
       buttons: [
         { label: "더 대화하기", onClick: triggerDialogueStage2 },
         { label: "아이템 받기", onClick: handleGiveItem },
@@ -41,12 +41,14 @@ export default function Npc({
           label: "닫기", onClick: () => {
             setDialogueState(null);
             onDialogueChange?.(null);
+            setIsShopOpen(false);
           }
-        }
+        } 
       ]
     };
     setDialogueState(state);
     onDialogueChange?.(state); // 외부에도 전달
+    setIsShopOpen(true);
   };
 
   const triggerDialogueStage2 = () => {
@@ -58,6 +60,7 @@ export default function Npc({
           label: "닫기", onClick: () => {
             setDialogueState(null);
             onDialogueChange?.(null);
+            setIsShopOpen(false);
           }
         }
       ]
@@ -90,7 +93,7 @@ export default function Npc({
       items: [
         { icon: "/objects/apple.png", name: '사과', price: 20 },
         { icon: "/objects/pipe.png", name: '파이프', price: 30 },
-        { icon: "/objects/ak-47.png", name: 'ak-47', price: 80}
+        { icon: "/objects/ak-47.png", name: 'ak-47', price: 80 }
       ],
       npcDescription: '상점에서 아이템 구매하세요',
 
@@ -140,7 +143,6 @@ export default function Npc({
     if (other.rigidBodyObject?.name === 'player') {
       setIsNear(false);
       setDialogueState(null);
-      setIsShopOpen(false);
       onProximityChange?.(false);
       setIsShopOpen(false); // ✅ 상점도 닫기
       onDialogueChange?.(null);

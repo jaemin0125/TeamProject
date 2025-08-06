@@ -20,9 +20,9 @@ export default function NpcHUD({
 
   return (
     <div className="npc-hud-ui">
-     {/* ✅ 실패 메시지 출력 */}
+      {/* ✅ 실패 메시지 출력 */}
       {npcActionMessage && (
-        <div className="npc-warning-message" style={{ marginTop: '10px', color: 'red' }}>
+        <div className="npc-warning-message" style={{ marginTop: '80px', color: 'red' }}>
           {npcActionMessage}
         </div>
       )}
@@ -53,38 +53,36 @@ export default function NpcHUD({
             <div className="npc-title">{dialogueState.npcName}</div>
           )}
 
-      <div className="shop-left">
-      {shopItems.map((item, index) => (
-        <div className="shop-item" key={index}>
-          <img src={item.icon} alt={item.name} className="shop-item-image" />
-          <div className="item-details">
-            <div className="item-name">{item.name} : {item.price}골드</div>
+          <div className="shop-left">
+            {shopItems.map((item, index) => (
+              <div className="shop-item" key={index} style={{ marginBottom: '10px' }}>
+                <img src={item.icon} alt={item.name} className="shop-item-image" />
+                <div className="item-details">
+                  <div className="item-name">{item.name} : {item.price}골드</div>
+                </div>
+                <button
+                  className="shop-buy-button"
+                  onClick={() => {
+                    console.log("🛒 구매 버튼 클릭됨:", item.name);
+                    dialogueState.onBuy?.(item);
+                  }}
+                >
+                  구매
+                </button>
+              </div>
+            ))}
           </div>
-          <button
-            className="shop-buy-button"
-            onClick={() => {
-              console.log("🛒 구매 버튼 클릭됨:", item.name);
-              dialogueState.onBuy?.(item);
-            }}
-          >
-            구매
-          </button>
+
+          {/* 우측 설명 영역 */}
+          <div className="shop-right">
+            <p>{npcDescription}</p>
+          </div>
+
+          <div className="shop-close-button" onClick={onCloseShop}>
+            닫기
+          </div>
         </div>
-      ))}
-
- 
-    </div>
-
-    {/* 우측 설명 영역 */}
-    <div className="shop-right">
-      <p>{npcDescription}</p>
-    </div>
-
-    <div className="shop-close-button" onClick={onCloseShop}>
-      닫기
-    </div>
-  </div>
-)}
+      )}
     </div>
   );
 }

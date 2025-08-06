@@ -490,7 +490,6 @@ public class PlayerService {
 		PlayerState player = connectedPlayers.get(playerId);
 		if (player == null)
 			return false;
-		System.out.println(itemName);
 		// ❌ 코인 부족
 		// 파이프 중복 방지
 		if (itemName.equals("파이프")) {
@@ -499,7 +498,7 @@ public class PlayerService {
 			if (alreadyOwned) {
 				System.out.println("❌ 이미 보유중인 아이템: 구매 불가");
 				messagingTemplate.convertAndSend("/topic/hud/" + playerId, Map.of("type", "ITEM_GIVE_RESULT", "success",
-						false, "message", itemName + "은(는) 1개만 소지할 수 있습니다."));
+						false, "message", itemName + " 은(는) 1개만 소지할 수 있습니다."));
 				return false;
 			}
 		} else if (itemName.equals("ak-47")) {
