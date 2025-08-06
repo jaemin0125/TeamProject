@@ -31,7 +31,8 @@ export function Player({
     isInventoryOpen,
     startEating,
     cancelEating,
-    isShopOpen
+    isShopOpen,
+    setIsDead
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -890,8 +891,14 @@ export function Player({
             camera.position.copy(finalCameraPos);
             camera.lookAt(playerHeadPos);
 
+            
+            
+            
             // 디버깅 로그
             // console.log(`P: ${pitch.current.toFixed(2)}, Y: ${yaw.current.toFixed(2)} | Hit: ${hit ? `toi: ${toi}` : 'null'} | Dist: ${finalDistance.toFixed(2)}`);
+        }
+        if(pos.y < -80 && !isDead){
+            setIsDead(true);
         }
         // 최종 디버그 로깅
         // HUD 상태 업데이트
