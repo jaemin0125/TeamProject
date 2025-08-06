@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect} from 'react';
-import {useThree } from '@react-three/fiber';
+import React, { useRef, useState, useEffect } from 'react';
+import { useThree } from '@react-three/fiber';
 import { useGLTF, useAnimations } from '@react-three/drei';
 import { RigidBody, CapsuleCollider } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -19,7 +19,7 @@ export default function Npc({
   const gltf = useGLTF('/objects/npc.glb');
   const { actions, names } = useAnimations(gltf.animations, gltf.scene);
   const npcRef = useRef();
-  const {gl} = useThree(); // Three.js 카메라와 WebGL 렌더러
+  const { gl } = useThree(); // Three.js 카메라와 WebGL 렌더러
   const [isNear, setIsNear] = useState(false);
   const [dialogueState, setDialogueState] = useState(null);
   const [isShopOpen, setIsShopOpen] = useState(false);
@@ -98,9 +98,11 @@ export default function Npc({
           console.warn("❌ STOMP 연결 또는 playerId 누락");
           return;
         }
-        if (item.name === '파이프' && inventoryRef?.current.some(item => item?.name === 'pipe')) {
-                return;
-            }
+
+        // 이중 검증 로직.
+        // if (item.name === '파이프' && inventoryRef?.current.some(item => item?.name === 'pipe')) {
+        //   return;
+        // }
 
         client.publish({
           destination: '/app/npc/action',

@@ -483,23 +483,24 @@ public class PlayerService {
         if (player == null) return false;
 
         // ❌ 코인 부족
-        if (player.getCoin() < price) {
-            System.out.println("❌ 코인 부족: 구매 불가");
-            messagingTemplate.convertAndSend("/topic/hud/" + playerId,
-                Map.of("type", "ITEM_GIVE_RESULT", "success", false, "message", "보유 금액이 부족합니다."));
-            return false;
-        }
+        // 파이프 중복 방지
+		if (itemName.equals("파이프")) {
+			List<Item> inventory = player.getInventory();
+			boolean alreadyOwned = inventory.stream().anyMatch(item -> item.getName().equals("pipe"));
+			if (alreadyOwned) {
+				messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+						Map.of("type", "ITEM_GIVE_RESULT", "success", false, "message", "해당 아이템은 1개만 소지할 수 있습니다."));
+				logger.info("❌ {} 이미 pipe 보유 중 → 중복 구매 불가", playerId);
+				return false;
+			}
+		} else if (player.getCoin() < price) {
+			System.out.println("❌ 코인 부족: 구매 불가");
+			messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+					Map.of("type", "ITEM_GIVE_RESULT", "success", false, "message", "보유 금액이 부족합니다."));
+			return false;
+		}
         
-      // 파이프 중복 방지
-        if (itemName.equals("pipe")) {
-            List<Item> inventory = player.getInventory();
-            boolean alreadyOwned = inventory.stream()
-                .anyMatch(item -> item.getName().equals("pipe"));
-            if (alreadyOwned) {
-                logger.info("❌ {} 이미 pipe 보유 중 → 중복 구매 불가", playerId);
-                return false;
-            }
-        }
+        
 
 
         player.setCoin(player.getCoin() - price);
