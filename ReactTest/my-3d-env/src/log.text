@@ -1,0 +1,48 @@
+GameCanvas.jsx:473 Uncaught TypeError: Cannot read properties of null (reading 'current')
+    at GameCanvas.jsx:473:76
+    at react-stack-bottom-frame (chunk-ABJ2RQAK.js?v=6e2d199b:17478:20)
+    at runWithFiberInDEV (chunk-ABJ2RQAK.js?v=6e2d199b:1485:72)
+    at commitHookEffectListMount (chunk-ABJ2RQAK.js?v=6e2d199b:8460:122)
+    at commitHookPassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:8518:60)
+    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9887:29)
+    at recursivelyTraversePassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:9868:13)
+    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9881:13)
+    at recursivelyTraversePassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:9868:13)
+    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9899:13)
+(anonymous) @ GameCanvas.jsx:473
+react-stack-bottom-frame @ chunk-ABJ2RQAK.js?v=6e2d199b:17478
+runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1485
+commitHookEffectListMount @ chunk-ABJ2RQAK.js?v=6e2d199b:8460
+commitHookPassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:8518
+commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9887
+recursivelyTraversePassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:9868
+commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9881
+recursivelyTraversePassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:9868
+commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9899
+flushPassiveEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11302
+(anonymous) @ chunk-ABJ2RQAK.js?v=6e2d199b:11060
+performWorkUntilDeadline @ chunk-ABJ2RQAK.js?v=6e2d199b:36Understand this error
+chunk-ABJ2RQAK.js?v=6e2d199b:6229 An error occurred in the <GameCanvas> component.
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
+
+defaultOnUncaughtError @ chunk-ABJ2RQAK.js?v=6e2d199b:6229
+logUncaughtError @ chunk-ABJ2RQAK.js?v=6e2d199b:6283
+runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1485
+lane.callback @ chunk-ABJ2RQAK.js?v=6e2d199b:6311
+callCallback @ chunk-ABJ2RQAK.js?v=6e2d199b:4097
+commitCallbacks @ chunk-ABJ2RQAK.js?v=6e2d199b:4109
+runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1487
+commitLayoutEffectOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9029
+flushLayoutEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11174
+commitRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:11080
+commitRootWhenReady @ chunk-ABJ2RQAK.js?v=6e2d199b:10512
+performWorkOnRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:10457
+performSyncWorkOnRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:11635
+flushSyncWorkAcrossRoots_impl @ chunk-ABJ2RQAK.js?v=6e2d199b:11536
+flushPassiveEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11311
+(anonymous) @ chunk-ABJ2RQAK.js?v=6e2d199b:11060
+performWorkUntilDeadline @ chunk-ABJ2RQAK.js?v=6e2d199b:36Understand this warning
+GameCanvas.jsx:709 [STOMP] Disconnected from WebSocket from App.jsx.
+chunk-ASDYTBGJ.js?v=6e2d199b:9728 THREE.WebGLRenderer: Context Lost.

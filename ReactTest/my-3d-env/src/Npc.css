@@ -1,0 +1,189 @@
+@font-face {
+    font-family: 'Cafe24Ohsquare';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/Cafe24Ohsquare.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+}
+
+
+/* 도트 폰트 공통 적용 */
+body, .npc-hud-ui,.npc-bubble-text, .shop-ui, .npc-option-button, .shop-button, .shop-item,.shop-container {
+  font-family: 'Cafe24Ohsquare', sans-serif;
+  letter-spacing: 1px;
+  text-transform: none;
+}
+
+/* ✅ NPC 대화창 */
+.npc-hud-ui {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  background: rgba(15, 15, 15, 0.9); /* Darker, more solid background */
+  backdrop-filter: blur(3px); /* Slightly more blur */
+  padding: 40px 60px; /* Reduced padding for a more compact look */
+  border-radius: 10px;
+  border: 2px solid #444; /* Darker, more subtle border */
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7); /* Deeper, non-glowing shadow */
+  font-family: 'Cafe24Ohsquare', sans-serif;
+  color: #e0e0e0; /* Slightly darker text color */
+  pointer-events: auto;
+  font-size: 1.8rem; /* Slightly smaller font size */
+}
+
+
+/* 말풍선 텍스트 */
+.npc-bubble-text {
+  margin-bottom: 16px;
+  font-size: 2rem;
+  text-align: center;
+  pointer-events: auto;
+}
+
+.npc-option-button {
+  pointer-events: auto;
+  margin: 6px 0;
+  padding: 12px 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 255, 255, 0.5); /* ✅ 동일한 반투명 테두리 */
+  border-radius: 8px;
+  backdrop-filter: blur(4px); /* ✅ 흐림 효과 추가 */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); /* ✅ 그림자 */
+  color: #f0f0f0;
+  font-size: 1.8rem;
+  font-family: 'Cafe24Ohsquare', sans-serif;
+  cursor: pointer;
+}
+
+.npc-option-button:hover {
+  background: #444;
+  color: #ffcc00;
+}
+
+/* ✅ 상점 UI */
+.shop-ui {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  background: #444;
+  padding: 30px 50px;
+  border: 4px solid #fff;
+  color: #fff;
+  text-align: center;
+  image-rendering: pixelated;
+}
+
+.shop-button {
+  margin: 10px;
+  padding: 14px 20px;
+  background: #222;
+  border: 3px solid #fff;
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.shop-button:hover {
+  background: #444;
+  color: #00ff00;
+}
+
+.shop-container {
+  display: flex;
+    min-width: 500px;
+  flex-direction: column; /* 상하 정렬로 전환 */
+  align-items: center; /* 수평 중앙 정렬 */
+  background: rgba(25, 25, 25, 0.95); /* Dark, almost black background */
+  padding: 25px;
+  border: 3px solid #555; /* Muted grey border */
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.6); /* Deeper, non-glowing shadow */
+  gap: 20px; /* Increased gap for better spacing */
+  overflow-y: auto; /* Enable scrolling for items if they exceed height */
+}
+
+.shop-item {
+  background: rgba(40, 40, 40, 0.9); /* Slightly lighter dark background for items */
+  padding: 15px 20px;
+  justify-content: space-between;
+  border: 1px solid #666; /* Subtle grey border for items */
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: 95%; /* Occupy more width within the container */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4); /* Subtle, dark shadow for items */
+}
+
+
+.shop-item img {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+}
+
+.shop-buy-button {
+  padding: 10px 20px;
+  background: #333; /* Dark grey button */
+  border: 1px solid #777; /* Lighter grey border */
+  border-radius: 4px;
+  color: #eee; /* Light grey text */
+  font-family: 'Cafe24Ohsquare', sans-serif;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); /* Subtle, dark shadow */
+  width: 80px;            /* 고정 너비 */
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.shop-buy-button:hover {
+  background-color: #555; /* Darker grey on hover */
+  color: #fff; /* White text on hover */
+  transform: none; /* No scale effect */
+}
+
+.shop-close-button {
+  margin-top: 25px;
+  padding: 12px 20px;
+  background: #333; /* Dark grey button */
+  border: 1px solid #777; /* Lighter grey border */
+  color: #eee; /* Light grey text */
+  font-size: 1.1rem;
+  cursor: pointer;
+  pointer-events: auto;
+  text-align: center;
+  min-width: 120px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4); /* Subtle, dark shadow */
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.shop-close-button:hover {
+  background-color: #555; /* Darker grey on hover */
+  color: #fff; /* White text on hover */
+}
+
+.npc-warning-message {
+  position: fixed; /* 고정 위치 */
+  top: 50%; /* 화면 중앙 */
+  left: 50%; /* 화면 중앙 */
+  transform: translate(-50%, -50%); /* 정확한 중앙 정렬 */
+  width: 320px; /* 고정 너비 */
+  padding: 18px 25px;
+  background-color: rgba(30, 0, 0, 0.95); /* Dark red, almost black background */
+  border: 2px solid #880000; /* Darker red border */
+  border-radius: 6px;
+  color: #ffaaaa !important; /* Soft red text */
+  font-weight: bold;
+  font-size: 16px;
+  text-align: center;
+  z-index: 10000; /* 다른 UI 위에 표시 */
+  box-shadow: 0 0 10px rgba(150, 0, 0, 0.7); /* Subtle red glow */
+}

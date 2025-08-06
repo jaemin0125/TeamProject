@@ -1,0 +1,87 @@
+@import url('https://cdn.jsdelivr.net/gh/webfontworld/pretendard/Pretendard.css');
+
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+
+.main_page {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  /* ✅ 화면 전체 크기 */
+  width: 100vw;
+  height: 100vh;
+
+  /* ✅ 배경 이미지 설정 */
+  background-image: url('/Thumbnail/Thumbnail.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  /* ✅ 스타일 */
+  font-family: 'Cafe24PROUP', sans-serif;
+  font-size: 3rem;
+  color: #F8FAFC;
+
+  /* ✅ 여백 제거 */
+  margin: 0;
+  padding: 0;
+
+  animation: fadeIn 1.5s ease-in;
+}
+
+
+.display-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+
+
+.nickname-input {
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  border: 2px solid #888;
+  font-size: 1rem;
+  margin-bottom: 1rem;      /* ✅ 버튼과 간격 */
+}
+
+
+.start-button {
+  padding: 0.6rem 1.2rem;
+  background-color: #213555;
+  color: white;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.2s;
+
+}
+
+
+.start-button:hover {
+  transform: scale(1.6);
+  background-color: #6482AD;;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}  
+
+
+@font-face {
+    font-family: 'Cafe24PROUP';
+    src: url('https://fastly.jsdelivr.net/gh/projectnoonnu/2507-1@1.0/Cafe24PROUP.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+}

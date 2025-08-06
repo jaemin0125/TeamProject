@@ -1,0 +1,14 @@
+/* src/index.css */
+body {
+  margin: 0;
+  overflow: hidden; /* 스크롤바 제거 */
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+}
+
+canvas {
+  display: block; /* 캔버스 아래 불필요한 여백 제거 */
+}
