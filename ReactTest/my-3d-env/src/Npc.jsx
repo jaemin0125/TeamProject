@@ -89,7 +89,8 @@ export default function Npc({
       shopOpen: true,
       items: [
         { icon: "/objects/apple.png", name: '사과', price: 20 },
-        { icon: "/objects/pipe.png", name: '파이프', price: 30 }
+        { icon: "/objects/pipe.png", name: '파이프', price: 30 },
+        { icon: "/objects/ak-47.png", name: 'ak-47', price: 80}
       ],
       npcDescription: '상점에서 아이템 구매하세요',
 

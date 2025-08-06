@@ -307,6 +307,9 @@ public class GameController {
                 case "파이프":
                     price = 30;
                     break;
+                case "ak-47":
+                	price = 80;
+                	break;
                 default:
                     System.out.println("❌ 알 수 없는 아이템: " + itemName);
                     messagingTemplate.convertAndSend("/topic/hud/" + playerId,
