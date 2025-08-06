@@ -8,6 +8,7 @@ export default function NpcHUD({
   gold,
   client,
   currentPlayerId,
+  npcActionMessage,
 }) {
   if (!dialogueState && !showPrompt) return null;
 
@@ -16,8 +17,16 @@ export default function NpcHUD({
   const npcDescription = dialogueState?.npcDescription || '';
   const countdownTime = dialogueState?.countdownTime || '';
 
+
   return (
     <div className="npc-hud-ui">
+     {/* ✅ 실패 메시지 출력 */}
+      {npcActionMessage && (
+        <div className="npc-warning-message" style={{ marginTop: '10px', color: 'red' }}>
+          {npcActionMessage}
+        </div>
+      )}
+
       {/* ✅ F 키 안내 */}
       {showPrompt && <div className="npc-bubble-text">[F] 대화하기</div>}
 
@@ -44,39 +53,38 @@ export default function NpcHUD({
             <div className="npc-title">{dialogueState.npcName}</div>
           )}
 
-          <div className="shop-left">
-            {shopItems.map((item, index) => (
-              <div className="shop-item" key={index}>
-                <img src={item.icon} alt={item.name} className="shop-item-image" />
-
-                <div className="item-details">
-                  <div className="item-name">
-                    {item.name} : {item.price}골드
-                  </div>
-                </div>
-
-                <button
-                  className="shop-buy-button"
-                  onClick={() => {
-                    console.log("🛒 구매 버튼 클릭됨:", item.name);
-                    dialogueState.onBuy?.(item);
-                  }}
-                >
-                  구매
-                </button>
-              </div>
-            ))}
+      <div className="shop-left">
+      {shopItems.map((item, index) => (
+        <div className="shop-item" key={index}>
+          <img src={item.icon} alt={item.name} className="shop-item-image" />
+          <div className="item-details">
+            <div className="item-name">{item.name} : {item.price}골드</div>
           </div>
-
-          <div className="shop-right">
-            <p>{npcDescription}</p>
-          </div>
-
-          <div className="shop-close-button" onClick={onCloseShop}>
-            닫기
-          </div>
+          <button
+            className="shop-buy-button"
+            onClick={() => {
+              console.log("🛒 구매 버튼 클릭됨:", item.name);
+              dialogueState.onBuy?.(item);
+            }}
+          >
+            구매
+          </button>
         </div>
-      )}
+      ))}
+
+ 
+    </div>
+
+    {/* 우측 설명 영역 */}
+    <div className="shop-right">
+      <p>{npcDescription}</p>
+    </div>
+
+    <div className="shop-close-button" onClick={onCloseShop}>
+      닫기
+    </div>
+  </div>
+)}
     </div>
   );
 }

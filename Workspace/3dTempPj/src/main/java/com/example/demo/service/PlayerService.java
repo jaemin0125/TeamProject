@@ -39,7 +39,8 @@ public class PlayerService {
     private final Map<String, ObjectState> sceneObjects = new ConcurrentHashMap<>();
     private final SimpMessagingTemplate messagingTemplate;
     private final Random random = new Random();
-
+    private final Map<String, Integer> appleReceiveMap = new ConcurrentHashMap<>(); // 아이템 횟수 제한
+    
     public PlayerService(SimpMessagingTemplate messagingTemplate) {
         this.messagingTemplate = messagingTemplate;
     }
@@ -481,8 +482,11 @@ public class PlayerService {
         PlayerState player = connectedPlayers.get(playerId);
         if (player == null) return false;
 
+        // ❌ 코인 부족
         if (player.getCoin() < price) {
             System.out.println("❌ 코인 부족: 구매 불가");
+            messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                Map.of("type", "ITEM_GIVE_RESULT", "success", false, "message", "보유 금액이 부족합니다."));
             return false;
         }
         
@@ -542,8 +546,13 @@ public class PlayerService {
             );
         }
 
-        if (item == null) return false;
+//        if (item == null) return false;
 
+        if (item == null) {
+            messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                Map.of("type", "ITEM_GIVE_RESULT", "success", false, "message", "아이템 생성에 실패했습니다."));
+            return false;
+        }
         boolean success = addItemToPlayerInventory(playerId, item);
 
         messagingTemplate.convertAndSend("/topic/hud/" + playerId,
@@ -557,7 +566,23 @@ public class PlayerService {
         return success;
     }
 
-   
+    // 아이템 5회 초과 수령시 제한
+    
+    //해당 플레이어가 지금까지 몇 번 사과를 받았는지 조회
+    public int getAppleReceiveCount(String playerId) {
+        return appleReceiveMap.getOrDefault(playerId, 0);
+    }
+    //해당 플레이어의 사과 수령 횟수를 1 증가시킴.
+    public void incrementAppleReceiveCount(String playerId) {
+        appleReceiveMap.put(playerId, getAppleReceiveCount(playerId) + 1);
+    }
+    
+    //해당 플레이어가 사과를 받을 수 있는지 여부를 판단함.
+    public boolean canReceiveApple(String playerId) {
+        return getAppleReceiveCount(playerId) < 5;
+    }
+    
+    
     /**
      * 플레이어를 사망 상태로 설정하고 리스폰 타이머를 시작합니다.
      * @param playerId 사망 처리할 플레이어의 ID
@@ -611,6 +636,5 @@ public class PlayerService {
         }
     }
     
-    
-    
+
 }

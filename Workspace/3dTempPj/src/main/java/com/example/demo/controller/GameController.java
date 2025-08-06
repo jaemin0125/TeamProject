@@ -2,6 +2,7 @@ package com.example.demo.controller;
 
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,7 +28,8 @@ public class GameController {
 	private static final Logger logger = LoggerFactory.getLogger(GameController.class);
 	private final SimpMessagingTemplate messagingTemplate;
 	private final PlayerService playerService;
-
+	private final Map<String, Integer> playerAppleReceiveMap = new ConcurrentHashMap<>();
+	
 	public GameController(SimpMessagingTemplate messagingTemplate, PlayerService playerService) {
 		this.messagingTemplate = messagingTemplate;
 		this.playerService = playerService;
@@ -238,56 +240,88 @@ public class GameController {
     }
 
     // 신규 추가 -->  8/4 추가 
-	@MessageMapping("/npc/action")
-	public void handleNpcAction(ItemActionRequest request) {
+    @MessageMapping("/npc/action")
+    public void handleNpcAction(ItemActionRequest request) {
 
-		if ("give".equals(request.getActionType())) {
+        String playerId = request.getPlayerId();
 
-			// 로그 확인용 (추후 제거 가능)
-			System.out.println("📦 NPC 지급 아이템: apple");
+        if ("give".equals(request.getActionType())) {
 
-			Item item = new Item(UUID.randomUUID().toString(), "apple", // 아이템 이름 (itemType)
-					"food", // 아이템 종류 (objectType)
-					1, "/objects/apple.png" // 프론트에서 사용할 이미지 경로
+            System.out.println("📦 NPC 지급 아이템: apple");
 
-			);
+            int maxReceiveCount = 5;
+            int receivedCount = playerService.getAppleReceiveCount(playerId);
 
-			boolean success = playerService.addItemToPlayerInventory(request.getPlayerId(), item);
+            if (receivedCount >= maxReceiveCount) {
+                messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                    Map.of(
+                        "type", "ITEM_GIVE_RESULT",
+                        "success", false,
+                        "message", "❌ 오늘은 더 이상 사과를 받을 수 없습니다."
+                    )
+                );
+                return;
+            }
 
-			if (success) {
-				messagingTemplate.convertAndSend("/topic/inventory/" + request.getPlayerId(),
-						playerService.getInventoryForPlayer(request.getPlayerId()));
-			} 
-			
-			
-		} else if ("buy".equalsIgnoreCase(request.getActionType())) {
-		    System.out.println("🛒 구매 요청 도착!");
+            // ✅ 정상 지급 처리
+            Item item = new Item(
+                UUID.randomUUID().toString(),
+                "apple",
+                "food",
+                1,
+                "/objects/apple.png"
+            );
 
-		    String playerId = request.getPlayerId(); // ✅ 선언 필요
-		    String itemName = request.getItemData().getName(); // 예: "apple"
+            boolean success = playerService.addItemToPlayerInventory(playerId, item);
 
-		    int price;
-		    switch (itemName.toLowerCase().trim()) {
-		    case "apple":
-		    case "사과":
-		        price = 20;
-		        break;
-		    case "pipe":
-		    case "파이프":
-		        price = 30;
-		        break;
-		    default:
-		        System.out.println("❌ 알 수 없는 아이템: " + itemName);
-		        return;
-		}
+            if (success) {
+                playerService.incrementAppleReceiveCount(playerId);
 
-		    playerService.buyItemForPlayer(playerId, itemName, price);
-		}
+                // 1️⃣ 인벤토리 동기화
+                messagingTemplate.convertAndSend("/topic/inventory/" + playerId,
+                    playerService.getInventoryForPlayer(playerId)
+                );
 
+                // 2️⃣ 성공 메시지 전송
+                messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                    Map.of(
+                        "type", "ITEM_GIVE_RESULT",
+                        "success", true,
+                        "message", "🍎 아이템을 성공적으로 받았습니다!"
+                    )
+                );
+            }  // ✅ ← 이 줄이 없어서 에러가 발생했던 것
+        } 
+        else if ("buy".equalsIgnoreCase(request.getActionType())) {
+            System.out.println("🛒 구매 요청 도착!");
 
-		}
+            String itemName = request.getItemData().getName();
+            int price;
 
+            switch (itemName.toLowerCase().trim()) {
+                case "apple":
+                case "사과":
+                    price = 20;
+                    break;
+                case "pipe":
+                case "파이프":
+                    price = 30;
+                    break;
+                default:
+                    System.out.println("❌ 알 수 없는 아이템: " + itemName);
+                    messagingTemplate.convertAndSend("/topic/hud/" + playerId,
+                        Map.of(
+                            "type", "ITEM_GIVE_RESULT",
+                            "success", false,
+                            "message", "알 수 없는 아이템입니다: " + itemName
+                        )
+                    );
+                    return;
+            }
 
+            playerService.buyItemForPlayer(playerId, itemName, price);
+        }
+    }
 
 	/**
 	 * 웹소켓 연결이 끊어졌을 때 호출되는 메서드. 이 메서드는 WebSocketEventListener의

@@ -21,7 +21,6 @@ import NpcHUD from './NpcHUD';
 import { debug, vec2 } from 'three/tsl';
 
 
-
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
 extend({ H2: H2DummyObject });
@@ -40,7 +39,7 @@ const { id: currentPlayerId } = getOrCreatePlayerInfo();
 
 
 // React Error Boundary 컴포넌트
-// 자식 컴포넌트에서 발생하는 오류를 잡아내어 대체 UI를 렌더링합니다.
+// 자식 컴포넌트에서 발생하는 오류를 잡아내어 대체 UI를 렌더링합니다.F
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
@@ -108,9 +107,12 @@ export function GameCanvas({ playerNickname }) {
     const [dialogueState, setDialogueState] = useState(null); // NPC 대사 텍스트와 버튼 목록
     const [isNpcNear, setIsNpcNear] = useState(false); // 플레이어가 NPC 근처에 있는지 여부를 추적
     const [isShopOpen, setIsShopOpen] = useState(false);
+     const [npcActionMessage, setNpcActionMessage] = useState(null);
     const handleCloseShop = () => {
         setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
+        setIsShopOpen(false); //상점 닫기
     };
+
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -248,6 +250,32 @@ export function GameCanvas({ playerNickname }) {
 
     }, [selectedInventorySlot, isReloading, inventory]);
 
+    useEffect(() => {
+        if (!stompClient || !currentPlayerId) return;
+
+        const sub = stompClient.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+            const data = JSON.parse(msg.body);
+
+            if (data.type === 'ITEM_GIVE_RESULT') {
+                setNpcActionMessage(data.message || "아이템 처리 실패");
+
+                // 3초 뒤 메시지 제거
+                setTimeout(() => setNpcActionMessage(null), 3000);
+            }
+
+            if (data.type === 'COIN_UPDATE') {
+                setHudState(prev => ({ ...prev, coin: data.coin }));
+            }
+        });
+
+        return () => sub.unsubscribe();
+    }, [stompClient, currentPlayerId]);
+
+
+
+
+
+
     // 'Q' 키 입력 감지 (인벤토리 토글)
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -311,9 +339,12 @@ export function GameCanvas({ playerNickname }) {
             const itemData = {
                 name: itemToDrop.name,
                 image: itemToDrop.image,
-                ammo: itemToDrop.ammo ? { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve } : undefined,
-                magazineSize: itemToDrop.magazineSize,
             };
+
+            if (itemToDrop.ammo) {
+                itemData.ammo = { current: itemToDrop.ammo.current, reserve: itemToDrop.ammo.reserve };
+                itemData.magazineSize = itemToDrop.magazineSize;
+            }
 
             // ✨ 아이템 데이터를 임시 상태에 저장 (ID를 키로 사용)
             setDroppedItemData(prev => ({ ...prev, [itemToDrop.id]: itemData }));
@@ -335,7 +366,7 @@ export function GameCanvas({ playerNickname }) {
                 }),
             });
         }
-    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]);
+    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]); ""
 
     // 'G' 키 입력 감지
     useEffect(() => {
@@ -371,7 +402,7 @@ export function GameCanvas({ playerNickname }) {
                     clearInterval(progressInterval); // 인터벌 종료
                 }
                 setHudState(prev => ({ ...prev, respawnProgress: currentProgress }));
-                
+
             }, 100); // 100ms마다 업데이트
 
             // 실제 리스폰 타이머
@@ -466,15 +497,18 @@ export function GameCanvas({ playerNickname }) {
     useEffect(() => {
         const selectedItem = inventory[selectedInventorySlot];
 
-        if (selectedItem && selectedItem?.name === 'ak-47' && selectedItem?.ammo.current === 0 && selectedItem?.ammo.reserve === 0) {
+        // 현재 선택된 아이템이 'ak-47'이고 탄약이 모두 소진되었는지 확인
+        if (selectedItem && selectedItem.name === 'ak-47' && selectedItem.ammo && selectedItem.ammo.current === 0 && selectedItem.ammo.reserve === 0) {
+            console.log(`[GameCanvas] AK-47 has run out of ammo and is being removed from inventory.`);
 
-            // 인벤토리 제거
+
+            // 인벤토리에서 해당 아이템 제거
             setInventory(prevInventory => {
                 const newInventory = [...prevInventory];
                 newInventory[selectedInventorySlot] = null; // 현재 슬롯을 비웁니다.
 
                 return newInventory;
-            }); 
+            });
         }
     }, [selectedItem, inventory, selectedInventorySlot]); // currentAmmo, maxAmmo, 또는 선택된 슬롯이 변경될 때마다 실행
 
@@ -548,44 +582,42 @@ export function GameCanvas({ playerNickname }) {
                 }
             });
 
-            // 인벤토리 업데이트 구독
+            // 인벤토리 업데이트 구독 (슬롯 위치 및 ammo 정보 유지 로직 적용)
             client.subscribe(`/topic/inventory/${currentPlayerId}`, (message) => {
                 const receivedItems = JSON.parse(message.body);
 
                 setInventory(prevInventory => {
-                    // 새로운 인벤토리 배열을 생성 (기존 상태 복사)
-                    const newInventory = [...prevInventory];
+                    const receivedItemsMap = new Map();
+                    receivedItems.forEach(item => {
+                        if (item) receivedItemsMap.set(item.id, item);
+                    });
 
-                    // 서버에서 받은 아이템들을 순회하며 인벤토리 업데이트
-                    receivedItems.forEach((item, index) => {
-                        if (item) {
-                            // 기존 아이템 정보를 찾음 (같은 슬롯, 같은 아이템 이름)
-                            const existingItem = prevInventory[index];
+                    const finalInventory = new Array(MAX_SLOTS).fill(null);
 
-                            // 만약 서버에서 받은 아이템에 ammo 정보가 없고,
-                            // 기존 아이템에 ammo 정보가 있다면, 기존 정보를 유지
-                            if (existingItem && existingItem.ammo && !item.ammo) {
-                                newInventory[index] = {
-                                    ...item,
-                                    ammo: existingItem.ammo,
-                                    magazineSize: existingItem.magazineSize
-                                };
-                            } else {
-                                newInventory[index] = item;
+                    prevInventory.forEach((prevItem, index) => {
+                        if (prevItem && receivedItemsMap.has(prevItem.id)) {
+                            let newItem = receivedItemsMap.get(prevItem.id);
+
+                            // 서버에서 받은 아이템에 ammo 정보가 없으면 기존 ammo 정보를 유지
+                            if (prevItem.ammo && !newItem.ammo) {
+                                newItem.ammo = prevItem.ammo;
+                                newItem.magazineSize = prevItem.magazineSize;
                             }
-                        } else {
-                            newInventory[index] = null;
+
+                            finalInventory[index] = newItem;
+                            receivedItemsMap.delete(prevItem.id);
                         }
                     });
 
-                    // 혹시 모를 배열 길이 문제를 위해 8칸으로 맞춤
-                    const fixedInventory = Array(MAX_SLOTS).fill(null);
-                    for (let i = 0; i < Math.min(newInventory.length, MAX_SLOTS); i++) {
-                        fixedInventory[i] = newInventory[i];
-                    }
+                    receivedItemsMap.forEach(newItem => {
+                        const emptySlotIndex = finalInventory.findIndex(slot => slot === null);
+                        if (emptySlotIndex !== -1) {
+                            finalInventory[emptySlotIndex] = newItem;
+                        }
+                    });
 
-                    console.log('📦 인벤토리 업데이트 수신:', fixedInventory);
-                    return fixedInventory;
+                    console.log('📦 인벤토리 업데이트 수신 (병합됨):', finalInventory);
+                    return finalInventory;
                 });
             });
 
@@ -673,7 +705,6 @@ export function GameCanvas({ playerNickname }) {
             });
 
 
-
             // 오브젝트 수집 이벤트 구독
             client.subscribe('/topic/collectObject', (message) => {
                 try {
@@ -691,14 +722,23 @@ export function GameCanvas({ playerNickname }) {
             });
 
             // 신규 추가 플레이어 코인 상태 구독
-            client.subscribe('/topic/hud/' + currentPlayerId, (message) => {
-                const data = JSON.parse(message.body);
+            // 코인 갱신 구독
+            client.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+                const data = JSON.parse(msg.body);
+
                 if (data.type === 'COIN_UPDATE') {
                     setHudState(prev => ({ ...prev, coin: data.coin }));
+                }
+
+                // 🔻 아이템 수령 실패 또는 코인 부족 메시지 처리
+                if (data.type === 'ITEM_GIVE_RESULT' && data.success === false) {
+                    setNpcActionMessage(data.message);
+                    setTimeout(() => setNpcActionMessage(null), 1000);
                 }
             });
 
         };
+
 
         // STOMP 오류 발생 시
         client.onStompError = (frame) => {
@@ -1070,7 +1110,7 @@ export function GameCanvas({ playerNickname }) {
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
 
-            {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
+                {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
                 {isNpcNear && (
                     <NpcHUD
                         dialogueState={dialogueState} // Npc 대화 상태 전달
@@ -1079,6 +1119,8 @@ export function GameCanvas({ playerNickname }) {
                         onCloseShop={handleCloseShop}
                         client={stompClient}
                         currentPlayerId={currentPlayerId}
+                        npcActionMessage={npcActionMessage}
+
                     />
                 )}
 
@@ -1164,6 +1206,7 @@ export function GameCanvas({ playerNickname }) {
                                         isInventoryOpen={isInventoryOpen}
                                         startEating={startEating}
                                         cancelEating={cancelEating}
+                                        isShopOpen={isShopOpen}
                                     />
                                 )}
                             </React.Suspense>
