@@ -1,48 +1,28 @@
-GameCanvas.jsx:473 Uncaught TypeError: Cannot read properties of null (reading 'current')
-    at GameCanvas.jsx:473:76
-    at react-stack-bottom-frame (chunk-ABJ2RQAK.js?v=6e2d199b:17478:20)
-    at runWithFiberInDEV (chunk-ABJ2RQAK.js?v=6e2d199b:1485:72)
-    at commitHookEffectListMount (chunk-ABJ2RQAK.js?v=6e2d199b:8460:122)
-    at commitHookPassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:8518:60)
-    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9887:29)
-    at recursivelyTraversePassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:9868:13)
-    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9881:13)
-    at recursivelyTraversePassiveMountEffects (chunk-ABJ2RQAK.js?v=6e2d199b:9868:13)
-    at commitPassiveMountOnFiber (chunk-ABJ2RQAK.js?v=6e2d199b:9899:13)
-(anonymous) @ GameCanvas.jsx:473
-react-stack-bottom-frame @ chunk-ABJ2RQAK.js?v=6e2d199b:17478
-runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1485
-commitHookEffectListMount @ chunk-ABJ2RQAK.js?v=6e2d199b:8460
-commitHookPassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:8518
-commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9887
-recursivelyTraversePassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:9868
-commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9881
-recursivelyTraversePassiveMountEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:9868
-commitPassiveMountOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9899
-flushPassiveEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11302
-(anonymous) @ chunk-ABJ2RQAK.js?v=6e2d199b:11060
-performWorkUntilDeadline @ chunk-ABJ2RQAK.js?v=6e2d199b:36Understand this error
-chunk-ABJ2RQAK.js?v=6e2d199b:6229 An error occurred in the <GameCanvas> component.
-
-Consider adding an error boundary to your tree to customize error handling behavior.
-Visit https://react.dev/link/error-boundaries to learn more about error boundaries.
-
-defaultOnUncaughtError @ chunk-ABJ2RQAK.js?v=6e2d199b:6229
-logUncaughtError @ chunk-ABJ2RQAK.js?v=6e2d199b:6283
-runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1485
-lane.callback @ chunk-ABJ2RQAK.js?v=6e2d199b:6311
-callCallback @ chunk-ABJ2RQAK.js?v=6e2d199b:4097
-commitCallbacks @ chunk-ABJ2RQAK.js?v=6e2d199b:4109
-runWithFiberInDEV @ chunk-ABJ2RQAK.js?v=6e2d199b:1487
-commitLayoutEffectOnFiber @ chunk-ABJ2RQAK.js?v=6e2d199b:9029
-flushLayoutEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11174
-commitRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:11080
-commitRootWhenReady @ chunk-ABJ2RQAK.js?v=6e2d199b:10512
-performWorkOnRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:10457
-performSyncWorkOnRoot @ chunk-ABJ2RQAK.js?v=6e2d199b:11635
-flushSyncWorkAcrossRoots_impl @ chunk-ABJ2RQAK.js?v=6e2d199b:11536
-flushPassiveEffects @ chunk-ABJ2RQAK.js?v=6e2d199b:11311
-(anonymous) @ chunk-ABJ2RQAK.js?v=6e2d199b:11060
-performWorkUntilDeadline @ chunk-ABJ2RQAK.js?v=6e2d199b:36Understand this warning
-GameCanvas.jsx:709 [STOMP] Disconnected from WebSocket from App.jsx.
-chunk-ASDYTBGJ.js?v=6e2d199b:9728 THREE.WebGLRenderer: Context Lost.
+🎯 정확히 콜라이더 맞춤! 타겟: 34b4ecc3-a6c5-4699-a3e5-3bffe5e827a3
+GameCanvas.jsx:628 [STOMP] playerHit 메시지 수신: {fromId: '22bca84c-5a53-45e2-9367-8e4fa9a7e286', targetId: '34b4ecc3-a6c5-4699-a3e5-3bffe5e827a3', fromPosition: {…}, targetPosition: {…}, weaponName: 'ak-47', …}damage: 10fromId: "22bca84c-5a53-45e2-9367-8e4fa9a7e286"fromPosition: {x: -15.240804672241211, y: 0.835708737373352, z: 2.1910128593444824}targetId: "34b4ecc3-a6c5-4699-a3e5-3bffe5e827a3"targetPosition: {x: -0.25998732447624207, y: 0.8357969522476196, z: 0.44686758518218994}weaponName: "ak-47"[[Prototype]]: Object
+GameCanvas.jsx:687 🥊 GameCanvas: 내가 공격했습니다!
+GameCanvas.jsx:702 [STOMP Subscribe] playerHit 메시지 파싱 실패: ReferenceError: targetPlayer is not defined
+    at GameCanvas.jsx:691:21
+    at MESSAGE (@stomp_stompjs.js?v=7bc148ac:492:9)
+    at Parser.onFrame (@stomp_stompjs.js?v=7bc148ac:545:9)
+    at Parser._retrievedBody (@stomp_stompjs.js?v=7bc148ac:307:12)
+    at Parser._collectBodyFixedSize (@stomp_stompjs.js?v=7bc148ac:299:12)
+    at Parser.parseChunk (@stomp_stompjs.js?v=7bc148ac:212:12)
+    at _webSocket.onmessage (@stomp_stompjs.js?v=7bc148ac:559:14)
+    at EventTarget.dispatchEvent (sockjs-client.js?v=7bc148ac:981:24)
+    at sockjs-client.js?v=7bc148ac:3633:21
+    at Array.forEach (<anonymous>)
+(anonymous) @ GameCanvas.jsx:702
+MESSAGE @ @stomp_stompjs.js?v=7bc148ac:492
+(anonymous) @ @stomp_stompjs.js?v=7bc148ac:545
+_retrievedBody @ @stomp_stompjs.js?v=7bc148ac:307
+_collectBodyFixedSize @ @stomp_stompjs.js?v=7bc148ac:299
+parseChunk @ @stomp_stompjs.js?v=7bc148ac:212
+_webSocket.onmessage @ @stomp_stompjs.js?v=7bc148ac:559
+EventTarget.dispatchEvent @ sockjs-client.js?v=7bc148ac:981
+(anonymous) @ sockjs-client.js?v=7bc148ac:3633
+SockJS._transportMessage @ sockjs-client.js?v=7bc148ac:3631
+EventEmitter.emit @ sockjs-client.js?v=7bc148ac:1034
+WebSocketTransport.ws.onmessage @ sockjs-client.js?v=7bc148ac:1089Understand this error
+GameCanvas.jsx:653 💥 GameCanvas: 다른 플레이어 34b4e가 맞았습니다!
+GameCanvas.jsx:668 💥 GameCanvas: 다른 플레이어 34b4e isHitted 상태 false로 재설정.

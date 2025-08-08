@@ -21,7 +21,6 @@ import NpcHUD from './NpcHUD';
 import { debug, vec2 } from 'three/tsl';
 
 
-
 // Three.js 객체 확장 (필요한 경우에만 유지)
 class H2DummyObject extends THREE.Object3D { }
 extend({ H2: H2DummyObject });
@@ -40,7 +39,7 @@ const { id: currentPlayerId } = getOrCreatePlayerInfo();
 
 
 // React Error Boundary 컴포넌트
-// 자식 컴포넌트에서 발생하는 오류를 잡아내어 대체 UI를 렌더링합니다.
+// 자식 컴포넌트에서 발생하는 오류를 잡아내어 대체 UI를 렌더링합니다.F
 class ErrorBoundary extends React.Component {
     constructor(props) {
         super(props);
@@ -100,17 +99,19 @@ export function GameCanvas({ playerNickname }) {
     }
 
     const sceneRef = useRef(); // GameCanvas 함수 내부에서 선언
-
-
     const [chatMessages, setChatMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const [isChatting, setIsChatting] = useState(false); // 채팅 중인지 확인
     const [dialogueState, setDialogueState] = useState(null); // NPC 대사 텍스트와 버튼 목록
     const [isNpcNear, setIsNpcNear] = useState(false); // 플레이어가 NPC 근처에 있는지 여부를 추적
     const [isShopOpen, setIsShopOpen] = useState(false);
+     const [npcActionMessage, setNpcActionMessage] = useState(null);
     const handleCloseShop = () => {
         setDialogueState(null); // *NpcHud의 상점 Ui 닫기 버튼 활성화
+        setIsShopOpen(false); //상점 닫기
+
     };
+
 
     const [hudState, setHudState] = useState({
         health: 100,
@@ -248,6 +249,32 @@ export function GameCanvas({ playerNickname }) {
 
     }, [selectedInventorySlot, isReloading, inventory]);
 
+    useEffect(() => {
+        if (!stompClient || !currentPlayerId) return;
+
+        const sub = stompClient.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+            const data = JSON.parse(msg.body);
+
+            if (data.type === 'ITEM_GIVE_RESULT') {
+                setNpcActionMessage(data.message || "아이템 처리 실패");
+
+                // 3초 뒤 메시지 제거
+                setTimeout(() => setNpcActionMessage(null), 3000);
+            }
+
+            if (data.type === 'COIN_UPDATE') {
+                setHudState(prev => ({ ...prev, coin: data.coin }));
+            }
+        });
+
+        return () => sub.unsubscribe();
+    }, [stompClient, currentPlayerId]);
+
+
+
+
+
+
     // 'Q' 키 입력 감지 (인벤토리 토글)
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -338,7 +365,7 @@ export function GameCanvas({ playerNickname }) {
                 }),
             });
         }
-    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]);""
+    }, [selectedInventorySlot, isChatting, isInventoryOpen, stompClient, currentPlayerId]); ""
 
     // 'G' 키 입력 감지
     useEffect(() => {
@@ -374,7 +401,7 @@ export function GameCanvas({ playerNickname }) {
                     clearInterval(progressInterval); // 인터벌 종료
                 }
                 setHudState(prev => ({ ...prev, respawnProgress: currentProgress }));
-                
+
             }, 100); // 100ms마다 업데이트
 
             // 실제 리스폰 타이머
@@ -509,7 +536,7 @@ export function GameCanvas({ playerNickname }) {
 
     // STOMP WebSocket 연결 및 메시지 구독 로직
     useEffect(() => {
-        const WS_URL = 'http://localhost:8080/ws';
+        const WS_URL = 'https://7215d369b7d2.ngrok-free.app/ws';
         const socket = new SockJS(WS_URL); // SockJS를 사용하여 WebSocket 연결
         const client = new Client({
             webSocketFactory: () => socket, // SockJS 소켓 팩토리 설정
@@ -565,7 +592,7 @@ export function GameCanvas({ playerNickname }) {
                     });
 
                     const finalInventory = new Array(MAX_SLOTS).fill(null);
-                    
+
                     prevInventory.forEach((prevItem, index) => {
                         if (prevItem && receivedItemsMap.has(prevItem.id)) {
                             let newItem = receivedItemsMap.get(prevItem.id);
@@ -587,7 +614,7 @@ export function GameCanvas({ playerNickname }) {
                             finalInventory[emptySlotIndex] = newItem;
                         }
                     });
-                    
+
                     console.log('📦 인벤토리 업데이트 수신 (병합됨):', finalInventory);
                     return finalInventory;
                 });
@@ -651,6 +678,17 @@ export function GameCanvas({ playerNickname }) {
                                     });
                                 }, 500);
 
+                                // 신규 추가 죽은 사람 ID + 죽인 사람 Id 표시
+                                // 플레이어가 죽었을때 코인을 죽인 사람에게 전달하게 정보 구독
+                                if (targetPlayer.health <= 0 && !targetPlayer.isDead) {
+                                    client.publish({
+                                        destination: "/app/player/dead",
+                                        body: JSON.stringify({
+                                            deadPlayerId: targetPlayer.id,    // 죽은 사람의 ID
+                                            killerPlayerId: currentPlayerId,  // 죽인 사람의 ID
+                                        }),
+                                    });
+                                }
                             }
                             return { ...prev, otherPlayers: newOtherPlayers };
                         });
@@ -659,23 +697,11 @@ export function GameCanvas({ playerNickname }) {
                     if (data.fromId === currentPlayerId) {
                         console.log('🥊 GameCanvas: 내가 공격했습니다!');
                     }
-                    // 신규 추가 죽은 사람 ID + 죽인 사람 Id 표시
-                    // 플레이어가 죽었을때 코인을 죽인 사람에게 전달하게 정보 구독
-                    if (targetPlayer.health <= 0 && !targetPlayer.isDead) {
-                        client.publish({
-                            destination: "/app/player/dead",
-                            body: JSON.stringify({
-                                deadPlayerId: targetPlayer.id,    // 죽은 사람의 ID
-                                killerPlayerId: currentPlayerId,  // 죽인 사람의 ID
-                            }),
-                        });
-                    }
 
                 } catch (e) {
                     console.error('[STOMP Subscribe] playerHit 메시지 파싱 실패:', e);
                 }
             });
-
 
 
             // 오브젝트 수집 이벤트 구독
@@ -695,14 +721,23 @@ export function GameCanvas({ playerNickname }) {
             });
 
             // 신규 추가 플레이어 코인 상태 구독
-            client.subscribe('/topic/hud/' + currentPlayerId, (message) => {
-                const data = JSON.parse(message.body);
+            // 코인 갱신 구독
+            client.subscribe(`/topic/hud/${currentPlayerId}`, (msg) => {
+                const data = JSON.parse(msg.body);
+
                 if (data.type === 'COIN_UPDATE') {
                     setHudState(prev => ({ ...prev, coin: data.coin }));
+                }
+
+                // 🔻 아이템 수령 실패 또는 코인 부족 메시지 처리
+                if (data.type === 'ITEM_GIVE_RESULT' && data.success === false) {
+                    setNpcActionMessage(data.message);
+                    setTimeout(() => setNpcActionMessage(null), 1000);
                 }
             });
 
         };
+
 
         // STOMP 오류 발생 시
         client.onStompError = (frame) => {
@@ -760,12 +795,12 @@ export function GameCanvas({ playerNickname }) {
                         baseObject.restitution = 0;
                         break;
                     case 'ak-47':
-                        baseObject.mass = 10;
+                        baseObject.mass = 0.2;
                         baseObject.friction = 10;
                         baseObject.restitution = 0;
                         break;
                     case 'pipe':
-                        baseObject.mass = 10;
+                        baseObject.mass = 0.2;
                         baseObject.friction = 10;
                         baseObject.restitution = 0.1;
                         break;
@@ -1074,7 +1109,7 @@ export function GameCanvas({ playerNickname }) {
             {/* 키보드 컨트롤 맵 설정 */}
             <KeyboardControls map={controlsMap}>
 
-            {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
+                {/* 고정형 UI는(NpcHud UI는) Canvas 바깥에 있어야 CSS 적용됨 */}
                 {isNpcNear && (
                     <NpcHUD
                         dialogueState={dialogueState} // Npc 대화 상태 전달
@@ -1083,6 +1118,8 @@ export function GameCanvas({ playerNickname }) {
                         onCloseShop={handleCloseShop}
                         client={stompClient}
                         currentPlayerId={currentPlayerId}
+                        npcActionMessage={npcActionMessage}
+
                     />
                 )}
 
@@ -1108,7 +1145,7 @@ export function GameCanvas({ playerNickname }) {
                     {/* 방향성 라이트 (태양과 같은 광원) */}
                     <directionalLight position={[10, 10, 10]} intensity={2} castShadow />
                     {/* Rapier 물리 엔진 설정 */}
-                    <Physics gravity={[0, -9.81, 0]}  > {/* 중력 설정 */}
+                    <Physics gravity={[0, -25, 0]} > {/* 중력 설정 */}
                         {/* GModMap을 Physics 내부로 이동하여 물리적 상호작용 가능하게 함 */}
                         <GModMap />
 
@@ -1168,6 +1205,7 @@ export function GameCanvas({ playerNickname }) {
                                         isInventoryOpen={isInventoryOpen}
                                         startEating={startEating}
                                         cancelEating={cancelEating}
+                                        isShopOpen={isShopOpen}
                                     />
                                 )}
                             </React.Suspense>
@@ -1210,8 +1248,9 @@ export function GameCanvas({ playerNickname }) {
                             client={stompClient}
                             onDialogueChange={setDialogueState} // ✅ 상태 전달 받음
                             onProximityChange={setIsNpcNear} // 👈 proximity 상태 받음
-                            onShopOpen={() => setIsShopOpen(true)}
+                            setIsShopOpen={setIsShopOpen}
                             currentPlayerId={currentPlayerId}
+                            inventoryRef={inventoryRef}
                         />
                     </Physics>
                 </Canvas>

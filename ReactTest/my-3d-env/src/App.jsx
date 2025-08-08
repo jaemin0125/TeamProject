@@ -1,5 +1,5 @@
 // App.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GameCanvas } from './GameCanvas'; // GameCanvas 임포트
 import { getOrCreatePlayerInfo } from './utils/constants'; // getOrCreatePlayerInfo 임포트
 import './App.css';
@@ -28,9 +28,18 @@ export default function App() {
     }, [enteredGame]);
 
     // 닉네임 제출 핸들러
+    const nicknameInputRef = useRef(null);
+
     const handleNicknameSubmit = () => {
         localStorage.setItem('myNickname', nickname); // 입력된 닉네임 저장
+
+        if (nickname.trim().length === 0) {
+            alert('닉네임을 입력하세요.');
+            nicknameInputRef.current.focus();
+            return;
+        }
         setEnteredGame(true); // 게임 입장 상태로 변경
+
     };
 
     // 게임 입장 전 닉네임 입력 화면
@@ -51,6 +60,7 @@ export default function App() {
                 </p>
                 <input
                     type="text"
+                    ref={nicknameInputRef}
                     value={nickname}
                     onChange={(e) => setNickname(e.target.value)}
                     placeholder="닉네임을 입력하세요"

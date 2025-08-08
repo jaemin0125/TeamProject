@@ -30,7 +30,9 @@ export function Player({
     isReloading, // isReloading prop 추가
     isInventoryOpen,
     startEating,
-    cancelEating
+    cancelEating,
+    isShopOpen,
+    setIsDead
 
 }) {
     const { camera, gl, scene } = useThree(); // Three.js 카메라와 WebGL 렌더러
@@ -481,11 +483,11 @@ export function Player({
         const canvas = gl.domElement;
         const requestPointerLock = () => {
             // 클릭 핸들러용 함수
-            if (isDead || isInventoryOpen) return;
+            if (isDead || isInventoryOpen || isShopOpen) return;
             canvas.requestPointerLock();
         };
 
-        if (isInventoryOpen) {
+        if (isInventoryOpen || isShopOpen) {
             // 인벤토리가 열려 있으면 포인터 락 해제
             document.exitPointerLock();
         } else {
@@ -501,7 +503,7 @@ export function Player({
             // 이펙트가 다시 실행되거나 컴포넌트가 언마운트될 때 리스너 정리
             canvas.removeEventListener('click', requestPointerLock);
         };
-    }, [gl, isDead, isInventoryOpen]); // 의존성 배열
+    }, [gl, isDead, isInventoryOpen, isShopOpen]); // 의존성 배열
 
     // 포인터 락 상태 변경 감지 및 마우스 이벤트 리스너 추가/제거 로직
     useEffect(() => {
@@ -889,8 +891,14 @@ export function Player({
             camera.position.copy(finalCameraPos);
             camera.lookAt(playerHeadPos);
 
+            
+            
+            
             // 디버깅 로그
             // console.log(`P: ${pitch.current.toFixed(2)}, Y: ${yaw.current.toFixed(2)} | Hit: ${hit ? `toi: ${toi}` : 'null'} | Dist: ${finalDistance.toFixed(2)}`);
+        }
+        if(pos.y < -80 && !isDead){
+            setIsDead(true);
         }
         // 최종 디버그 로깅
         // HUD 상태 업데이트
