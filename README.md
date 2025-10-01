@@ -84,10 +84,36 @@ Three.js, React, Rapier Physics를 기반으로 구현한 **웹 기반 1인칭/3
 ## 기능별 실행 화면
 
 ### 메인 로비
-(게임 접속 초기 화면 캡처 추가)
+<img width="600" height="600" alt="image" src="https://github.com/user-attachments/assets/d773fbf1-5894-4e70-ae32-28244529e9d5" />
 
-### 플레이어 이동 & 전투
-(1인칭/3인칭 전환 장면, 사격 시 레이저/반동 효과 캡처)
+---
+
+### 플레이어 컨트롤러
+- 키보드 입력을 통한 이동 및 자세 변화(달리기, 앉기, 엎드리기) 기능 구현
+ 
+![조작키 gif](https://github.com/user-attachments/assets/5fae0e3e-213f-402a-96b0-e86dc4b64b9b)
+
+---
+
+### 전투 시스템
+- **레이캐스팅 기반 사격 판정** → 총알이 실제 물리 오브젝트와 충돌했는지 판별
+- **반동(Recoil) 적용** → 연사 시 총기 반동을 계산해 사격 정확도 감소
+- **무장/비무장 전투** → 무기 장착 상태에 따른 애니메이션 전환
+- **히트 판정 & 데미지 처리** → 서버 검증을 통해 공격/피격 동기화
+
+![사격 gif](https://github.com/user-attachments/assets/937527a6-9c4d-47b5-80dc-64092e11db76)
+![캐릭터 전환 gif](https://github.com/user-attachments/assets/b4820267-9533-4ee7-950a-dd73dbaf6910)
+
+---
+
+### 카메라 충돌 처리
+
+- **레이캐스팅을 활용해** 캐릭터와 카메라 사이의 장애물을 감지
+- 카메라가 벽이나 오브젝트를 통과하지 않도록 **위치를 자동 보정**
+
+![카메라 클리핑 GIF](https://github.com/user-attachments/assets/7f78f81c-cb6a-46c5-b83b-9f3bd929a8bd)
+
+---
 
 ### 인벤토리 & 아이템 획득
 (총기 줍기, 탄약 표시, 장전 장면 캡처)
